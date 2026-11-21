@@ -1753,7 +1753,7 @@ const chat=$("#chatFab");
 chat.href="https://m.me/"+CONFIG.messenger;
 chat.setAttribute("aria-label","Chat with SHOPYHAT on Messenger");
 chat.setAttribute("title","Facebook Messenger");
-if(CONFIG.whatsapp){$("#waTxt").innerHTML=`<a href="https://wa.me/${esc(CONFIG.whatsapp)}" target="_blank" rel="noopener noreferrer">+${esc(CONFIG.whatsapp)}</a><br>Chat with us for quick help.`}
+if(CONFIG.whatsapp){$("#waTxt").innerHTML=`<a href="https://wa.me/${esc(CONFIG.whatsapp)}" target="_blank" rel="noopener noreferrer" aria-label="Chat with SHOPYHAT on WhatsApp">Chat on WhatsApp</a><br>Message us for quick product and order support.`}
 else{$("#waCard").classList.add("hidden");$("#cWa").classList.add("hidden")}
 function renderAll(keep){buildHero();renderHome();renderCart();renderWish();updateBadges();route(keep)}
 function showLoading(){const m=`<div class="empty" style="grid-column:1/-1">Loading products…</div>`;["#homeGrid","#shopGrid"].forEach(i=>$(i).innerHTML=m);$("#mosaic").innerHTML=""}
