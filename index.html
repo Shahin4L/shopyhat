@@ -1269,9 +1269,9 @@ main{overflow:clip}
 const CONFIG = {
   whatsapp: "8801772222668",          // e.g. "88017XXXXXXXX" (country code, no + or spaces). Leave "" to hide WhatsApp.
   messenger: "shopyhat", // Facebook page username for the m.me chat link
-  bkash: "01772222668",             // VERIFIED receiving bKash Merchant/PRA account number (11 digits). Not your WhatsApp number.
-  nagad: "01772222668",             // VERIFIED receiving Nagad business account number (11 digits). Empty = payment choice disabled.
-  paymentMode: {bkash:"Merchant Payment",nagad:"Merchant Payment"}, // Set actual approved collection type; NEVER ask for PIN/OTP.
+  bkash: "01772222668",             // Your actual 11-digit bKash number enabled for receiving Send Money. Replace the current invalid number.
+  nagad: "01772222668",             // Your actual 11-digit Nagad number enabled for receiving Send Money. Replace the current invalid number.
+  paymentMode: {bkash:"Send Money",nagad:"Send Money"}, // Manual Send Money only. NEVER request PIN or OTP.
   paymentSupport: "",   // Optional support contact for manual payment queries. Do not paste private account keys.
   sheetUrl: "https://script.google.com/macros/s/AKfycbysUef65k8syzZ-S4RYIpQHnrQfzkEatBeKon8jUP-FieUpt5s28wQDfc5EQl9gYunj/exec",          // Paste your Google Sheet Web app URL here. Products load from the sheet and orders are saved to it.
                          // Leave "" to show the sample products below instead.
@@ -1766,8 +1766,8 @@ function openCheckout(){
    closeAll();
    checkoutRef=genId();
    const pay=[{id:"cod",t:"Cash on delivery",s:"Pay after your parcel arrives",enabled:true,symbol:"COD"},
-     {id:"bkash",t:"bKash",s:CONFIG.bkash?"Manual payment · verify after transfer":"Payment account not configured yet",enabled:isConfiguredMFS(CONFIG.bkash),symbol:"bKash"},
-     {id:"nagad",t:"Nagad",s:CONFIG.nagad?"Manual payment · verify after transfer":"Payment account not configured yet",enabled:isConfiguredMFS(CONFIG.nagad),symbol:"Nagad"}];
+     {id:"bkash",t:"bKash — Send Money",s:CONFIG.bkash?"Send Money via bKash app · manual verification":"Payment account not configured yet",enabled:isConfiguredMFS(CONFIG.bkash),symbol:"bKash"},
+     {id:"nagad",t:"Nagad — Send Money",s:CONFIG.nagad?"Send Money via Nagad app · manual verification":"Payment account not configured yet",enabled:isConfiguredMFS(CONFIG.nagad),symbol:"Nagad"}];
    const saved=LS.get("sh_cust",{});
   $("#coBox").innerHTML=`<form class="f" id="coForm" novalidate>
     <div class="checkout-topline"><span>SHOPYHAT CHECKOUT</span><span>One simple step</span></div>
@@ -1784,7 +1784,7 @@ function openCheckout(){
      <div class="pay-manual hidden" id="payX"><span class="manual-badge">MANUAL TRANSFER · VERIFICATION REQUIRED</span><div id="payT"></div>
        <div class="payment-proof-fields"><div class="fld"><label for="kTrx">Transaction ID *</label><input id="kTrx" type="text" autocomplete="off" maxlength="40" placeholder="e.g. TXA8B42C9D"></div>
        <div class="fld"><label for="kSender">Sender mobile (last 4 digits) *</label><input id="kSender" type="text" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="1234" pattern="[0-9]{4}"></div></div>
-       <label class="pay-ack"><input type="checkbox" id="kPaidAck"> <span>I have made the payment to the displayed receiving account. I understand SHOPYHAT must verify it before confirming payment.</span></label>
+       <label class="pay-ack"><input type="checkbox" id="kPaidAck"> <span>I have completed Send Money to the displayed receiving number. I understand SHOPYHAT must verify it before confirming payment.</span></label>
        <div class="pay-warning">Never share your bKash/Nagad PIN, OTP, login or security code. A Transaction ID is a claim, <strong>not automatic payment confirmation</strong>.</div>
      </div>
     <label class="agree"><input type="checkbox" id="kAgree"><span>I have read the <a href="#policies" target="_blank" rel="noopener">return, exchange and privacy policies</a> and my order details are correct.</span></label>
@@ -1818,9 +1818,9 @@ function renderSummary(){
      const num=m==='bkash'?CONFIG.bkash:CONFIG.nagad, provider=m==='bkash'?'bKash':'Nagad';
      const mode=(CONFIG.paymentMode||{})[m]||'approved payment method';
      x.classList.remove('hidden');
-     $('#payT').innerHTML=`<p style="margin:9px 0 5px;font-weight:750">Open your ${provider} app and pay <strong>${money(calcTotals().total)}</strong> using your approved <strong>${esc(mode)}</strong> method.</p>
+     $('#payT').innerHTML=`<p style="margin:9px 0 5px;font-weight:750">Open your ${provider} app, choose <strong>${esc(mode)}</strong>, and send <strong>${money(calcTotals().total)}</strong> to the number below.</p>
        <div class="pay-row"><span class="pay-number" id="selectedPayNumber">${esc(num)}</span><button type="button" class="pay-copy" id="payCopyBtn">Copy number</button></div>
-       <div class="pay-hint">Order reference: <b>${esc(checkoutRef)}</b> · Save your payment receipt and enter the real Transaction ID below. ${provider} will not be charged automatically by this website.</div>`;
+       <div class="pay-hint">Steps: 1. Copy the number. 2. Open the ${provider} app and tap Send Money. 3. Enter the number and exact amount. 4. Complete payment inside the app. 5. Return here and enter the real Transaction ID and sender’s last four digits. Order reference: <b>${esc(checkoutRef)}</b>. No automatic charge or payment verification occurs on this site.</div>`;
    }else x.classList.add('hidden');
  }
 
