@@ -12,6 +12,43 @@ for(const line of raw.split('\n')){
 }
 
 // Additional catalog and checkout vocabulary, including common dynamic labels.
+const ABOUT_NEW = {
+ 'SHOPYHAT · OUR STORY SINCE 2020':'SHOPYHAT · ২০২০ থেকে আমাদের গল্প',
+ 'Everyday choices.':'প্রতিদিনের পছন্দ।','Real trust.':'সত্যিকারের আস্থা।',
+ 'We started with a belief: customers deserve authentic products, honest product photos, reasonable prices and the confidence that what they choose is what they receive.':'আমরা বিশ্বাস করি—ক্রেতার প্রাপ্য আসল পণ্য, সত্যনিষ্ঠ ছবি, যুক্তিসঙ্গত দাম এবং যা দেখানো হয় তা-ই পাওয়ার নিশ্চয়তা।',
+ 'From sarees and hijabs to lifestyle essentials, SHOPYHAT is working toward making more of your everyday needs available in one thoughtful shopping destination.':'শাড়ি, হিজাব ও লাইফস্টাইল সামগ্রী থেকে প্রতিদিনের প্রয়োজনীয় পণ্য—সবকিছু এক বিশ্বস্ত জায়গায় দেওয়ার লক্ষ্য নিয়ে SHOPYHAT এগিয়ে চলেছে।',
+ 'Connect with us':'আমাদের সঙ্গে যোগাযোগ করুন','01 AUG 2020':'০১ আগস্ট ২০২০','Planning began':'পরিকল্পনার শুরু',
+ '28 AUG 2020':'২৮ আগস্ট ২০২০','Online launch':'অনলাইন যাত্রা শুরু','YOUR CHOICE':'আপনার পছন্দ','OUR GIFT.':'আমাদের উপহার।',
+ 'ESTABLISHED AUGUST 2020 · BANGLADESH':'প্রতিষ্ঠা আগস্ট ২০২০ · বাংলাদেশ',
+ 'WHY WE EXIST':'আমাদের উদ্দেশ্য','What you see should be':'যা দেখবেন,','what you receive.':'তা-ই পাবেন।',
+ 'We aim to close the gap between online product photos and customers\' real experience. Clear descriptions, transparent options, thoughtful sourcing and dependable support are the principles guiding how we grow.':'অনলাইনে পণ্যের ছবির সঙ্গে বাস্তবে পাওয়া পণ্যের পার্থক্য কমানোই আমাদের লক্ষ্য। পরিষ্কার বিবরণ, স্বচ্ছ বিকল্প, যত্নশীল সোর্সিং ও নির্ভরযোগ্য সাপোর্ট আমাদের পথ দেখায়।',
+ 'Product authenticity':'পণ্যের আসলত্ব','Fair everyday value':'সাশ্রয়ী ও ন্যায্য মূল্য','Care beyond checkout':'কেনাকাটার পরেও সেবা',
+ 'We aim to bring original, accurately presented products and avoid creating misleading expectations about quality, color or design.':'আসল পণ্য সঠিকভাবে উপস্থাপন করা এবং মান, রং বা ডিজাইন সম্পর্কে ভুল প্রত্যাশা তৈরি না করাই আমাদের লক্ষ্য।',
+ 'Our goal is to make useful fashion and lifestyle choices accessible through reasonable prices and clear information.':'যুক্তিসঙ্গত দাম ও পরিষ্কার তথ্যের মাধ্যমে প্রয়োজনীয় ফ্যাশন ও লাইফস্টাইল পণ্য সহজলভ্য করতে চাই।',
+ 'We listen to feedback and keep improving product availability, order handling and after-sales issue resolution.':'গ্রাহকের মতামত শুনে স্টক, অর্ডার ব্যবস্থাপনা ও বিক্রয়োত্তর সমস্যা সমাধান উন্নত করছি।',
+ 'THE SHOPYHAT JOURNEY':'SHOPYHAT-এর পথচলা','A small beginning.':'ছোট্ট শুরু।','A bigger purpose.':'বড় একটি লক্ষ্য।',
+ 'Our planning began on':'আমাদের পরিকল্পনা শুরু হয়','August 01, 2020':'০১ আগস্ট ২০২০','August 28, 2020':'২৮ আগস্ট ২০২০',
+ 'The idea took shape':'ভাবনার শুরু','Initial planning and product selection began.':'প্রাথমিক পরিকল্পনা ও পণ্য নির্বাচন শুরু হয়।',
+ 'Our online launch':'অনলাইন যাত্রার শুরু','SHOPYHAT started serving customers.':'SHOPYHAT ক্রেতাদের সেবা দেওয়া শুরু করে।',
+ 'EARLY COLLECTION':'প্রথম কালেকশন','More choices arrived':'পণ্যের বৈচিত্র্য বাড়ে',
+ 'Hijabs, cosmetics, three-piece sets and sarees joined the range.':'হিজাব, কসমেটিকস, থ্রি-পিস ও শাড়ি কালেকশনে যুক্ত হয়।',
+ 'CUSTOMER RESPONSE':'গ্রাহকদের সাড়া','Repeat requests, meaningful feedback':'পুনরায় অর্ডার ও মূল্যবান মতামত',
+ 'Returning customers helped guide our next steps.':'ফিরে আসা ক্রেতারা আমাদের পরবর্তী পথচলায় অনুপ্রেরণা দিয়েছেন।',
+ 'CONTINUOUS LEARNING':'নিরন্তর শেখা','Stronger stock planning':'স্টক পরিকল্পনার উন্নতি',
+ 'Availability challenges helped us improve how we plan and serve.':'স্টক সমস্যাগুলো পরিকল্পনা ও সেবা আরও ভালো করতে সাহায্য করেছে।',
+ 'OUR DIRECTION':'আমাদের পথনির্দেশ','Vision, mission & goals':'ভিশন, মিশন ও লক্ষ্য','Built around the needs of the people we serve.':'গ্রাহকদের প্রয়োজনকে কেন্দ্র করে আমাদের পরিকল্পনা।',
+ 'VISION':'ভিশন','One trusted destination':'এক বিশ্বস্ত গন্তব্য',
+ 'MISSION':'মিশন','Honest products, better service':'সৎ উপস্থাপনা, উন্নত সেবা',
+ 'GOAL':'লক্ষ্য','Grow with our customers':'গ্রাহকদের সঙ্গে এগিয়ে চলা',
+ 'DISCOVER OUR COLLECTION':'কালেকশন দেখুন','Products that tell our story.':'আমাদের গল্প বলে যে পণ্যগুলো।',
+ 'Actual product photos from our current catalog—not unrelated stock photography.':'এগুলো আমাদের বর্তমান কালেকশনের প্রকৃত পণ্যের ছবি, স্টক ফটো নয়।',
+ 'See all products':'সব পণ্য দেখুন','OUR COMMITMENT':'আমাদের অঙ্গীকার',
+ 'More than a product.':'শুধু পণ্য নয়।','A promise to keep improving.':'উন্নতির অঙ্গীকার।',
+ 'Start shopping':'কেনাকাটা শুরু করুন','STAY CONNECTED':'যোগাযোগ রাখুন','Follow our journey':'আমাদের যাত্রায় সঙ্গী হোন',
+ 'Our location':'আমাদের ঠিকানা','Contact & Map':'যোগাযোগ ও মানচিত্র','View product ↗':'পণ্য দেখুন ↗'
+};
+for(const [key,val] of Object.entries(ABOUT_NEW))EN.set(key,val);
+
 const EXTRAS = {
  'Products':'পণ্যসমূহ','Product':'পণ্য','All':'সব','Explore':'দেখুন','Explore collection':'কালেকশন দেখুন',
  'Three-piece':'থ্রি-পিস','Matching sets':'মানানসই সেট',
