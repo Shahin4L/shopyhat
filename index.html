@@ -1465,7 +1465,9 @@ const DEFAULT_PRODUCTS = [
 /* =====================================================================
    HELPERS
    ===================================================================== */
-let CATS=DEFAULT_CATS, PRODUCTS=[];
+let CATS=DEFAULT_CATS, PRODUCTS=[], TAX_CATEGORIES=[], BRAND_PARTNERS=[];
+const activeRoots=()=>TAX_CATEGORIES.filter(c=>!c.parent_id&&c.is_active).sort((a,b)=>a.sort_order-b.sort_order||a.name.localeCompare(b.name));
+const activeChildren=id=>TAX_CATEGORIES.filter(c=>c.parent_id===id&&c.is_active).sort((a,b)=>a.sort_order-b.sort_order||a.name.localeCompare(b.name));
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const money=n=>"৳"+Math.round(n).toLocaleString("en-US");
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1613,7 +1615,7 @@ function parseProduct(r,i){
   const catName=String(r.category||"Products").trim()||"Products";
   const types=["saree","three","kurti","top","scarf","bag","neck","ear"], t=String(r.type||"").trim().toLowerCase();
   const sizes=list(r.sizes,/,/), imgs=imageEntries(r.images), old=num(r.old);
-  return{id:+r.id||i+1,name,cat:slug(catName),catName,price,old:old>price?old:0,
+  return{id:+r.id||i+1,name,cat:r.category_slug||slug(catName),subcat:r.subcategory_slug||'',brandPartnerId:r.brand_partner_id||null,catName,price,old:old>price?old:0,
     isNew:/^(y|yes|true|1|new)/i.test(String(r.isNew==null?"":r.isNew)),
     soldOut:/sold/i.test(String(r.availability||"")),
     variants:VARIANT_MAP[String(r.id)]||[],colors:(()=>{
@@ -1638,7 +1640,10 @@ function applyProducts(list){
   const seen=[],cats=[];
   list.forEach(p=>{if(!seen.includes(p.cat)){seen.push(p.cat);
     const d=DEFAULT_CATS.find(c=>catKey(c.id)===catKey(p.cat));cats.push({id:p.cat,name:p.catName,note:d?d.note:""})}});
-  CATS=cats;maxPrice=Math.max(1000,...list.map(p=>p.price));F.max=0;
+  for(const top of activeRoots()){
+    if(!cats.some(c=>c.id===top.slug))cats.unshift({id:top.slug,name:top.name,note:top.description||''});
+  }
+  CATS=cats;maxPrice=Math.max(1000,...list.map(p=>p.price));F.max=0;F.sub='all';
 }
 const defaultList=()=>DEFAULT_PRODUCTS.map(p=>({...p,catName:(DEFAULT_CATS.find(c=>c.id===p.cat)||{}).name||p.cat,soldOut:false}));
 
@@ -1683,6 +1688,7 @@ function renderRV(){
   $("#rvGrid").innerHTML=L.map(cardHTML).join("");
 }
 function renderHome(){
+  renderPublishedPartners();
   const cnt=id=>PRODUCTS.filter(p=>p.cat===id).length;
   $("#mosaic").innerHTML=CATS.slice(0,5).map((c,i)=>{const p=PRODUCTS.find(x=>x.cat===c.id);
     return `<a class="mt ${i===0?"big":""}" href="#shop/${c.id}" aria-label="Shop ${esc(c.name)}"><div class="art">${p?storefrontArt(p):""}</div><span class="category-count">${cnt(c.id)} ${cnt(c.id)===1?"style":"styles"}</span><span class="ml"><b>${esc(c.name)}</b><small>${c.note?esc(c.note):"Explore collection"}</small><span class="category-cta">Explore <span aria-hidden="true">↗</span></span></span></a>`}).join("");
@@ -1692,7 +1698,7 @@ function renderHome(){
   $("#payBadges").innerHTML=pays.map(x=>`<span>${x}</span>`).join("");
   renderHomeGrid();renderRV();
 }
-const F={cat:"all",q:"",sort:"new",max:0,sale:false};
+const F={cat:"all",sub:"all",q:"",sort:"new",max:0,sale:false};
 let maxPrice=1000;
 function productSearchText(p){
  const tr=window.SHOPYHAT_I18N?.translate;
@@ -1700,11 +1706,16 @@ function productSearchText(p){
  return [p.name,p.nameBn||'',p.catName||'',catName(p.cat),p.desc,p.descBn||'',...colors].join(' ').toLowerCase();
 }
 function renderShop(){
+  const root=activeRoots().find(c=>c.slug===F.cat);
+  const subs=root?activeChildren(root.id):[];
+  $("#subchips").innerHTML=subs.length?
+    [{slug:"all",name:"All "+root.name},{slug:"",name:""}].slice(0,1).concat(subs.map(c=>({slug:c.slug,name:c.name})))
+      .map(c=>'<button type="button" data-subcat="'+esc(c.slug)+'" class="'+(F.sub===c.slug?'on':'')+'">'+esc(c.name)+'</button>').join(''):'';
   $("#chips").innerHTML=[{id:"all",name:"All"},...CATS].map(c=>`<button class="chip ${F.cat===c.id?"on":""}" data-cat="${c.id}">${esc(c.name)}</button>`).join("");
   $("#shopTitle").textContent=F.cat==="all"?"All products":catName(F.cat);
   const pm=$("#pmax"); pm.min=0; pm.max=Math.ceil(maxPrice/100)*100; pm.step=50; if(!F.max)F.max=+pm.max; pm.value=F.max; $("#pmaxv").textContent=money(F.max);
   $("#onlySale").checked=F.sale; $("#sort").value=F.sort;
-  let a=PRODUCTS.filter(p=>(F.cat==="all"||p.cat===F.cat)&&p.price<=F.max&&(!F.sale||isSale(p)));
+  let a=PRODUCTS.filter(p=>(F.cat==="all"||p.cat===F.cat)&&(F.sub==="all"||p.subcat===F.sub)&&p.price<=F.max&&(!F.sale||isSale(p)));
   if(F.q){const q=F.q.toLowerCase();a=a.filter(p=>productSearchText(p).includes(q))}
   if(F.sort==="lh")a.sort((x,y)=>x.price-y.price);else if(F.sort==="hl")a.sort((x,y)=>y.price-x.price);else if(F.sort==="az")a.sort((x,y)=>x.name.localeCompare(y.name));else a.sort((x,y)=>Number(y.isNew)-Number(x.isNew)||y.id-x.id);
   $("#pcount").textContent=a.length+" product"+(a.length===1?"":"s")+(F.q?` for “${F.q}”`:"");
@@ -2053,14 +2064,20 @@ function closeAll(){$("#ov").classList.remove("show");$("#sov").classList.remove
 
 const PAGES=["home","shop","track","contact","policies","care","about"];
 function route(keep){
-  const h=(location.hash||"#home").slice(1), [pg,arg]=h.split("/");
+  const h=(location.hash||"#home").slice(1), [pg,arg,subarg]=h.split("/");
   const page=PAGES.includes(pg)?pg:"home";
   PAGES.forEach(p=>$("#p-"+p).classList.toggle("hidden",p!==page));
   $$("nav.main a").forEach(a=>{const d=a.dataset.p;
     const isS=catKey(arg||"")==="saree";
     a.classList.toggle("on",d==="saree"?(page==="shop"&&isS):d==="shop"?(page==="shop"&&!isS):d===page)});
   $$(".bnav a").forEach(a=>a.classList.toggle("on",a.dataset.b===page));
-  if(page==="shop"){const hit=CATS.find(c=>catKey(c.id)===catKey(arg||""));F.cat=hit?hit.id:"all";renderShop()}
+  if(page==="shop"){
+    const hit=CATS.find(c=>catKey(c.id)===catKey(arg||""));
+    F.cat=hit?hit.id:"all";
+    const root=activeRoots().find(c=>c.slug===F.cat);
+    F.sub=root&&activeChildren(root.id).some(c=>c.slug===subarg)?subarg:"all";
+    renderShop();
+  }
   if(page==="track")renderMyOrders();
   if(page==="home")renderRV();
   $("#mainNav").classList.remove("open");
@@ -2078,7 +2095,9 @@ document.addEventListener("click",e=>{
   const o=t.closest("[data-open]"); if(o){openProduct(o.dataset.open);return}
   if(t.closest("[data-close]")||t===$("#ov")||t.classList.contains("modal")){closeAll()}
   const ht=t.closest("[data-ht]"); if(ht){homeTab=ht.dataset.ht;renderHomeGrid();return}
-  const cat=t.closest("[data-cat]"); if(cat){F.cat=cat.dataset.cat;history.replaceState(null,"","#shop"+(F.cat==="all"?"":"/"+F.cat));renderShop();return}
+  const cat=t.closest("[data-cat]"); if(cat){F.cat=cat.dataset.cat;F.sub="all";history.replaceState(null,"","#shop"+(F.cat==="all"?"":"/"+F.cat));renderShop();return}
+  const sub=t.closest("[data-subcat]");
+  if(sub){F.sub=sub.dataset.subcat;history.replaceState(null,"","#shop/"+F.cat+(F.sub==="all"?"":"/"+F.sub));renderShop();return}
   const ci=t.closest("[data-ci]"); if(ci&&cur){cur.ci=+ci.dataset.ci;cur.gi=0;cur.qty=1;drawProduct();return}
   const gi=t.closest("[data-gi]"); if(gi&&cur){cur.gi=+gi.dataset.gi;drawProduct();return}
   const sz=t.closest("[data-sz]"); if(sz&&cur){cur.size=sz.dataset.sz;drawProduct();return}
@@ -2176,6 +2195,30 @@ function fetchVariantsJSONP(url){
     document.head.appendChild(s);
   });
 }
+async function fetchPublishedCatalogStructure(){
+ const headers={apikey:SH_DB_KEY},base=SH_DB_URL+"/rest/v1/";
+ const request=async path=>{
+   const r=await fetch(base+path,{headers,cache:"no-store"});
+   if(!r.ok)throw Error("Catalog navigation unavailable ("+r.status+")");
+   return r.json();
+ };
+ const [cats,brands]=await Promise.allSettled([
+   request("sh_categories?select=id,parent_id,name,name_bn,slug,description,is_active,sort_order&is_active=eq.true&order=sort_order.asc"),
+   request("sh_brand_partners?select=id,name,name_bn,website_url,logo_url,sort_order&is_published=eq.true&order=sort_order.asc")
+ ]);
+ TAX_CATEGORIES=cats.status==="fulfilled"?cats.value:[];
+ BRAND_PARTNERS=brands.status==="fulfilled"?brands.value:[];
+}
+function renderPublishedPartners(){
+ const section=$("#brandPartnersSection"),grid=$("#brandPartnersGrid");
+ if(!section||!grid)return;
+ const shown=BRAND_PARTNERS.filter(b=>b.name&&b.website_url&&/^https:\/\//i.test(b.website_url));
+ section.classList.toggle('hidden',!shown.length);
+ if(!shown.length){grid.replaceChildren();return}
+ grid.innerHTML=shown.map(b=>'<a class="catalog-partner-card" href="'+esc(b.website_url)+'" rel="noopener noreferrer" target="_blank">'+
+ (b.logo_url?'<img src="'+esc(b.logo_url)+'" loading="lazy" alt="'+esc(b.name)+' logo">':'')+
+ '<b>'+esc(b.name)+'</b><small>View official website ↗</small></a>').join('');
+}
 async function fetchShopyhatCatalog(){
  const h={apikey:SH_DB_KEY}, base=SH_DB_URL+"/rest/v1/";
  const endpoints=[
@@ -2189,6 +2232,7 @@ async function fetchShopyhatCatalog(){
   return response.json();
  }));
  const [prods,vs,imgs]=data;
+ await fetchPublishedCatalogStructure().catch(e=>console.warn("Catalog taxonomy unavailable",e));
  VARIANT_MAP={};
  const rows=prods.map(p=>{
   const pv=vs.filter(v=>v.product_id===p.id&&v.active);
@@ -2197,7 +2241,11 @@ async function fetchShopyhatCatalog(){
     images:imgs.filter(i=>i.variant_id===v.id).map(i=>i.image_url)
   }));
   const photos=imgs.filter(i=>i.product_id===p.id&&!i.variant_id).map(i=>i.image_url);
-  return {id:p.legacy_id,name:p.name,name_bn:p.name_bn||"",category:p.category,price:p.base_price,
+  const root=activeRoots().find(c=>c.id===p.category_id);
+  const child=root?activeChildren(root.id).find(c=>c.id===p.subcategory_id):null;
+  return {id:p.legacy_id,name:p.name,name_bn:p.name_bn||"",
+    category:root?root.name:p.category,category_slug:root?root.slug:"",
+    subcategory_slug:child?.slug||"",brand_partner_id:p.brand_partner_id||null,price:p.base_price,
     old:p.old_price,availability:p.status==="active"?"Available":"Hidden",
     isNew:p.is_new?"YES":"NO",type:"",sizes:(p.sizes||[]).join(","),
     colors:pv.map(v=>v.color+(v.hex?":"+v.hex:"")).join(","),
