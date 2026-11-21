@@ -8,7 +8,7 @@ for(const line of raw.split('\n')){
  const tab=line.indexOf('\t');
  if(tab<1)continue;
  const en=line.slice(0,tab).trim(),bn=line.slice(tab+1).trim();
- if(en && bn)EN.set(en.replace(/&amp;/g,'&'),bn);
+ if(en && bn)EN.set(en.replace(/&amp;/g,'&').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim(),bn);
 }
 const EN_TO_BN = EN;
 const BN_TO_EN = new Map([...EN].map(([en,bn])=>[bn,en]));
@@ -16,7 +16,7 @@ const saved=(()=>{try{return localStorage.getItem('sh_language')||'en'}catch{ret
 let lang=saved==='bn'?'bn':'en';
 const remembered=new WeakMap();
 const attrRemembered=new WeakMap();
-const skipTags=new Set(['SCRIPT','STYLE','NOSCRIPT','TEXTAREA','CODE','PRE','OPTION']);
+const skipTags=new Set(['SCRIPT','STYLE','NOSCRIPT','TEXTAREA','CODE','PRE']);
 const placeholderElements='input[placeholder],textarea[placeholder],button[aria-label],a[aria-label],[title]';
 const clean=s=>String(s||'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
 const exact=v=>EN_TO_BN.get(clean(v))||null;
