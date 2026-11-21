@@ -216,7 +216,9 @@ async function manageCase(id){
  $('caseForm').onsubmit=async e=>{
   e.preventDefault();if(!edit)return;
   const f=formData('caseForm'),changes={status:f.status,priority:f.priority,assigned_to:f.assigned_to,resolution:String(f.resolution||'').trim(),last_staff_feedback:String(f.last_staff_feedback||'').trim()};
-  if(['Resolved','Closed'].includes(changes.status)&&changes.resolution.length<10)return notice('drawerMsg','Provide at least 10 characters of final resolution before closing.',true);
+  if(['Resolved','Closed'].includes(changes.status)&&changes.resolution.length<10)return notice('drawerMsg','Provide at least 10 characters of final resolution before resolving or closing.',true);
+  if(changes.status==='Closed'&&!['Resolved','Closed'].includes(c.status))return notice('drawerMsg','Set the case to Resolved and save before closing it.',true);
+  if(changes.status==='Reopened'&&!['Resolved','Closed','Reopened'].includes(c.status))return notice('drawerMsg','Only a resolved or closed case can be reopened.',true);
   if(['Under Review','Investigating','Resolution Proposed','Resolved','Closed'].includes(changes.status)&&!changes.assigned_to)return notice('drawerMsg','Assign a staff member before processing this case.',true);
   if(changes.status==='Awaiting Customer'&&changes.last_staff_feedback.length<12)return notice('drawerMsg','Tell the customer what additional information is required.',true);
   const button=e.currentTarget.querySelector('button[type=submit]');button.disabled=true;
