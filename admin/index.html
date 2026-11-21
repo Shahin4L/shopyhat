@@ -43,6 +43,19 @@
 .order-item-info img{width:44px!important;height:54px!important;max-height:54px!important}
 @media print{.order-item-info img{width:32px!important;height:40px!important;max-height:40px!important}}
 @media print{header,.nav,.tools,.btn,.stats,.overlay,.no-print{display:none!important}body,main,.panel{background:#fff;box-shadow:none;border:0}}
+/* Operations controls: date range, audit trail and update metadata */
+.ops-filters{display:flex;align-items:flex-end;flex-wrap:wrap;gap:12px;background:#fff;border:1px solid #e9e1d8;border-radius:14px;padding:13px 16px;margin:17px 0;box-shadow:0 3px 13px #00000004}
+.ops-filters label{margin:0 0 4px;font-weight:750;color:#62594f}
+.ops-filters .date-field{min-width:155px}
+.ops-filters input,.ops-filters select{min-width:0;padding:9px}
+.ops-filters .range-actions{display:flex;gap:7px;flex-wrap:wrap}
+.audit-row{font-size:12px}
+.audit-row .changed-list{color:#696057;font-size:12px;max-width:300px;overflow-wrap:anywhere}
+.audit-row .actor{font-weight:650}
+.audit-meta{margin-top:8px;font-size:12px;color:#746a60}
+.meta-stack{font-size:11px;color:#786d62;margin-top:5px;line-height:1.5}
+.ops-filters [data-range].on{background:#171717;color:#fff;border-color:#171717}
+@media(max-width:760px){.ops-filters{padding:12px}.ops-filters .date-field{flex:1 1 130px}.ops-filters .range-actions{width:100%}.audit-row .changed-list{max-width:180px}}
 </style></head><body>
 <header><div><h2>SHOP<span>YHAT</span></h2><small>PRIVATE OPERATIONS STUDIO · Since 2020</small></div><div class="row"><small id="profile"></small><button class="btn small hidden" id="logout">Sign out</button></div></header>
 <main>
@@ -50,11 +63,25 @@
 <section class="hidden" id="dashboard">
 <div class="topline"><div><h1>Operations Dashboard</h1><p class="muted">Catalog, orders, payments, inventory &amp; access management.</p></div><button class="btn" id="refresh">↻ Refresh</button></div>
 <div class="stats"><div class="stat"><small>Products</small><strong id="kProducts">—</strong></div><div class="stat"><small>Live products</small><strong id="kActive">—</strong></div><div class="stat"><small>Orders</small><strong id="kOrders">—</strong></div><div class="stat"><small>Pending orders</small><strong id="kPending">—</strong></div></div>
-<nav class="nav" id="nav"><button class="btn active" data-page="products">Products</button><button class="btn" data-page="orders">Orders</button><button class="btn" data-page="payments">Payment Review</button><button class="btn" data-page="users" id="usersTab">Team Access</button></nav>
-<div id="page-products" class="panel"><div class="topline"><h2>Product Catalog</h2><div class="tools"><input id="productSearch" placeholder="Search product…" style="width:200px"><button id="newProduct" class="btn primary">＋ Add Product</button></div></div><div class="scroll"><table><thead><tr><th>Product</th><th>Price</th><th>Status</th><th>Colors</th><th>Actions</th></tr></thead><tbody id="productRows"></tbody></table></div></div>
-<div id="page-orders" class="panel hidden"><div class="topline"><h2>Order Management</h2><div class="tools"><input id="orderSearch" placeholder="Order ID, phone, customer" style="width:205px"><select id="statusFilter" style="width:160px"><option value="">All statuses</option><option>Pending</option><option>Confirmed</option><option>Processing</option><option>Ready to Ship</option><option>Shipped</option><option>Delivered</option><option>Cancelled</option><option>Return Requested</option><option>Returned</option></select><button class="btn primary" id="newOrder">＋ Create Order</button><button class="btn" id="exportOrders">Export CSV</button></div></div><div class="scroll"><table><thead><tr><th>Photo</th><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Payment</th><th>Actions</th></tr></thead><tbody id="orderRows"></tbody></table></div></div>
-<div id="page-payments" class="panel hidden"><h2>Payment Review</h2><p class="muted">Payment verification is manual. Match transaction IDs with your actual provider records before approving.</p><div class="scroll"><table><thead><tr><th>Order</th><th>Method</th><th>Transaction</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody id="paymentRows"></tbody></table></div></div>
-<div id="page-users" class="panel hidden"><div class="topline"><h2>Team Access</h2><button class="btn primary" id="addStaff">＋ Add Staff</button></div><p class="muted">Add an authorized email and role. The staff member can then request an OTP. Owner cannot be disabled here.</p><div class="scroll"><table><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Access</th><th>Actions</th></tr></thead><tbody id="staffRows"></tbody></table></div></div>
+<section class="ops-filters" aria-label="Global date range filter">
+ <div class="date-field"><label for="dateFrom">From Date</label><input id="dateFrom" type="date"></div>
+ <div class="date-field"><label for="dateTo">To Date</label><input id="dateTo" type="date"></div>
+ <div class="date-field"><label for="dateBasis">Filter by</label><select id="dateBasis"><option value="created">Created Date</option><option value="updated">Updated Date</option></select></div>
+ <div class="range-actions"><button type="button" class="btn small" data-range="today">Today</button><button type="button" class="btn small" data-range="7">Last 7 Days</button><button type="button" class="btn small" data-range="30">Last 30 Days</button><button type="button" class="btn small" data-range="all">All Time</button></div>
+ <div class="muted" id="rangeSummary" role="status" style="font-size:12px;min-width:180px">Showing all records</div>
+</section>
+<nav class="nav" id="nav"><button class="btn active" data-page="products">Products</button><button class="btn" data-page="orders">Orders</button><button class="btn" data-page="payments">Payment Review</button><button class="btn" data-page="users" id="usersTab">Team Access</button><button class="btn" data-page="activity" id="activityTab">Activity Log</button></nav>
+<div id="page-products" class="panel"><div class="topline"><h2>Product Catalog</h2><div class="tools"><input id="productSearch" placeholder="Search product…" style="width:200px"><button id="newProduct" class="btn primary">＋ Add Product</button></div></div><div class="scroll"><table><thead><tr><th>Product</th><th>Price</th><th>Status</th><th>Colors</th><th>Updated By / Date</th><th>Actions</th></tr></thead><tbody id="productRows"></tbody></table></div></div>
+<div id="page-orders" class="panel hidden"><div class="topline"><h2>Order Management</h2><div class="tools"><input id="orderSearch" placeholder="Order ID, phone, customer" style="width:205px"><select id="statusFilter" style="width:160px"><option value="">All statuses</option><option>Pending</option><option>Confirmed</option><option>Processing</option><option>Ready to Ship</option><option>Shipped</option><option>Delivered</option><option>Cancelled</option><option>Return Requested</option><option>Returned</option></select><button class="btn primary" id="newOrder">＋ Create Order</button><button class="btn" id="exportOrders">Export CSV</button></div></div><div class="scroll"><table><thead><tr><th>Photo</th><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Payment</th><th>Updated By / Date</th><th>Actions</th></tr></thead><tbody id="orderRows"></tbody></table></div></div>
+<div id="page-payments" class="panel hidden"><h2>Payment Review</h2><p class="muted">Payment verification is manual. Match transaction IDs with your actual provider records before approving.</p><div class="scroll"><table><thead><tr><th>Order</th><th>Method</th><th>Transaction</th><th>Amount</th><th>Status</th><th>Reviewed By / Date</th><th>Actions</th></tr></thead><tbody id="paymentRows"></tbody></table></div></div>
+<div id="page-users" class="panel hidden"><div class="topline"><h2>Team Access</h2><button class="btn primary" id="addStaff">＋ Add Staff</button></div><p class="muted">Add an authorized email and role. The staff member can then request an OTP. Owner cannot be disabled here.</p><div class="scroll"><table><thead><tr><th>Email</th><th>Name</th><th>Role</th><th>Access</th><th>Updated By / Date</th><th>Actions</th></tr></thead><tbody id="staffRows"></tbody></table></div></div>
+<div id="page-activity" class="panel hidden">
+ <div class="topline"><div><h2>Activity Log</h2><p class="muted">Read-only, database-recorded staff activity. Timestamps in Bangladesh time.</p></div><div class="tools"><button type="button" class="btn" id="exportAudit">Export Audit CSV</button></div></div>
+ <div class="tools" style="margin:14px 0"><select id="auditEntity" aria-label="Audit section" style="width:190px"><option value="">All Sections</option><option value="sh_products">Products</option><option value="sh_variants">Color Variants</option><option value="sh_product_images">Product Photos</option><option value="sh_orders">Orders</option><option value="sh_payments">Payments</option><option value="sh_staff">Staff Access</option></select><select id="auditAction" aria-label="Change type" style="width:165px"><option value="">All Actions</option><option>INSERT</option><option>UPDATE</option><option>DELETE</option></select><input id="auditSearch" placeholder="Search user or record…" aria-label="Search activity log" style="width:240px"></div>
+ <p id="auditCount" class="muted"></p>
+ <div class="scroll"><table><thead><tr><th>Date & Time</th><th>User / Role</th><th>Section</th><th>Action</th><th>Record</th><th>Fields Changed</th></tr></thead><tbody id="auditRows"></tbody></table></div>
+ <p class="muted">Log is append-only. Changes made before audit tracking was enabled cannot be reconstructed. New activity is stored by the database.</p>
+</div>
 <p id="appMsg" class="msg" role="status"></p>
 </section></main>
 <div class="overlay hidden" id="overlay"><aside class="drawer"><div class="topline"><h2 id="drawerTitle">Edit</h2><button id="closeDrawer" class="btn" type="button">Close ✕</button></div><div id="drawerBody"></div><p id="drawerMsg" class="msg" role="status"></p></aside></div>
