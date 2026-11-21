@@ -1,6 +1,7 @@
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,CHECKOUT_URL} from './config.js';
 import {setupBrandManager} from './brand.js';
+import {setupCatalogManager} from './catalog.js';
 const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -8,6 +9,7 @@ const money=v=>'৳'+Number(v||0).toLocaleString('en-BD',{maximumFractionDigits:
 const fmtDate=v=>v?new Date(v).toLocaleString('en-BD',{timeZone:'Asia/Dhaka',dateStyle:'medium',timeStyle:'short'}):'—';
 const roleCan=(...r)=>r.includes(role);
 const branding=setupBrandManager({db,roleCan,notify:(id,msg,error)=>notice(id,msg,error),formatDate:fmtDate});
+const catalog=setupCatalogManager({db,roleCan,notify:(id,msg,error)=>notice(id,msg,error),fmtDate});
 const imageUrl=v=>{const s=String(v||'');const m=s.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||s.match(/[?&]id=([\w-]+)/);return m&&s.includes('google.com')?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000':s};
 let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],reviews=[],cases=[],caseMedia=[],caseUpdates=[],caseReplies=[],dailyStats=[],archiveHealth=null,reviewMedia=[],archiveRequests=[],activePage='products';
 function notice(id,message,error=false){$(id).textContent=message;$(id).classList.toggle('error',!!error)}
@@ -138,7 +140,7 @@ async function boot(){const {data:{user},error}=await db.auth.getUser();
  const r=await db.from('sh_staff').select('*').eq('email',(user.email||'').toLowerCase()).maybeSingle();
  if(r.error||!r.data?.active){await db.auth.signOut();show('login',true);show('dashboard',false);show('logout',false);return notice('loginMsg','This account is not an active SHOPYHAT staff member. Ask the owner to grant access.',true)}
  actor=user;role=r.data.role;$('profile').textContent=(r.data.display_name||user.email)+' · '+role;
- show('login',false);show('dashboard',true);show('logout',true);show('usersTab',role==='owner');show('addStaff',role==='owner');show('activityTab',roleCan('owner','manager'));show('insightsTab',roleCan('owner','manager'));show('brandTab',roleCan('owner','manager'));
+ show('login',false);show('dashboard',true);show('logout',true);show('usersTab',role==='owner');show('addStaff',role==='owner');show('activityTab',roleCan('owner','manager'));show('insightsTab',roleCan('owner','manager'));show('brandTab',roleCan('owner','manager'));show('catalogTab',roleCan('owner','manager'));
  show('newProduct',roleCan('owner','manager'));show('bulkProducts',roleCan('owner','manager'));show('newOrder',roleCan('owner','manager','operator'));
  await refresh()}
 async function refresh(){notice('appMsg','Loading live data…');
@@ -146,13 +148,13 @@ async function refresh(){notice('appMsg','Loading live data…');
  const [p,v,i,o,oi,pa,st,rv,cs,cm,cu,cr,ws,rm]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff'),query('sh_reviews'),query('sh_customer_cases'),query('sh_case_media'),query('sh_case_updates'),query('sh_case_replies'),queryTraffic(),query('sh_review_media')]);
  products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;reviews=rv;cases=cs;caseMedia=cm;caseUpdates=cu;caseReplies=cr;dailyStats=ws;reviewMedia=rm;
  try{await loadAudit()}catch(e){audit=[];console.warn('Audit log not loaded:',e.message)}
- if(roleCan('owner','manager'))await branding.reload();
+ if(roleCan('owner','manager')){await branding.reload();await catalog.reload();}
  if(roleCan('owner','manager')){try{const r=await db.rpc('sh_admin_archive_health');archiveHealth=r.error?null:r.data}catch(e){archiveHealth=null}}else archiveHealth=null;
  if(roleCan('owner','manager')){try{const response=await db.from('sh_archive_requests').select('id,requested_at,requested_by,database_bytes,eligible_audit_rows,status').order('requested_at',{ascending:false}).limit(20);archiveRequests=response.error?[]:(response.data||[])}catch(e){archiveRequests=[]}}else archiveRequests=[];
  $('kProducts').textContent=p.length;$('kActive').textContent=p.filter(x=>x.status==='active').length;$('kOrders').textContent=o.length;$('kPending').textContent=o.filter(x=>x.status==='Pending').length;
  render();notice('appMsg','Last refreshed '+new Date().toLocaleTimeString('en-BD'))}
  catch(e){notice('appMsg',e.message,true)}}
-function showPage(page){if(['activity','insights','brand'].includes(page)&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity','reviews','cases','insights','brand'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
+function showPage(page){if(['activity','insights','brand','catalog'].includes(page)&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity','reviews','cases','insights','brand','catalog'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
 function cover(product){const base=images.find(i=>i.product_id===product.id&&!i.variant_id);if(base)return base.image_url;
  const v=variants.find(x=>x.product_id===product.id);return images.find(i=>i.variant_id===v?.id)?.image_url||''}
 function render(){
@@ -165,7 +167,7 @@ function render(){
  $('kPending').textContent=filteredOrders.filter(o=>o.status==='Pending').length;
  $('rangeSummary').textContent=($('dateFrom').value||'All dates')+' → '+($('dateTo').value||'Today / future')+' · '+($('dateBasis').value==='updated'?'Updated Date':'Created Date');
  $('productRows').innerHTML=dateFiltered(products).filter(p=>(p.name+' '+p.legacy_id+' '+p.category).toLowerCase().includes(search)).map(p=>
- '<tr><td><div class="row" style="justify-content:flex-start">'+imgTag(cover(p),p.name)+'<div><b>'+esc(p.name)+'</b><div class="muted">#'+esc(p.legacy_id||p.id.slice(0,7))+' · '+esc(p.category)+'</div></div></div></td><td>'+money(p.base_price)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+variants.filter(v=>v.product_id===p.id).length+'</td><td>'+metaLabel('sh_products',p)+'</td><td><div class="tools"><button class="btn small" data-edit-product="'+p.id+'">Edit / Photos</button>'+(roleCan("owner","manager")?'<button type="button" class="btn small danger" data-delete-product="'+p.id+'">Delete</button>':'')+'</div></td></tr>').join('')||'<tr><td colspan="6">No products found</td></tr>';
+ '<tr><td><div class="row" style="justify-content:flex-start">'+imgTag(cover(p),p.name)+'<div><b>'+esc(p.name)+'</b><div class="muted">#'+esc(p.legacy_id||p.id.slice(0,7))+' · '+esc(p.category)+(p.subcategory_id?' · Subcategory assigned':'')+'</div></div></div></td><td>'+money(p.base_price)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+variants.filter(v=>v.product_id===p.id).length+'</td><td>'+metaLabel('sh_products',p)+'</td><td><div class="tools"><button class="btn small" data-edit-product="'+p.id+'">Edit / Photos</button>'+(roleCan("owner","manager")?'<button type="button" class="btn small danger" data-delete-product="'+p.id+'">Delete</button>':'')+'</div></td></tr>').join('')||'<tr><td colspan="6">No products found</td></tr>';
  $('orderRows').innerHTML=dateFiltered(orders).filter(o=>(!filter||o.status===filter)&&(!oq||[o.order_number,o.customer_name,o.customer_phone].some(v=>String(v||'').toLowerCase().includes(oq)))).map(o=>
  '<tr><td>'+orderThumb(o)+'</td><td><b>'+esc(o.order_number)+'</b><div class="muted">'+fmtDate(o.created_at)+'</div></td><td>'+esc(o.customer_name)+'<div class="muted">'+esc(o.customer_phone)+'</div></td><td>'+money(o.total)+'</td><td><span class="pill">'+esc(o.status)+'</span></td><td>'+esc(o.payment_status)+'</td><td>'+metaLabel('sh_orders',o)+'</td><td><button class="btn small" data-edit-order="'+o.id+'">Process / Invoice</button></td></tr>').join('')||'<tr><td colspan="8">No matching orders</td></tr>';
  $('paymentRows').innerHTML=dateFiltered(payments).map(p=>'<tr><td>'+esc(orders.find(o=>o.id===p.order_id)?.order_number||'—')+'</td><td>'+esc(p.method)+'</td><td>'+esc(p.transaction_id)+'</td><td>'+money(p.amount)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+metaLabel('sh_payments',p)+'</td><td>'+ (roleCan('owner','manager')?'<button class="btn small" data-review="'+p.id+'">Review</button>':'Read only')+'</td></tr>').join('')||'<tr><td colspan="7">No payment reviews</td></tr>';
@@ -400,8 +402,9 @@ function editProduct(id){
  const group=images.filter(i=>i.product_id===id&&!i.variant_id);
  drawer(id?'Edit Product':'Add Product',`\n ${id?'<p class="audit-meta">'+metaLabel('sh_products',p)+'</p>':''}
  <form id="productForm"><label>Product name</label><input name="name" required minlength="3" value="${esc(p.name)}">
- <div class="fieldrow"><div><label>Category</label><input name="category" required value="${esc(p.category)}"></div><div><label>Status</label><select name="status">${['active','draft','hidden','sold_out'].map(v=>'<option '+(p.status===v?'selected':'')+'>'+v+'</option>').join('')}</select></div>
+ <div class="fieldrow"><div><label>Legacy Category Label (auto-updates from selection)</label><input name="category" required value="${esc(p.category)}"></div><div><label>Status</label><select name="status">${['active','draft','hidden','sold_out'].map(v=>'<option '+(p.status===v?'selected':'')+'>'+v+'</option>').join('')}</select></div>
  <div><label>Price (BDT)</label><input name="base_price" type="number" min="0" step=".01" required value="${esc(p.base_price)}"></div><div><label>Previous price</label><input name="old_price" type="number" min="0" step=".01" value="${esc(p.old_price||'')}"></div></div>
+ ${catalog.productPickerHTML(p)}
  <label>Sizes (comma separated)</label><input name="sizes" value="${esc((p.sizes||[]).join(', '))}"><label>Description</label><textarea name="description">${esc(p.description)}</textarea>
  <label>Product details (English)</label><textarea name="details">${esc(p.details)}</textarea>
  <div class="media-section" style="margin:14px 0">
@@ -429,10 +432,11 @@ function editProduct(id){
  <div class="media-section"><div class="section-heading"><h3>Step 2 · Color Variants</h3><div class="tools"><button type="button" class="btn primary small" data-new-variant="${p.id}">＋ Add One Color</button><button type="button" class="btn small" data-bulk-variants="${p.id}">＋ Add Multiple Colors</button></div></div>
  ${variantList.map(v=>'<div class="variant-card"><div class="topline"><div><b>'+esc(v.color)+'</b> · '+esc(v.sku||'No SKU')+'<div class="muted">Stock: '+esc(v.stock??'Unlimited')+' · '+money(v.price??p.base_price)+'</div></div><button type="button" class="btn small" data-edit-variant="'+v.id+'">Edit Color / Photos</button></div><div class="photos">'+productPhotoTiles(images.filter(i=>i.variant_id===v.id),v.color)+'</div></div>').join('')||'<p class="muted">No colors yet. Choose a color to create a separate gallery.</p>'}
  </div>`:''}`);
+ catalog.bindProductPicker();
  setupLocalPhotoPreview('productInitialFiles','productInitialPreview');
  $('backFromProduct').onclick=()=>{closeDrawer();showPage('products')};
  $('productForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('productForm'),saveMode=e.submitter?.dataset?.saveMode||'edit';const payload={name:String(f.name).trim(),category:String(f.category).trim(),base_price:Number(f.base_price),old_price:f.old_price?Number(f.old_price):null,description:String(f.description||''),details:String(f.details||''),name_bn:String(f.name_bn||'').trim(),description_bn:String(f.description_bn||'').trim(),details_bn:String(f.details_bn||'').trim(),sizes:String(f.sizes||'').split(',').map(s=>s.trim()).filter(Boolean),status:f.status,is_new:!!f.is_new};
- try{
+ try{Object.assign(payload,catalog.selectionPayload(f));
  const files=[...($('productInitialFiles')?.files||[])];
  const q=id?db.from('sh_products').update(payload).eq('id',id).select('id').single():db.from('sh_products').insert(payload).select('id').single();
  const r=await q;if(r.error)throw r.error;
