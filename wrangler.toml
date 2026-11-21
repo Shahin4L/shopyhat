@@ -1,0 +1,5 @@
+# Cloudflare Pages build output for SHOPYHAT v2
+# Static site: "npm run build" copies the website and admin into ./dist.
+name = "shopyhat"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-11-20"
