@@ -138,7 +138,7 @@ async function editOrder(id){
  $('printInvoice').onclick=()=>printInvoice(o,items.data);
  }catch(e){notice('drawerMsg',e.message,true)}
 }
-function printInvoice(o,items){const w=window.open('','_blank','noopener,noreferrer,width=840,height=900');if(!w)return notice('drawerMsg','Allow pop-ups to print the invoice.',true);
+function printInvoice(o,items){const w=window.open('','_blank','width=840,height=900');if(!w)return notice('drawerMsg','Allow pop-ups to print the invoice.',true);
  const html=`<!doctype html><title>Invoice ${esc(o.order_number)}</title><style>body{font:14px Arial;padding:32px;color:#222}h1{margin:0}table{width:100%;border-collapse:collapse;margin:25px 0}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:21px;font-weight:bold}</style><h1>SHOPYHAT</h1><p>Your Choice, Our Gift. · Since 2020</p><hr><h2>Invoice ${esc(o.order_number)}</h2><p>${fmtDate(o.created_at)}</p><b>Delivery to</b><p>${esc(o.customer_name)} · ${esc(o.customer_phone)}<br>${esc(o.address)}</p><table><tr><th>Product</th><th>Variant</th><th>Qty</th><th>Amount</th></tr>${items.map(i=>'<tr><td>'+esc(i.product_name)+'</td><td>'+esc(i.color)+' / '+esc(i.size)+'</td><td>'+i.qty+'</td><td>'+money(i.line_total)+'</td></tr>').join('')}</table><p>Subtotal: ${money(o.subtotal)}<br>Discount: ${money(o.discount)}<br>Delivery: ${money(o.shipping)}</p><p class="total">Total ${money(o.total)}</p><p>Payment: ${esc(o.payment_method)} — ${esc(o.payment_status)}<br>Order status: ${esc(o.status)}</p>`;
  w.document.write(html);w.document.close();w.focus();w.print()}
 function reviewPayment(id){
@@ -161,7 +161,7 @@ function editStaff(email){
  if(r.error)return notice('drawerMsg',r.error.message,true);await refresh();closeDrawer()};
 }
 function addOrder(){if(!roleCan('owner','manager','operator'))return;
- const available=variants.filter(v=>v.active&&products.find(p=>p.id===v.product_id)?.status==='active');
+ const available=variants.filter(v=>v.active&&products.find(p=>p.id===v.product_id)?.status==='active'&&(v.stock===null||v.stock>0));
  drawer('Create Order',`<p class="muted">Manual COD order. Amount and stock are verified by the backend.</p><form id="newOrderForm">
  <label>Product / Color</label><select name="variant_id" required>${available.map(v=>'<option value="'+esc(v.id)+'">'+esc(products.find(p=>p.id===v.product_id)?.name)+' · '+esc(v.color)+'</option>').join('')}</select>
  <div class="fieldrow"><div><label>Qty</label><input name="qty" type="number" required min="1" max="20" value="1"></div><div><label>Size</label><input name="size" placeholder="Optional"></div></div>
@@ -171,11 +171,23 @@ function addOrder(){if(!roleCan('owner','manager','operator'))return;
  $('newOrderForm').onsubmit=async e=>{e.preventDefault();const f=formData('newOrderForm'),btn=e.currentTarget.querySelector('button[type=submit]');btn.disabled=true;
  try{const {data:{session}}=await db.auth.getSession();const r=await fetch(CHECKOUT_URL,{method:'POST',
  headers:{'content-type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,...(session?{'authorization':'Bearer '+session.access_token}:{})},
- body:JSON.stringify({request_id:crypto.randomUUID(),variant:'admin',name:f.name,phone:f.phone,address:f.address,zone:f.zone,payment_method:'cod',
+ body:JSON.stringify({request_id:crypto.randomUUID(),name:f.name,phone:f.phone,address:f.address,zone:f.zone,payment_method:'cod',
  items:[{variant_id:f.variant_id,qty:Number(f.qty),size:f.size||''}]})});const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Order not created');
  await refresh();closeDrawer();notice('appMsg','Created '+j.orderId);}
  catch(err){notice('drawerMsg',err.message,true)}finally{btn.disabled=false}};
 }
+
+function exportOrders(){
+ if(!orders.length)return notice('appMsg','No orders available to export.',true);
+ const columns=['order_number','created_at','customer_name','customer_phone','address','zone','status','payment_method','payment_status','subtotal','discount','shipping','total','courier','tracking_id'];
+ const cell=v=>'"'+String(v??'').replace(/^[=+\-@\t\r]/,"'$('sendOtp').onclick=loginSend;").replace(/"/g,'""')+'"';
+ const csv=[columns.join(','),...orders.map(o=>columns.map(k=>cell(o[k])).join(','))].join('\r\n');
+ const blob=new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8'});
+ const u=URL.createObjectURL(blob);const a=document.createElement('a');
+ a.href=u;a.download='SHOPYHAT_Orders_'+new Date().toISOString().slice(0,10)+'.csv';
+ document.body.append(a);a.click();a.remove();URL.revokeObjectURL(u);
+}
+$('exportOrders').onclick=exportOrders;
 $('sendOtp').onclick=loginSend;$('verifyOtp').onclick=loginVerify;
 $('email').onkeydown=e=>{if(e.key==='Enter')loginSend()};$('otp').onkeydown=e=>{if(e.key==='Enter')loginVerify()};
 $('logout').onclick=async()=>{await db.auth.signOut();location.reload()};
