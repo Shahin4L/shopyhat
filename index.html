@@ -934,6 +934,9 @@ main{overflow:clip}
 .pay-status-info{background:#fff6ed;border-left:3px solid var(--ribbon);padding:12px 14px;border-radius:6px;margin-top:12px;color:#665348;font-size:13px;line-height:1.65}
 @media(max-width:560px){.pay-manual .payment-proof-fields{grid-template-columns:1fr}.pay-choice{padding:13px!important}.swatches .sw-name{font-size:11px}.swatches .sw-dot{width:22px;height:22px;flex-basis:22px}.swatches .sw{min-height:39px;padding:5px 10px 5px 5px!important}}
 
+.sh-photo-empty{display:flex;width:100%;height:100%;min-height:110px;flex-direction:column;align-items:center;justify-content:center;gap:7px;background:#f2eeea;color:#8b8178;text-align:center;padding:14px;line-height:1.35}
+.sh-photo-empty span{font-size:13px;font-weight:800;letter-spacing:2px;color:#c16a30}.sh-photo-empty small{font-size:11px;max-width:90%;letter-spacing:.2px}
+.sh-real-photo{display:block;width:100%;height:100%;object-fit:cover}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1382,71 +1385,41 @@ const catName=id=>(CATS.find(c=>c.id===id)||{}).name||id;
 const isSale=p=>p.old&&p.old>p.price;
 function toast(msg){const t=$("#toast");t.innerHTML=msg;t.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("show"),2600)}
 
-/* ---------- generated product art (SVG) — replaced automatically when you add real photos ---------- */
+/* ---------- actual photo first; no illustrated/fake product photos ---------- */
 function shade(hex,a){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;
   const f=v=>Math.max(0,Math.min(255,Math.round(a<0?v*(1+a):v+(255-v)*a)));
-  return "#"+[f(r),f(g),f(b)].map(x=>x.toString(16).padStart(2,"0")).join("")}
-let uid=0;
-function imgOf(p){return p.img||(p.imgs&&p.imgs[0])||""}
-function art(p,col){
-  col=col||p.colors[0];
-  const real=imgOf(p); if(real) return `<img src="${esc(real)}" alt="${esc(p.name)}" loading="lazy">`;
-  const id="g"+(++uid), h=col.h, h2=col.h2, light=shade(h,.84), mid=shade(h,.6), dark=shade(h,-.25);
-  let s=`<svg viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(p.name)}"><defs>
-  <linearGradient id="${id}b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${light}"/><stop offset="1" stop-color="${mid}"/></linearGradient>
-  <linearGradient id="${id}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${shade(h,.18)}"/><stop offset="1" stop-color="${dark}"/></linearGradient>
-  <pattern id="${id}p" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M17 5l6 12-6 12-6-12z" fill="${h2}" opacity=".35"/></pattern>
-  </defs><rect width="400" height="500" fill="url(#${id}b)"/>`;
-  const T=p.type;
-  if(T==="saree"){
-    s+=`<path d="M60 70C140 30 250 100 340 52L356 430C270 478 170 410 46 462Z" fill="url(#${id}f)"/>
-    <path d="M60 70C140 30 250 100 340 52L356 430C270 478 170 410 46 462Z" fill="url(#${id}p)"/>`;
-    for(let i=1;i<7;i++){const x=60+i*43;s+=`<path d="M${x} ${62+((i%2)*8)}C${x+10} 200 ${x-12} 330 ${x+4} ${452-i*6}" stroke="#fff" stroke-opacity=".16" stroke-width="3" fill="none"/>`}
-    s+=`<path d="M46 462C170 410 270 478 356 430L360 470C272 520 170 456 42 506Z" fill="${h2}"/>
-    <path d="M46 474C170 422 270 490 358 444" stroke="${shade(h2,-.35)}" stroke-opacity=".5" stroke-width="3" fill="none" stroke-dasharray="6 6"/>
-    <path d="M250 70C290 150 330 150 346 118L340 52C310 66 280 74 250 70Z" fill="${h2}" opacity=".9"/>
-    <circle cx="298" cy="98" r="9" fill="${dark}" opacity=".5"/>`;
-  }else if(T==="three"){
-    s+=`<path d="M150 70h30q20 28 40 0h30l62 44-30 40-24-18 10 280H132l10-280-24 18-30-40z" fill="url(#${id}f)"/>
-    <path d="M150 70h30q20 28 40 0h30l62 44-30 40-24-18 10 280H132l10-280-24 18-30-40z" fill="url(#${id}p)"/>
-    <path d="M180 70q20 30 40 0" stroke="${h2}" stroke-width="5" fill="none"/>
-    <rect x="132" y="396" width="136" height="16" fill="${h2}"/>
-    <path d="M300 80C350 170 330 300 360 440" stroke="${h2}" stroke-width="26" stroke-linecap="round" fill="none" opacity=".75"/>
-    <path d="M150 428h45v60h-45zM205 428h45v60h-45z" fill="${dark}" opacity=".85"/>`;
-  }else if(T==="kurti"){
-    s+=`<path d="M150 56h30q20 30 40 0h30l56 44-28 40-22-16 14 330H130l14-330-22 16-28-40z" fill="url(#${id}f)"/>
-    <path d="M200 86v110" stroke="${h2}" stroke-width="3"/>
-    ${[110,134,158].map(y=>`<circle cx="200" cy="${y}" r="4" fill="${h2}"/>`).join("")}
-    <path d="M170 220q30-20 60 0" stroke="${h2}" stroke-width="3" fill="none" opacity=".8"/>
-    <rect x="130" y="400" width="140" height="22" fill="${h2}" opacity=".85"/>
-    ${[0,1,2,3,4,5].map(i=>`<circle cx="${148+i*21}" cy="411" r="4" fill="${light}"/>`).join("")}`;
-  }else if(T==="top"){
-    s+=`<path d="M145 90h35q20 24 40 0h35l62 50-30 44-26-18 8 210H131l8-210-26 18-30-44z" fill="url(#${id}f)"/>
-    <path d="M180 90q20 24 40 0" stroke="${h2}" stroke-width="5" fill="none"/>
-    <path d="M139 366h122" stroke="${h2}" stroke-width="6"/>`;
-  }else if(T==="scarf"){
-    s+=`<path d="M70 90C140 40 260 150 330 80L350 190C280 260 200 160 120 250L60 190Z" fill="url(#${id}f)"/>
-    <path d="M120 250C200 160 280 260 350 190L360 320C280 400 190 300 100 390L90 330Z" fill="${shade(h,.1)}" opacity=".95"/>
-    <path d="M100 390C190 300 280 400 360 320L350 400C270 470 190 380 80 450Z" fill="${dark}" opacity=".9"/>
-    <path d="M60 190C140 130 240 230 340 140" stroke="${h2}" stroke-opacity=".5" stroke-width="3" fill="none"/>`;
-  }else if(T==="bag"){
-    s+=`<path d="M135 190C135 90 265 90 265 190" stroke="${dark}" stroke-width="14" fill="none" stroke-linecap="round"/>
-    <path d="M85 190h230l30 240q0 30-30 30H85q-30 0-30-30z" fill="url(#${id}f)"/>
-    <path d="M85 190h230l8 60H77z" fill="${shade(h,-.12)}"/>
-    <rect x="178" y="226" width="44" height="40" rx="8" fill="${h2}"/><circle cx="200" cy="246" r="6" fill="${dark}"/>
-    <path d="M85 330h230" stroke="${h2}" stroke-width="3" stroke-dasharray="7 7" opacity=".8"/>`;
-  }else if(T==="neck"){
-    s+=`<path d="M90 90Q200 400 310 90" stroke="${h2}" stroke-width="3" fill="none"/>`;
-    for(let i=0;i<=16;i++){const t=i/16,x=90+220*t,y=90+(1-(2*t-1)**2)*232; s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="13" fill="${h}" stroke="${h2}" stroke-width="2"/><circle cx="${(x-4).toFixed(1)}" cy="${(y-4).toFixed(1)}" r="4" fill="#fff" opacity=".7"/>`}
-    s+=`<path d="M200 330l-16 34 16 30 16-30z" fill="${h2}"/><circle cx="130" cy="432" r="11" fill="${h}" stroke="${h2}" stroke-width="2"/><circle cx="270" cy="432" r="11" fill="${h}" stroke="${h2}" stroke-width="2"/>`;
-  }else{
-    [150,250].forEach(x=>{s+=`<path d="M${x} 90v40" stroke="${h2}" stroke-width="4"/><circle cx="${x}" cy="150" r="20" fill="${h}" stroke="${h2}" stroke-width="3"/><path d="M${x-45} 330q45-170 90 0z" fill="url(#${id}f)" stroke="${h2}" stroke-width="3"/>`;
-      for(let i=0;i<5;i++) s+=`<circle cx="${x-36+i*18}" cy="352" r="5" fill="${h2}"/>`;
-      s+=`<circle cx="${x}" cy="280" r="9" fill="${h2}" opacity=".8"/>`});
-  }
-  return s+"</svg>";
+  return '#'+[f(r),f(g),f(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+function imageEntries(value){
+  const raw=Array.isArray(value)?value:String(value||'').split(/[\n,]+/);
+  const used=new Set();return raw.map(v=>String(v||'').trim()).filter(v=>{
+    if(!/^https?:\/\//i.test(v))return false;
+    const m=/google\.com/i.test(v)?v.match(/(?:drive\.google\.com\/file\/d\/|[?&]id=)([-\w]{15,})/i):null;
+    const key=m?'drive:'+m[1]:(v.replace(/[?#].*$/,'').toLowerCase());
+    if(used.has(key))return false;used.add(key);return true;
+  }).map(fixImg)
 }
-
+function imgOf(p){return (p.imgs&&p.imgs[0])||p.img||''}
+function art(p){return `<div class="sh-photo-empty" role="img" aria-label="Photo not available for ${esc(p.name)}"><span>SHOPYHAT</span><small>Product photo coming soon</small></div>`}
+function shImgCandidates(p,color){
+  const vs=variantsFor(p),selected=color?chosenVariant(p,color):null;
+  const main=selected&&selected.images||[];
+  const rest=vs.flatMap(v=>v.images||[]);
+  return imageEntries([...main,...(p.imgs||[]),p.img||'',...rest]);
+}
+function shPhotoMarkup(p,color,css=''){
+  const urls=shImgCandidates(p,color);
+  if(!urls.length)return art(p);
+  return `<img class="sh-real-photo" ${css?`style="${css}"`:''} src="${esc(urls[0])}" data-sh-images="${esc(JSON.stringify(urls))}" data-sh-index="0" alt="${esc(p.name)}" loading="lazy" onerror="shImageFallback(this)">`;
+}
+function shImageFallback(el){
+  let urls=[];try{urls=JSON.parse(el.dataset.shImages||'[]')}catch(e){}
+  let i=Number(el.dataset.shIndex||0)+1;
+  if(i<urls.length){el.dataset.shIndex=i;el.src=urls[i];return}
+  const placeholder=document.createElement('div');placeholder.className='sh-photo-empty';
+  const name=document.createElement('span');name.textContent='SHOPYHAT';
+  const note=document.createElement('small');note.textContent='Photo unavailable';
+  placeholder.append(name,note);el.replaceWith(placeholder);
+}
 /* =====================================================================
    HERO — ribbon that draws itself and hangs three products as gift tags
    ===================================================================== */
@@ -1468,13 +1441,14 @@ function buildHero(){
   </g></svg>`;
   const svg=host.querySelector("svg"), path=host.querySelector("#rpath"), L=path.getTotalLength();
   const pool=[],seenC=new Set();
-  PRODUCTS.forEach(p=>{if(!seenC.has(p.cat)){seenC.add(p.cat);pool.push(p)}});
-  PRODUCTS.forEach(p=>{if(pool.length<3&&!pool.includes(p))pool.push(p)});
+  const usedPhotos=new Set();
+  PRODUCTS.forEach(p=>{const image=storefrontCover(p),key=image.replace(/&sz=[^&]*/g,'');if(image&&!usedPhotos.has(key)&&!seenC.has(p.cat)){seenC.add(p.cat);usedPhotos.add(key);pool.push(p)}});
+  PRODUCTS.forEach(p=>{const image=storefrontCover(p),key=image.replace(/&sz=[^&]*/g,'');if(pool.length<3&&image&&!usedPhotos.has(key)){usedPhotos.add(key);pool.push(p)}});
   const picks=[[pool[0],.3,-7,1.45],[pool[1],.52,5,1.75],[pool[2],.74,-4,2.05]];
   let html="";
   picks.forEach(([p,f,r,d])=>{
     if(!p)return; const pt=path.getPointAtLength(L*f), ax=pt.x, ay=pt.y;
-    const real=storefrontCover(p), a=real?`<svg x="${ax-66}" y="${ay+56}" width="132" height="165" viewBox="0 0 132 165"><image href="${esc(real)}" width="132" height="165" preserveAspectRatio="xMidYMid slice"/></svg>`:art(p).replace("<svg ",`<svg x="${ax-66}" y="${ay+56}" width="132" height="165" `);
+    const real=storefrontCover(p);if(!real)return;const a=`<svg x="${ax-66}" y="${ay+56}" width="132" height="165" viewBox="0 0 132 165"><image href="${esc(real)}" width="132" height="165" preserveAspectRatio="xMidYMid slice"/></svg>`;
     html+=`<g class="tag" style="transform-origin:${ax}px ${ay}px;--r:${r}deg;animation-delay:${d}s">
       <line x1="${ax}" y1="${ay}" x2="${ax}" y2="${ay+52}" stroke="#f4efe6" stroke-width="1.6"/>
       <circle cx="${ax}" cy="${ay}" r="4.5" fill="#fff"/>
@@ -1518,9 +1492,13 @@ function guessType(s){s=String(s).toLowerCase();
   if(/three|3 ?piece|salwar|suit/.test(s))return"three";
   if(/kurti|kameez|panjabi|punjabi/.test(s))return"kurti";
   return"top"}
-function fixImg(u){u=u.trim();
-  const m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||u.match(/drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([\w-]+)/);
-  return m?"https://drive.google.com/thumbnail?id="+m[1]+"&sz=w1000":u}
+function fixImg(u){
+  u=String(u||'').trim();
+  const m=u.match(/drive\.google\.com\/file\/d\/([-\w]{15,})/i)||
+    u.match(/(?:drive\.google\.com|docs\.google\.com)\/(?:thumbnail|open|uc)[^#]*?[?&]id=([-\w]{15,})/i)||
+    u.match(/[?&]id=([-\w]{15,})/i);
+  return m&&/google\.com/i.test(u)?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000':u;
+}
 function parseProduct(r,i){
   const num=v=>{const n=parseFloat(String(v==null?"":v).replace(/[^0-9.]/g,""));return isFinite(n)?n:0};
   const list=(v,re)=>String(v==null?"":v).split(re).map(x=>x.trim()).filter(Boolean);
@@ -1529,7 +1507,7 @@ function parseProduct(r,i){
   if(/^hid/i.test(String(r.availability||"")))return null;
   const catName=String(r.category||"Products").trim()||"Products";
   const types=["saree","three","kurti","top","scarf","bag","neck","ear"], t=String(r.type||"").trim().toLowerCase();
-  const sizes=list(r.sizes,/,/), imgs=list(r.images,/[\n,]+/).map(fixImg), old=num(r.old);
+  const sizes=list(r.sizes,/,/), imgs=imageEntries(r.images), old=num(r.old);
   return{id:+r.id||i+1,name,cat:slug(catName),catName,price,old:old>price?old:0,
     isNew:/^(y|yes|true|1|new)/i.test(String(r.isNew==null?"":r.isNew)),
     soldOut:/sold/i.test(String(r.availability||"")),
@@ -1637,23 +1615,14 @@ function renderSearch(q){
 let cur=null;
 /* Consistent storefront cover: first listed colour's own image, then another uploaded variant,
    then the original base product image, then generated illustration. */
-function storefrontCover(p){
-  const variants=variantsFor(p), first=p.colors&&p.colors[0];
-  const selected=first&&chosenVariant(p,first.n);
-  const picked=(selected&&selected.images&&selected.images.find(Boolean))||
-               (variants.map(v=>(v.images||[]).find(Boolean)).find(Boolean));
-  return picked?fixImg(picked):imgOf(p);
-}
-function storefrontArt(p){
-  const src=storefrontCover(p);
-  return src?`<img src="${esc(src)}" alt="${esc(p.name)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:art(p);
-}
+function storefrontCover(p){return shImgCandidates(p,p.colors&&p.colors[0]&&p.colors[0].n)[0]||''}
+function storefrontArt(p){return shPhotoMarkup(p,p.colors&&p.colors[0]&&p.colors[0].n,'width:100%;height:100%;object-fit:cover')}
 function variantsFor(p){return Array.isArray(p.variants)?p.variants:[]}
 function chosenVariant(p,color){return variantsFor(p).find(v=>String(v.color).toLowerCase()===String(color).toLowerCase())||null}
 function variantPrice(p,color){const v=chosenVariant(p,color);return v&&Number(v.price)>0?Number(v.price):p.price}
 function variantStock(p,color){const v=chosenVariant(p,color);return v&&v.stock!==null&&v.stock!==''&&Number.isFinite(Number(v.stock))?Number(v.stock):null}
-function variantImage(p,color){const v=chosenVariant(p,color);return v&&v.images&&v.images.length?fixImg(v.images[0]):imgOf(p)}
-function variantArt(p,color){const src=variantImage(p,color);return src?`<img src="${esc(src)}" alt="${esc(p.name+' '+color)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:art(p,p.colors.find(c=>c.n===color))}
+function variantImage(p,color){return shImgCandidates(p,color)[0]||''}
+function variantArt(p,color){return shPhotoMarkup(p,color,'width:100%;height:100%;object-fit:cover')}
 function openProduct(id){
   const p=byId(id); if(!p)return;
   cur={p,ci:0,gi:0,size:"",qty:1};
@@ -1662,10 +1631,10 @@ function openProduct(id){
 }
 function drawProduct(){
   const {p,ci,gi,size,qty}=cur, col=p.colors[ci], sale=isSale(p), on=wish.includes(p.id);
-  const variant=chosenVariant(p,col.n), imgs=variant&&variant.images&&variant.images.length?variant.images.map(fixImg):(p.imgs||(p.img?[p.img]:[]));
+  const variant=chosenVariant(p,col.n), imgs=shImgCandidates(p,col.n);
   const selectedPrice=variantPrice(p,col.n),selectedStock=variantStock(p,col.n),variantSoldOut=p.soldOut||selectedStock===0;
   const rel=PRODUCTS.filter(x=>x.cat===p.cat&&x.id!==p.id).slice(0,3);
-  const main=imgs.length?`<div class="main z" id="pdMain"><img src="${esc(imgs[gi]||imgs[0])}" alt="${esc(p.name+" "+col.n)}" loading="eager"></div>`:`<div class="main">${art(p,col)}</div>`;
+  const main=imgs.length?`<div class="main z" id="pdMain"><img src="${esc(imgs[gi]||imgs[0])}" alt="${esc(p.name+' '+col.n)}" loading="eager" data-sh-images="${esc(JSON.stringify(imgs))}" data-sh-index="${gi}" onerror="shImageFallback(this)"></div>`:`<div class="main">${art(p,col)}</div>`;
   const thumbs=imgs.length>1?`<div class="thumbs">${imgs.map((u,i)=>`<button class="${i===gi?"on":""}" data-gi="${i}" aria-label="Photo ${i+1}"><img src="${esc(u)}" alt="" style="width:100%;height:100%;object-fit:cover"></button>`).join("")}</div>`:"";
   $("#prodBox").innerHTML=`<button class="x" data-close aria-label="Close">×</button>
   <div class="pd"><div class="gal">${main}${thumbs}</div>
@@ -1863,9 +1832,12 @@ function submitOrder(e){
 }
 function postEndpoint(payload){
   if(!SHEET)return;
-  const body=JSON.stringify(payload), hd={"Content-Type":"text/plain;charset=utf-8"};
-  fetch(SHEET,{method:"POST",headers:hd,body}).then(r=>r.json()).catch(()=>{
-    try{fetch(SHEET,{method:"POST",mode:"no-cors",headers:hd,body}).catch(()=>{})}catch(e){}});
+  // One best-effort POST only. CORS redirects can reject a response after
+  // Apps Script has already received the order; retrying would risk duplicates.
+  const body=JSON.stringify(payload),hd={"Content-Type":"text/plain;charset=utf-8"};
+  fetch(SHEET,{method:"POST",mode:"no-cors",headers:hd,body}).catch(err=>{
+    console.warn("Unable to confirm order delivery. Do not send an automatic duplicate.",err);
+  });
 }
 function sendWA(text){window.open("https://wa.me/"+CONFIG.whatsapp+"?text="+encodeURIComponent(text),"_blank","noopener")}
 async function sendMS(text){
