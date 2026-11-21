@@ -7,7 +7,7 @@ const money=v=>'৳'+Number(v||0).toLocaleString('en-BD',{maximumFractionDigits:
 const fmtDate=v=>v?new Date(v).toLocaleString('en-BD',{timeZone:'Asia/Dhaka',dateStyle:'medium',timeStyle:'short'}):'—';
 const roleCan=(...r)=>r.includes(role);
 const imageUrl=v=>{const s=String(v||'');const m=s.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||s.match(/[?&]id=([\w-]+)/);return m&&s.includes('google.com')?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000':s};
-let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],reviews=[],cases=[],caseMedia=[],caseUpdates=[],caseReplies=[],dailyStats=[],archiveHealth=null,reviewMedia=[],activePage='products';
+let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],reviews=[],cases=[],caseMedia=[],caseUpdates=[],caseReplies=[],dailyStats=[],archiveHealth=null,reviewMedia=[],archiveRequests=[],activePage='products';
 function notice(id,message,error=false){$(id).textContent=message;$(id).classList.toggle('error',!!error)}
 function show(id,on){$(id).classList.toggle('hidden',!on)}
 function drawer(title,html){$('drawerTitle').textContent=title;$('drawerBody').innerHTML=html;notice('drawerMsg','');show('overlay',true)}
@@ -145,6 +145,7 @@ async function refresh(){notice('appMsg','Loading live data…');
  products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;reviews=rv;cases=cs;caseMedia=cm;caseUpdates=cu;caseReplies=cr;dailyStats=ws;reviewMedia=rm;
  try{await loadAudit()}catch(e){audit=[];console.warn('Audit log not loaded:',e.message)}
  if(roleCan('owner','manager')){try{const r=await db.rpc('sh_admin_archive_health');archiveHealth=r.error?null:r.data}catch(e){archiveHealth=null}}else archiveHealth=null;
+ if(roleCan('owner','manager')){try{const response=await db.from('sh_archive_requests').select('id,requested_at,requested_by,database_bytes,eligible_audit_rows,status').order('requested_at',{ascending:false}).limit(20);archiveRequests=response.error?[]:(response.data||[])}catch(e){archiveRequests=[]}}else archiveRequests=[];
  $('kProducts').textContent=p.length;$('kActive').textContent=p.filter(x=>x.status==='active').length;$('kOrders').textContent=o.length;$('kPending').textContent=o.filter(x=>x.status==='Pending').length;
  render();notice('appMsg','Last refreshed '+new Date().toLocaleTimeString('en-BD'))}
  catch(e){notice('appMsg',e.message,true)}}
@@ -301,6 +302,25 @@ function renderInsights(){
  $('biPages').innerHTML=r.pages.map(x=>'<tr><td>'+esc(x.page)+'</td><td>'+x.views+'</td><td>'+x.visitors+'</td></tr>').join('')||'<tr><td colspan="3">No recorded traffic yet.</td></tr>';
  const h=archiveHealth;
  $('biArchiveHealth').textContent=h?'Database: '+(Number(h.database_bytes)/1024/1024).toFixed(1)+' MB · Files: '+(Number(h.storage_bytes||0)/1024/1024).toFixed(1)+' MB ('+Number(h.storage_files||0)+' files) · Audit threshold: '+(Number(h.threshold_bytes)/1024/1024).toFixed(0)+' MB · 6+ month audit rows: '+h.eligible_audit_rows+' · '+(h.needs_archive?'Verified archive required.':'Archive not required.')+' · Google Sheets auto-sync: '+(h.archive_configured?'Configured':'Inactive; setup required.'):'Capacity data unavailable (only Owner / Manager can view).';
+ renderArchiveRequests();
+}
+function renderArchiveRequests(){
+ if(!roleCan('owner','manager'))return;
+ const rows=$('archiveRequestRows');if(!rows)return;
+ rows.innerHTML=archiveRequests.map(r=>'<tr><td>'+fmtDate(r.requested_at)+'</td><td>'+esc(r.requested_by)+'</td><td>'+(Number(r.database_bytes)/1048576).toFixed(1)+' MB</td><td>'+Number(r.eligible_audit_rows).toLocaleString('en-BD')+'</td><td><span class="pill">'+esc(r.status)+'</span></td></tr>').join('')||'<tr><td colspan="5">No manual archive requests yet.</td></tr>';
+}
+async function generateArchiveRequest(){
+ if(!roleCan('owner','manager'))return;
+ const button=$('generateArchiveRequest'),reason=$('archiveReason').value.trim();
+ button.disabled=true;notice('archiveRequestMsg','Checking capacity and generating an archive review request…');
+ try{
+  const res=await db.rpc('sh_request_archive_review',{p_reason:reason});
+  if(res.error)throw res.error;
+  const data=res.data||{};
+  await refresh();
+  notice('archiveRequestMsg',data.status==='Not Eligible'?'Request #'+data.id+' recorded — Not Eligible: database usage is below the threshold or there are no six-month-old audit records. No data was moved or deleted.':'Request #'+data.id+' registered for review. This does NOT delete data or initiate backup. Google Sheets verification and authorized archive setup are required.');
+ }catch(e){notice('archiveRequestMsg','Archive request failed: '+e.message,true)}
+ finally{button.disabled=false}
 }
 function exportInsightReport(){
  if(!roleCan('owner','manager'))return;
@@ -636,6 +656,7 @@ function exportOrders(){
 }
 $('exportOrders').onclick=exportOrders;
 $('exportInsight').onclick=exportInsightReport;
+$('generateArchiveRequest').onclick=generateArchiveRequest;
 $('exportAudit').onclick=()=>{if(!roleCan('owner','manager'))return;const rows=filteredAudit().map(a=>({...a,changes:JSON.stringify(a.changes||{})}));exportCSV('SHOPYHAT_Audit_'+todayBD()+'.csv',['created_at','actor_email','actor_role','entity','action','record_id','record_label','changes'],rows)};
 for(const field of ['dateFrom','dateTo','dateBasis','auditEntity','auditAction','auditSearch','reviewStatusFilter','caseStatusFilter','casePriorityFilter','caseSearch']){const el=$(field);if(el)el.addEventListener(['auditSearch','caseSearch'].includes(field)?'input':'change',()=>{document.querySelectorAll('[data-range]').forEach(b=>b.classList.remove('on'));render()})}
 document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>setDatePreset(b.dataset.range));
