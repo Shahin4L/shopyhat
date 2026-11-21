@@ -3,6 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* Supabase may redirect approved Magic Links to the Site URL root.
+   Before loading storefront scripts, route only Auth callbacks to /admin/.
+   Keep the original query/hash intact; never send tokens to third parties. */
+(function(){
+ const query=window.location.search||'';
+ const hash=window.location.hash||'';
+ const hasAuthFragment=/(?:^#|[&#])(?:access_token|refresh_token|error|error_description|token_hash)=/.test(hash);
+ const hasPkceCode=/(?:^\?|[&])code=/.test(query);
+ if((hasAuthFragment||hasPkceCode)&&window.location.pathname.replace(/\/+$/,'')!=='/admin'){
+   window.location.replace('/admin/'+query+hash);
+ }
+})();
+</script>
 <title>SHOPYHAT | Tangail Sarees, Women's Clothing & Accessories</title>
 <meta name="description" content="Shop Tangail sarees, three-piece sets, kurti, hijab and accessories at SHOPYHAT. Your Choice, Our Gift. Delivery across Bangladesh.">
 <meta name="theme-color" content="#191817">
