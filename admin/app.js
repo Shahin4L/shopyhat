@@ -54,29 +54,29 @@ function editProduct(id){
  const editable=roleCan('owner','manager');
  const variantList=variants.filter(x=>x.product_id===id);
  const group=images.filter(i=>i.product_id===id&&!i.variant_id);
- drawer(id?'Edit Product':'Add Product',\`
- <form id="productForm"><label>Product name</label><input name="name" required minlength="3" value="\${esc(p.name)}">
- <div class="fieldrow"><div><label>Category</label><input name="category" required value="\${esc(p.category)}"></div><div><label>Status</label><select name="status">\${['active','draft','hidden','sold_out'].map(v=>'<option '+(p.status===v?'selected':'')+'>'+v+'</option>').join('')}</select></div>
- <div><label>Price (BDT)</label><input name="base_price" type="number" min="0" step=".01" required value="\${esc(p.base_price)}"></div><div><label>Previous price</label><input name="old_price" type="number" min="0" step=".01" value="\${esc(p.old_price||'')}"></div></div>
- <label>Sizes (comma separated)</label><input name="sizes" value="\${esc((p.sizes||[]).join(', '))}"><label>Description</label><textarea name="description">\${esc(p.description)}</textarea>
- <label>Product details</label><textarea name="details">\${esc(p.details)}</textarea>
- <label><input type="checkbox" name="is_new" \${p.is_new?'checked':''} style="width:auto"> New Arrival</label>
- <button class="btn primary" \${editable?'':'disabled'} type="submit">Save Product</button></form>
- \${id?\`<div class="divider"></div><div class="topline"><h3>Color variants</h3><button class="btn" data-new-variant="\${p.id}">＋ Add Color</button></div>
- \${variantList.map(v=>'<div class="panel"><div class="topline"><div><b>'+esc(v.color)+'</b> · '+esc(v.sku||'No SKU')+'<div class="muted">Stock: '+esc(v.stock??'Unlimited')+' · '+money(v.price??p.base_price)+'</div></div><button class="btn small" data-edit-variant="'+v.id+'">Edit Photos</button></div><div class="photos">'+images.filter(i=>i.variant_id===v.id).map(i=>imgTag(i.image_url,v.color)).join('')+'</div></div>').join('')||'<p class="muted">No colors yet</p>'}
- <div class="divider"></div><h3>General product photos</h3><div class="photos">\${group.map(i=>imgTag(i.image_url,p.name)).join('')}</div><button class="btn" data-photos="\${id}" data-variant="">Manage General Photos</button>\`:''}\`);
+ drawer(id?'Edit Product':'Add Product',`
+ <form id="productForm"><label>Product name</label><input name="name" required minlength="3" value="${esc(p.name)}">
+ <div class="fieldrow"><div><label>Category</label><input name="category" required value="${esc(p.category)}"></div><div><label>Status</label><select name="status">${['active','draft','hidden','sold_out'].map(v=>'<option '+(p.status===v?'selected':'')+'>'+v+'</option>').join('')}</select></div>
+ <div><label>Price (BDT)</label><input name="base_price" type="number" min="0" step=".01" required value="${esc(p.base_price)}"></div><div><label>Previous price</label><input name="old_price" type="number" min="0" step=".01" value="${esc(p.old_price||'')}"></div></div>
+ <label>Sizes (comma separated)</label><input name="sizes" value="${esc((p.sizes||[]).join(', '))}"><label>Description</label><textarea name="description">${esc(p.description)}</textarea>
+ <label>Product details</label><textarea name="details">${esc(p.details)}</textarea>
+ <label><input type="checkbox" name="is_new" ${p.is_new?'checked':''} style="width:auto"> New Arrival</label>
+ <button class="btn primary" ${editable?'':'disabled'} type="submit">Save Product</button></form>
+ ${id?`<div class="divider"></div><div class="topline"><h3>Color variants</h3><button class="btn" data-new-variant="${p.id}">＋ Add Color</button></div>
+ ${variantList.map(v=>'<div class="panel"><div class="topline"><div><b>'+esc(v.color)+'</b> · '+esc(v.sku||'No SKU')+'<div class="muted">Stock: '+esc(v.stock??'Unlimited')+' · '+money(v.price??p.base_price)+'</div></div><button class="btn small" data-edit-variant="'+v.id+'">Edit Photos</button></div><div class="photos">'+images.filter(i=>i.variant_id===v.id).map(i=>imgTag(i.image_url,v.color)).join('')+'</div></div>').join('')||'<p class="muted">No colors yet</p>'}
+ <div class="divider"></div><h3>General product photos</h3><div class="photos">${group.map(i=>imgTag(i.image_url,p.name)).join('')}</div><button class="btn" data-photos="${id}" data-variant="">Manage General Photos</button>`:''}`);
  $('productForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('productForm');const payload={name:String(f.name).trim(),category:String(f.category).trim(),base_price:Number(f.base_price),old_price:f.old_price?Number(f.old_price):null,description:String(f.description||''),details:String(f.details||''),sizes:String(f.sizes||'').split(',').map(s=>s.trim()).filter(Boolean),status:f.status,is_new:!!f.is_new};
  try{const q=id?db.from('sh_products').update(payload).eq('id',id).select('id').single():db.from('sh_products').insert(payload).select('id').single();const r=await q;if(r.error)throw r.error;await refresh();editProduct(r.data.id);notice('drawerMsg','Product saved.')}catch(err){notice('drawerMsg',err.message,true)}};
 }
 function editVariant(id,productId){
  const v=variants.find(v=>v.id===id)||{product_id:productId,color:'',hex:'#888888',sku:'',price:null,stock:null,active:true};
  const p=products.find(p=>p.id===v.product_id);
- drawer('Color / Variant',\`<form id="variantForm"><div class="fieldrow"><div><label>Color name</label><input required name="color" value="\${esc(v.color)}"></div><div><label>Color hex</label><input name="hex" type="color" value="\${esc(/^#[a-f0-9]{6}$/i.test(v.hex||'')?v.hex:'#888888')}"></div>
- <div><label>Variant price (leave blank for product price)</label><input name="price" type="number" min="0" step=".01" value="\${esc(v.price??'')}"></div><div><label>Stock (blank = unlimited)</label><input name="stock" type="number" min="0" step="1" value="\${esc(v.stock??'')}"></div></div>
- <label>SKU</label><input name="sku" value="\${esc(v.sku||'')}"><label><input name="active" type="checkbox" style="width:auto" \${v.active?'checked':''}> Variant enabled</label>
+ drawer('Color / Variant',`<form id="variantForm"><div class="fieldrow"><div><label>Color name</label><input required name="color" value="${esc(v.color)}"></div><div><label>Color hex</label><input name="hex" type="color" value="${esc(/^#[a-f0-9]{6}$/i.test(v.hex||'')?v.hex:'#888888')}"></div>
+ <div><label>Variant price (leave blank for product price)</label><input name="price" type="number" min="0" step=".01" value="${esc(v.price??'')}"></div><div><label>Stock (blank = unlimited)</label><input name="stock" type="number" min="0" step="1" value="${esc(v.stock??'')}"></div></div>
+ <label>SKU</label><input name="sku" value="${esc(v.sku||'')}"><label><input name="active" type="checkbox" style="width:auto" ${v.active?'checked':''}> Variant enabled</label>
  <button class="btn primary" type="submit">Save Color</button></form>
- \${id?'<div class="divider"></div><h3>Color-specific image gallery</h3><div class="photos">'+images.filter(i=>i.variant_id===id).map(i=>imgTag(i.image_url,v.color)).join('')+'</div><button class="btn" data-photos="'+v.product_id+'" data-variant="'+id+'">Manage Photos</button>':''}
- <p class="muted">One color can have multiple photos. Black and Purple maintain separate galleries.</p>\`);
+ ${id?'<div class="divider"></div><h3>Color-specific image gallery</h3><div class="photos">'+images.filter(i=>i.variant_id===id).map(i=>imgTag(i.image_url,v.color)).join('')+'</div><button class="btn" data-photos="'+v.product_id+'" data-variant="'+id+'">Manage Photos</button>':''}
+ <p class="muted">One color can have multiple photos. Black and Purple maintain separate galleries.</p>`);
  $('variantForm').onsubmit=async e=>{e.preventDefault();if(!roleCan('owner','manager'))return;const f=formData('variantForm');
  const row={product_id:v.product_id,color:String(f.color).trim(),hex:String(f.hex),sku:String(f.sku||'').trim()||null,price:f.price?Number(f.price):null,stock:f.stock===''?null:Number(f.stock),active:!!f.active};
  try{const r=id?await db.from('sh_variants').update(row).eq('id',id).select('id').single():await db.from('sh_variants').insert(row).select('id').single();if(r.error)throw r.error;await refresh();editVariant(r.data.id,v.product_id);notice('drawerMsg','Color saved.')}catch(err){notice('drawerMsg',err.message,true)}};
@@ -85,12 +85,12 @@ function editPhotos(productId,variantId){
  const product=products.find(x=>x.id===productId),variant=variants.find(x=>x.id===variantId);
  const selected=images.filter(i=>i.product_id===productId&&(i.variant_id||'')===(variantId||''));
  const heading=variant?variant.color+' Gallery':'General Product Gallery';
- drawer(heading,\`<p class="muted">\${esc(product?.name||'Product')} — upload JPG, PNG or WebP up to 4MB each, or add public image links.</p>
- <div class="photos">\${selected.map(i=>'<figure>'+imgTag(i.image_url,variant?.color||product?.name)+'<button title="Remove" data-delete-photo="'+i.id+'">×</button></figure>').join('')||'No images yet'}</div>
+ drawer(heading,`<p class="muted">${esc(product?.name||'Product')} — upload JPG, PNG or WebP up to 4MB each, or add public image links.</p>
+ <div class="photos">${selected.map(i=>'<figure>'+imgTag(i.image_url,variant?.color||product?.name)+'<button title="Remove" data-delete-photo="'+i.id+'">×</button></figure>').join('')||'No images yet'}</div>
  <label>Upload Photos (multiple)</label><input id="photoFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple>
  <button class="btn primary" id="uploadPhotos" type="button">Upload Selected Photos</button>
  <div class="divider"></div><label>Add existing public URLs (one per line)</label><textarea id="photoUrls" placeholder="https://..."></textarea>
- <button class="btn" id="savePhotoUrls" type="button">Add Image URLs</button>\`);
+ <button class="btn" id="savePhotoUrls" type="button">Add Image URLs</button>`);
  $('uploadPhotos').onclick=async()=>{
  const files=[...$('photoFiles').files];if(!files.length)return notice('drawerMsg','Select files first.',true);
  $('uploadPhotos').disabled=true;let done=0;
@@ -122,15 +122,15 @@ async function editOrder(id){
  const [items,history]=await Promise.all([db.from('sh_order_items').select('*').eq('order_id',id),db.from('sh_order_history').select('*').eq('order_id',id).order('created_at',{ascending:false})]);
  if(items.error||history.error)throw items.error||history.error;
  const editable=roleCan('owner','manager','operator');
- $('drawerBody').innerHTML=\`<div class="split"><section><h3>Customer</h3><b>\${esc(o.customer_name)}</b><p>\${esc(o.customer_phone)}<br>\${esc(o.address)}<br>\${esc(o.zone)}</p></section>
- <section><h3>Payment</h3><p>\${esc(o.payment_method)}<br>\${esc(o.payment_status)}<br>Transaction: \${esc(o.transaction_id||'—')}<br>Sender last 4: \${esc(o.sender_last4||'—')}</p></section></div>
- <h3>Items</h3>\${items.data.map(i=>'<div class="topline" style="border-bottom:1px solid #eee;padding:10px 0"><div>'+imgTag(i.image_url,i.product_name)+'<b>'+esc(i.product_name)+'</b><div class="muted">'+esc(i.color)+' · '+esc(i.size)+' · '+esc(i.sku)+'</div></div><b>'+i.qty+' × '+money(i.unit_price)+'</b></div>').join('')}
- <div class="badge">Subtotal \${money(o.subtotal)} − Discount \${money(o.discount)} + Delivery \${money(o.shipping)} = <b>\${money(o.total)}</b></div>
- <form id="orderForm"><div class="fieldrow"><div><label>Order Status</label><select name="status">\${['Pending','Confirmed','Processing','Ready to Ship','Shipped','Delivered','Cancelled','Return Requested','Returned'].map(v=>'<option '+(v===o.status?'selected':'')+'>'+v+'</option>').join('')}</select></div>
- <div><label>Courier</label><input name="courier" value="\${esc(o.courier)}"></div><div><label>Tracking ID</label><input name="tracking_id" value="\${esc(o.tracking_id)}"></div><div><label>Internal Note</label><textarea name="internal_note">\${esc(o.internal_note)}</textarea></div></div>
- <button class="btn primary" \${editable?'':'disabled'} type="submit">Save Order Changes</button>
+ $('drawerBody').innerHTML=`<div class="split"><section><h3>Customer</h3><b>${esc(o.customer_name)}</b><p>${esc(o.customer_phone)}<br>${esc(o.address)}<br>${esc(o.zone)}</p></section>
+ <section><h3>Payment</h3><p>${esc(o.payment_method)}<br>${esc(o.payment_status)}<br>Transaction: ${esc(o.transaction_id||'—')}<br>Sender last 4: ${esc(o.sender_last4||'—')}</p></section></div>
+ <h3>Items</h3>${items.data.map(i=>'<div class="topline" style="border-bottom:1px solid #eee;padding:10px 0"><div>'+imgTag(i.image_url,i.product_name)+'<b>'+esc(i.product_name)+'</b><div class="muted">'+esc(i.color)+' · '+esc(i.size)+' · '+esc(i.sku)+'</div></div><b>'+i.qty+' × '+money(i.unit_price)+'</b></div>').join('')}
+ <div class="badge">Subtotal ${money(o.subtotal)} − Discount ${money(o.discount)} + Delivery ${money(o.shipping)} = <b>${money(o.total)}</b></div>
+ <form id="orderForm"><div class="fieldrow"><div><label>Order Status</label><select name="status">${['Pending','Confirmed','Processing','Ready to Ship','Shipped','Delivered','Cancelled','Return Requested','Returned'].map(v=>'<option '+(v===o.status?'selected':'')+'>'+v+'</option>').join('')}</select></div>
+ <div><label>Courier</label><input name="courier" value="${esc(o.courier)}"></div><div><label>Tracking ID</label><input name="tracking_id" value="${esc(o.tracking_id)}"></div><div><label>Internal Note</label><textarea name="internal_note">${esc(o.internal_note)}</textarea></div></div>
+ <button class="btn primary" ${editable?'':'disabled'} type="submit">Save Order Changes</button>
  <button class="btn" id="printInvoice" type="button">Print Invoice</button></form>
- <div class="divider"></div><h3>Activity History</h3><p class="muted">\${(history.data||[]).map(h=>esc(h.action)+' · '+fmtDate(h.created_at)).join('<br>')||'No history yet'}</p>\`;
+ <div class="divider"></div><h3>Activity History</h3><p class="muted">${(history.data||[]).map(h=>esc(h.action)+' · '+fmtDate(h.created_at)).join('<br>')||'No history yet'}</p>`;
  $('orderForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('orderForm');
  const changes={status:f.status,courier:f.courier,tracking_id:f.tracking_id,internal_note:f.internal_note,updated_at:new Date().toISOString()};
  const r=await db.from('sh_orders').update(changes).eq('id',id);if(r.error)return notice('drawerMsg',r.error.message,true);
@@ -139,35 +139,35 @@ async function editOrder(id){
  }catch(e){notice('drawerMsg',e.message,true)}
 }
 function printInvoice(o,items){const w=window.open('','_blank','noopener,noreferrer,width=840,height=900');if(!w)return notice('drawerMsg','Allow pop-ups to print the invoice.',true);
- const html=\`<!doctype html><title>Invoice \${esc(o.order_number)}</title><style>body{font:14px Arial;padding:32px;color:#222}h1{margin:0}table{width:100%;border-collapse:collapse;margin:25px 0}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:21px;font-weight:bold}</style><h1>SHOPYHAT</h1><p>Your Choice, Our Gift. · Since 2020</p><hr><h2>Invoice \${esc(o.order_number)}</h2><p>\${fmtDate(o.created_at)}</p><b>Delivery to</b><p>\${esc(o.customer_name)} · \${esc(o.customer_phone)}<br>\${esc(o.address)}</p><table><tr><th>Product</th><th>Variant</th><th>Qty</th><th>Amount</th></tr>\${items.map(i=>'<tr><td>'+esc(i.product_name)+'</td><td>'+esc(i.color)+' / '+esc(i.size)+'</td><td>'+i.qty+'</td><td>'+money(i.line_total)+'</td></tr>').join('')}</table><p>Subtotal: \${money(o.subtotal)}<br>Discount: \${money(o.discount)}<br>Delivery: \${money(o.shipping)}</p><p class="total">Total \${money(o.total)}</p><p>Payment: \${esc(o.payment_method)} — \${esc(o.payment_status)}<br>Order status: \${esc(o.status)}</p>\`;
+ const html=`<!doctype html><title>Invoice ${esc(o.order_number)}</title><style>body{font:14px Arial;padding:32px;color:#222}h1{margin:0}table{width:100%;border-collapse:collapse;margin:25px 0}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:21px;font-weight:bold}</style><h1>SHOPYHAT</h1><p>Your Choice, Our Gift. · Since 2020</p><hr><h2>Invoice ${esc(o.order_number)}</h2><p>${fmtDate(o.created_at)}</p><b>Delivery to</b><p>${esc(o.customer_name)} · ${esc(o.customer_phone)}<br>${esc(o.address)}</p><table><tr><th>Product</th><th>Variant</th><th>Qty</th><th>Amount</th></tr>${items.map(i=>'<tr><td>'+esc(i.product_name)+'</td><td>'+esc(i.color)+' / '+esc(i.size)+'</td><td>'+i.qty+'</td><td>'+money(i.line_total)+'</td></tr>').join('')}</table><p>Subtotal: ${money(o.subtotal)}<br>Discount: ${money(o.discount)}<br>Delivery: ${money(o.shipping)}</p><p class="total">Total ${money(o.total)}</p><p>Payment: ${esc(o.payment_method)} — ${esc(o.payment_status)}<br>Order status: ${esc(o.status)}</p>`;
  w.document.write(html);w.document.close();w.focus();w.print()}
 function reviewPayment(id){
  if(!roleCan('owner','manager'))return;
  const p=payments.find(x=>x.id===id),o=orders.find(x=>x.id===p?.order_id);if(!p)return;
- drawer('Review Payment',\`<p>Order: <b>\${esc(o?.order_number||'—')}</b></p><p>Method: \${esc(p.method)} · \${money(p.amount)}<br>Transaction: <b>\${esc(p.transaction_id)}</b><br>Sender last 4: \${esc(p.sender_last4)}</p>
+ drawer('Review Payment',`<p>Order: <b>${esc(o?.order_number||'—')}</b></p><p>Method: ${esc(p.method)} · ${money(p.amount)}<br>Transaction: <b>${esc(p.transaction_id)}</b><br>Sender last 4: ${esc(p.sender_last4)}</p>
  <p class="badge">Check the actual bKash/Nagad transaction history before marking a payment verified.</p>
- <form id="paymentForm"><label>Review Result</label><select name="status">\${['Pending Verification','Review Required','Verified - Paid','Refund Pending','Refunded','Rejected'].map(x=>'<option '+(p.status===x?'selected':'')+'>'+x+'</option>').join('')}</select><button class="btn primary" type="submit">Save Review</button></form>\`);
+ <form id="paymentForm"><label>Review Result</label><select name="status">${['Pending Verification','Review Required','Verified - Paid','Refund Pending','Refunded','Rejected'].map(x=>'<option '+(p.status===x?'selected':'')+'>'+x+'</option>').join('')}</select><button class="btn primary" type="submit">Save Review</button></form>`);
  $('paymentForm').onsubmit=async e=>{e.preventDefault();const status=formData('paymentForm').status;if(status==='Verified - Paid'&&!confirm('I checked the transaction in the payment provider account. Confirm verified?'))return;
  const r=await db.from('sh_payments').update({status}).eq('id',id);
  if(r.error)return notice('drawerMsg',r.error.message,true);await refresh();closeDrawer()};
 }
 function editStaff(email){
  if(role!=='owner')return;const s=staff.find(s=>s.email===email)||{email:'',display_name:'',role:'viewer',active:true};if(s.role==='owner')return;
- drawer('Staff Access',\`<form id="staffForm"><label>Email</label><input type="email" required name="email" value="\${esc(s.email)}" \${email?'readonly':''}><label>Display Name</label><input name="display_name" value="\${esc(s.display_name)}">
- <div class="fieldrow"><div><label>Role</label><select name="role">\${['manager','operator','viewer'].map(v=>'<option '+(s.role===v?'selected':'')+'>'+v+'</option>').join('')}</select></div><div><label>Status</label><select name="active"><option value="true" \${s.active?'selected':''}>Active</option><option value="false" \${!s.active?'selected':''}>Disabled</option></select></div></div>
- <button class="btn primary" type="submit">Save Staff Access</button></form>\`);
+ drawer('Staff Access',`<form id="staffForm"><label>Email</label><input type="email" required name="email" value="${esc(s.email)}" ${email?'readonly':''}><label>Display Name</label><input name="display_name" value="${esc(s.display_name)}">
+ <div class="fieldrow"><div><label>Role</label><select name="role">${['manager','operator','viewer'].map(v=>'<option '+(s.role===v?'selected':'')+'>'+v+'</option>').join('')}</select></div><div><label>Status</label><select name="active"><option value="true" ${s.active?'selected':''}>Active</option><option value="false" ${!s.active?'selected':''}>Disabled</option></select></div></div>
+ <button class="btn primary" type="submit">Save Staff Access</button></form>`);
  $('staffForm').onsubmit=async e=>{e.preventDefault();const f=formData('staffForm'),row={email:String(f.email).toLowerCase().trim(),display_name:String(f.display_name||''),role:f.role,active:f.active==='true'};
  const r=await db.from('sh_staff').upsert(row,{onConflict:'email'});
  if(r.error)return notice('drawerMsg',r.error.message,true);await refresh();closeDrawer()};
 }
 function addOrder(){if(!roleCan('owner','manager','operator'))return;
  const available=variants.filter(v=>v.active&&products.find(p=>p.id===v.product_id)?.status==='active');
- drawer('Create Order',\`<p class="muted">Manual COD order. Amount and stock are verified by the backend.</p><form id="newOrderForm">
- <label>Product / Color</label><select name="variant_id" required>\${available.map(v=>'<option value="'+esc(v.id)+'">'+esc(products.find(p=>p.id===v.product_id)?.name)+' · '+esc(v.color)+'</option>').join('')}</select>
+ drawer('Create Order',`<p class="muted">Manual COD order. Amount and stock are verified by the backend.</p><form id="newOrderForm">
+ <label>Product / Color</label><select name="variant_id" required>${available.map(v=>'<option value="'+esc(v.id)+'">'+esc(products.find(p=>p.id===v.product_id)?.name)+' · '+esc(v.color)+'</option>').join('')}</select>
  <div class="fieldrow"><div><label>Qty</label><input name="qty" type="number" required min="1" max="20" value="1"></div><div><label>Size</label><input name="size" placeholder="Optional"></div></div>
  <label>Customer Name</label><input name="name" required minlength="2"><label>Phone (Bangladesh)</label><input name="phone" required placeholder="017XXXXXXXX"><label>Delivery Address</label><textarea name="address" required minlength="10"></textarea>
  <label>Delivery Zone</label><select name="zone"><option value="dhaka">Inside Dhaka</option><option value="outside">Outside Dhaka</option></select>
- <button class="btn primary" type="submit">Create Confirmed COD Order</button></form>\`);
+ <button class="btn primary" type="submit">Create Confirmed COD Order</button></form>`);
  $('newOrderForm').onsubmit=async e=>{e.preventDefault();const f=formData('newOrderForm'),btn=e.currentTarget.querySelector('button[type=submit]');btn.disabled=true;
  try{const {data:{session}}=await db.auth.getSession();const r=await fetch(CHECKOUT_URL,{method:'POST',
  headers:{'content-type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,...(session?{'authorization':'Bearer '+session.access_token}:{})},
