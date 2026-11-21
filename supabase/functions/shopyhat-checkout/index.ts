@@ -18,14 +18,27 @@ Deno.serve(async req=>{
   if(p.website || p.company_url)return reply({error:'Invalid order'},400);
   // Cloudflare Turnstile is enforced when SHOPYHAT_TURNSTILE_SECRET is configured.
   // Configure it before accepting public traffic; token is never trusted client-side.
-  const turnstileSecret=Deno.env.get('SHOPYHAT_TURNSTILE_SECRET');
-  if(turnstileSecret){
-   const token=String(p.turnstile_token||'').slice(0,2048);
-   if(!token)return reply({error:'Human verification required'},403);
-   const check=await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify',{
-     method:'POST',body:new URLSearchParams({secret:turnstileSecret,response:token})
-   });
-   if(!check.ok || !(await check.json()).success)return reply({error:'Human verification failed. Try again.'},403);
+  // Owner/Manager/Operator with a valid Supabase JWT may create manual orders.
+  const jwt=(req.headers.get('authorization')||'').match(/^Bearer\s+([^\s]+)$/i)?.[1];
+  let authorizedStaff=false;
+  if(jwt && jwt!==secret){
+    const verified=await db.auth.getUser(jwt);
+    const email=verified.data?.user?.email?.toLowerCase();
+    if(!verified.error && email){
+      const staff=await db.from('sh_staff').select('role,active').eq('email',email).maybeSingle();
+      authorizedStaff=!!staff.data?.active && ['owner','manager','operator'].includes(staff.data.role);
+    }
+  }
+  if(!authorizedStaff){
+    // Fail closed until the owner configures a free Turnstile secret.
+    const turnstileSecret=Deno.env.get('SHOPYHAT_TURNSTILE_SECRET');
+    if(!turnstileSecret)return reply({error:'Checkout activation pending — human verification setup required.'},503);
+    const token=String(p.turnstile_token||'').slice(0,2048);
+    if(!token)return reply({error:'Human verification required'},403);
+    const check=await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify',{
+      method:'POST',body:new URLSearchParams({secret:turnstileSecret,response:token})
+    });
+    if(!check.ok || !(await check.json()).success)return reply({error:'Human verification failed. Try again.'},403);
   }
   if(!Array.isArray(p.items)||p.items.length<1||p.items.length>15)return reply({error:'Invalid items'},400);
   const shaped={
