@@ -20,6 +20,24 @@ Checkout Edge code: `supabase/functions/shopyhat-checkout/index.ts`.
 
 **Do not place service_role, secret API keys, Gmail credentials, or Supabase database password in GitHub, HTML, or browser JavaScript.**
 
+## LIVE DOMAIN UPDATE — 22 Nov 2026
+- User supplied existing Cloudflare Pages site: https://shopyhat.pages.dev
+- Supabase OTP request Edge Function deployed: `shopyhat-auth-request`; only allowlisted staff email, 3 requests/email/hour, returns neutral response for unknown users.
+- Client `admin/app.js` calls the Edge Function. The first signup may send a confirmation link. After Magic Link template customization, later requests will show an OTP code.
+- Supabase checkout Edge Function v4 deployed and accepts allowed `shopyhat.pages.dev` browser origins. It validates all prices/stock server-side and enforces phone/global order limits; manual bKash/Nagad is **never** auto-verified. Free Turnstile remains optional but strongly recommended.
+- Real email delivery / click-through login and live Cloudflare deployment have not been verified with this integration. Do not claim they have.
+- The branch is still `develop/shopyhat-v2`; GitHub `main` remains older. Publishing the branch to the existing Pages site requires confirming the Cloudflare production branch or merging the reviewed PR after testing.
+
+## REQUIRED SETTINGS FOR THE EXISTING CLOUDFLARE SITE
+1. Supabase → Authentication → URL Configuration: **Site URL** = `https://shopyhat.pages.dev`; **Redirect URL** = `https://shopyhat.pages.dev/admin/`.
+2. Supabase → Authentication → Email Templates:
+   - **Magic Link**: paste [OTP_MAGIC_LINK_TEMPLATE.html](./OTP_MAGIC_LINK_TEMPLATE.html). It includes `{{ .Token }}` and `{{ .ConfirmationURL }}` for numeric code and link fallback.
+   - **Confirm Signup**: paste [OTP_CONFIRM_SIGNUP_TEMPLATE.html](./OTP_CONFIRM_SIGNUP_TEMPLATE.html) for first-time staff activation.
+3. In Cloudflare Pages → `shopyhat` → Settings → Builds & deployments, check which production branch is deployed. To use v2, deploy `develop/shopyhat-v2` via preview or merge tested PR to `main` **only when testing passes**.
+4. Open `https://shopyhat.pages.dev/admin/`, request owner login for `shahin4l.bd@gmail.com` and check inbox/spam. The Supabase default sender has tight rate limits; custom SMTP can be configured if necessary, with sender-domain verification.
+5. Test COD order using a non-payment test order and confirm Admin receives it; do not send real money for an unverified payment test.
+6. Free Cloudflare Turnstile is recommended to reduce automated checkout abuse. If added, configure Site Key in storefront and Secret in Supabase Edge Secrets together.
+
 ## ACTION 1 — Deploy with Cloudflare Pages Free
 Cloudflare → Workers & Pages → Create → Pages → Connect to Git.
 - Git provider: GitHub.
@@ -41,7 +59,7 @@ Supabase Dashboard: https://supabase.com/dashboard/project/xwfqgmgiunlxzvzoermn
 - Supabase built-in email sending has low rate limits. For real multi-user operations configure a permitted free custom SMTP service; this requires your own sending-account verification. Do not assume default email quota is enough for production.
 - After Owner login, Team Access → Add Staff with Role Manager / Operator / Viewer and Active status. Never share Owner OTP.
 
-## ACTION 3 — Free Cloudflare Turnstile (required to activate public checkout)
+## ACTION 3 — Free Cloudflare Turnstile (optional, recommended)
 Cloudflare Dashboard → Turnstile → Add widget for your Cloudflare Pages domain.
 - Copy **Site Key** and **Secret Key**.
 - Edit `index.html` CONFIG: `turnstileSiteKey: "<SITE_KEY>"`; commit to the development branch.
@@ -49,7 +67,7 @@ Cloudflare Dashboard → Turnstile → Add widget for your Cloudflare Pages doma
 - The deployed checkout function verifies the token when this secret is set. A browser request without a valid token will fail.
 - Site key is public. Secret key is server-side only. Never commit the secret.
 
-Public customer checkout is intentionally disabled until SHOPYHAT_TURNSTILE_SECRET is configured. Authenticated Owner/Manager/Operator manual COD orders can still be created without Turnstile. A phone rate limit also applies, but is not a substitute for anti-bot verification.
+Public customer checkout is enabled at the backend without a Turnstile Secret, using server-side validation, honeypot, allowed-origin checks, 5 orders/phone/hour and 80 orders globally/hour. If a Turnstile Secret is configured, a valid Turnstile token is required for public checkout. Backend deployment does not mean the current Cloudflare website is running v2 yet.
 
 ## ACTION 4 — Verify business settings
 In `index.html`, CONFIG includes:
@@ -68,7 +86,7 @@ The backend shipping/coupon settings were initially matched to these values in `
 7. Confirm production website remains unchanged during testing. After all pass, make a backup, merge tested branch into `main`, then switch production Cloudflare deployment.
 
 ## Important limitations
-- This chat **cannot verify real email delivery or Cloudflare Pages website rendering** until hosting and mail configurations are completed. Public checkout returns HTTP 503 until the free Turnstile secret is configured.
+- This chat **cannot verify real email delivery or Cloudflare Pages website rendering** until hosting and mail configurations are completed. Public checkout uses rate limits without Turnstile. If a Turnstile Secret is configured, verification becomes mandatory.
 - Product/order data is now in Supabase. Google Sheet remains the previous data source/reference; automatic two-way Sheet synchronization is NOT configured. Use Admin CSV export for reporting to Sheets until sync is built.
 - New staging site is not yet published just by uploading code to GitHub. Cloudflare connection/action above is required.
 - Rate limiting and Turnstile are defense-in-depth; manual fraud screening is still needed.
