@@ -167,9 +167,20 @@ function moderateReview(id){
  const r=reviews.find(r=>r.id===id);if(!r)return;
  const edit=roleCan('owner','manager');
  drawer('Moderate Customer Review',`<p class="muted">${esc(products.find(p=>p.id===r.product_id)?.name||'Product')} · ${fmtDate(r.created_at)}</p><h3>${esc(r.reviewer_name)} · ${'★'.repeat(r.rating)}</h3><h4>${esc(r.title)}</h4><p style="white-space:pre-wrap">${esc(r.review_text)}</p><div class="badge">Customer reviews remain hidden until approved. Reject reviews containing personal contact information, offensive content, or unrelated claims.</div>
+ <h3>Attached Review Photos</h3><div class="case-evidence" id="reviewPhotoEvidence"><p class="muted">Loading private review photos…</p></div>
  <form id="reviewModeration"><label>Moderation Status</label><select name="status" ${edit?'':'disabled'}>${['Pending','Approved','Rejected'].map(x=>'<option '+(x===r.status?'selected':'')+'>'+x+'</option>').join('')}</select>
  <label>Public Staff Response (optional)</label><textarea name="staff_response" maxlength="1000" ${edit?'':'readonly'}>${esc(r.staff_response||'')}</textarea>
  <div class="editor-actions"><button type="button" class="btn" id="backFromReview">← Back to Reviews</button><button class="btn primary" ${edit?'':'disabled'} type="submit">Save Review Decision</button></div></form>`);
+ const media=reviewMedia.filter(m=>m.review_id===id),el=$('reviewPhotoEvidence');
+ if(!media.length)el.innerHTML='<p class="muted">No photo attached.</p>';
+ else{el.innerHTML='';(async()=>{
+   for(const m of media){
+     const file=await db.storage.from('shopyhat-review-photos').createSignedUrl(m.storage_path,300);
+     if(file.error){el.insertAdjacentHTML('beforeend','<span class="muted">Photo unavailable.</span>');continue}
+     const a=document.createElement('a');a.href=file.data.signedUrl;a.target='_blank';a.rel='noopener noreferrer';
+     const img=document.createElement('img');img.src=file.data.signedUrl;img.alt='Customer review photo';a.append(img);el.append(a);
+   }
+ })().catch(err=>console.warn('Review photo preview:',err.message))}
  $('backFromReview').onclick=closeDrawer;
  $('reviewModeration').onsubmit=async e=>{e.preventDefault();if(!edit)return;const f=formData('reviewModeration');
  const res=await db.from('sh_reviews').update({status:f.status,staff_response:String(f.staff_response||'').trim()}).eq('id',id);
