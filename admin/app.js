@@ -22,7 +22,7 @@ function orderThumb(o){
  return '<span class="order-thumb" tabindex="0" aria-label="Preview '+title+'"><img src="'+src+'" alt="'+title+'" loading="lazy"><span class="image-popover" aria-hidden="true"><img src="'+src+'" alt=""></span></span>';
 }
 function productPhotoTiles(rows,label,canDelete=true){
- return rows.map(i=>'<figure>'+imgTag(i.image_url,label)+(canDelete&&roleCan('owner','manager')?'<button type="button" class="photo-delete" title="Remove photo" aria-label="Remove photo" data-delete-photo="'+esc(i.id)+'">×</button>':'')+'<figcaption>'+esc(i.alt_text||'Photo')+'</figcaption></figure>').join('');
+ return rows.map(i=>'<figure><img src="'+esc(imageUrl(i.image_url))+'" alt="'+esc(label||'Photo')+'" loading="lazy" data-view-photo="'+esc(imageUrl(i.image_url))+'" title="Click to preview" tabindex="0">'+(canDelete&&roleCan('owner','manager')?'<button type="button" class="photo-delete" title="Remove photo" aria-label="Remove photo" data-delete-photo="'+esc(i.id)+'">×</button>':'')+'<figcaption>'+esc(i.alt_text||'Photo')+'</figcaption></figure>').join('');
 }
 function setupLocalPhotoPreview(fileInputId,previewId){
  const input=$(fileInputId),preview=$(previewId);
@@ -155,20 +155,18 @@ function editPhotos(productId,variantId){
  const selected=images.filter(i=>i.product_id===productId&&(i.variant_id||'')===(variantId||''));
  const heading=variant?variant.color+' Gallery':'General Product Gallery';
  drawer(heading,`<p class="muted">${esc(product?.name||'Product')} — upload JPG, PNG or WebP up to 4MB each, or add public image links.</p>
- <div class="photos">${selected.map(i=>'<figure>'+imgTag(i.image_url,variant?.color||product?.name)+'<button title="Remove" data-delete-photo="'+i.id+'">×</button></figure>').join('')||'No images yet'}</div>
+ <div class="photo-main-display-wrap">${selected.length?'<img id="photoHeroImage" class="photo-main-display" src="'+esc(imageUrl(selected[0].image_url))+'" alt="Selected product photo">':'<p class="muted">No photos yet. Select images below to add them.</p>'}</div>
+ <div class="photos">${productPhotoTiles(selected,variant?.color||product?.name)}</div>
  <label>Upload Photos (multiple)</label><input id="photoFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+ <div class="photo-upload-preview photo-preview-list" id="photoFilePreview"></div>
  <button class="btn primary" id="uploadPhotos" type="button">Upload Selected Photos</button>
  <div class="divider"></div><label>Add existing public URLs (one per line)</label><textarea id="photoUrls" placeholder="https://..."></textarea>
  <button class="btn" id="savePhotoUrls" type="button">Add Image URLs</button>`);
+ setupLocalPhotoPreview('photoFiles','photoFilePreview');
  $('uploadPhotos').onclick=async()=>{
  const files=[...$('photoFiles').files];if(!files.length)return notice('drawerMsg','Select files first.',true);
  $('uploadPhotos').disabled=true;let done=0;
- try{for(const file of files){if(file.size>4194304||!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Photos must be JPG, PNG or WebP under 4 MB');
- const suffix=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg';
- const path=productId+'/'+(variantId||'general')+'/'+crypto.randomUUID()+'.'+suffix;
- const up=await db.storage.from('shopyhat-products').upload(path,file,{contentType:file.type,cacheControl:'3600',upsert:false});if(up.error)throw up.error;
- const url=db.storage.from('shopyhat-products').getPublicUrl(path).data.publicUrl;
- const ins=await db.from('sh_product_images').insert({product_id:productId,variant_id:variantId||null,image_url:url,sort_order:selected.length+done});if(ins.error)throw ins.error;done++}
+ try{done=await uploadProductFiles(productId,variantId,files);
  await refresh();editPhotos(productId,variantId);notice('drawerMsg',done+' photos uploaded.')}
  catch(e){notice('drawerMsg',e.message,true)}finally{if($('uploadPhotos'))$('uploadPhotos').disabled=false}
  };
@@ -183,6 +181,12 @@ function editPhotos(productId,variantId){
 }
 async function deletePhoto(id){if(!roleCan('owner','manager'))return;if(!confirm('Remove this image from the product gallery?'))return;const i=images.find(x=>x.id===id);if(!i)return;
  const r=await db.from('sh_product_images').delete().eq('id',id);if(r.error)return notice('drawerMsg',r.error.message,true);
+ // Clean up Supabase-hosted files only when no other gallery references that URL.
+ const base=SUPABASE_URL+'/storage/v1/object/public/shopyhat-products/';
+ if(i.image_url.startsWith(base)&&images.filter(x=>x.id!==id&&x.image_url===i.image_url).length===0){
+  try{const storagePath=decodeURIComponent(i.image_url.slice(base.length).split('?')[0]);await db.storage.from('shopyhat-products').remove([storagePath])}
+  catch(e){console.warn('Storage cleanup unavailable',e)}
+ }
  await refresh();editPhotos(i.product_id,i.variant_id||'');notice('drawerMsg','Image removed from gallery.')}
 async function editOrder(id){
  const o=orders.find(o=>o.id===id);if(!o)return;
@@ -193,7 +197,7 @@ async function editOrder(id){
  const editable=roleCan('owner','manager','operator');
  $('drawerBody').innerHTML=`<div class="split"><section><h3>Customer</h3><b>${esc(o.customer_name)}</b><p>${esc(o.customer_phone)}<br>${esc(o.address)}<br>${esc(o.zone)}</p></section>
  <section><h3>Payment</h3><p>${esc(o.payment_method)}<br>${esc(o.payment_status)}<br>Transaction: ${esc(o.transaction_id||'—')}<br>Sender last 4: ${esc(o.sender_last4||'—')}</p></section></div>
- <h3>Items</h3>${items.data.map(i=>'<div class="topline" style="border-bottom:1px solid #eee;padding:10px 0"><div>'+imgTag(i.image_url,i.product_name)+'<b>'+esc(i.product_name)+'</b><div class="muted">'+esc(i.color)+' · '+esc(i.size)+' · '+esc(i.sku)+'</div></div><b>'+i.qty+' × '+money(i.unit_price)+'</b></div>').join('')}
+ <h3>Items</h3>${items.data.map(i=>'<div class="order-item-row"><div class="order-item-info">'+(i.image_url?imgTag(i.image_url,i.product_name):'<span class="order-item-placeholder"></span>')+'<div><b>'+esc(i.product_name)+'</b><div class="muted">'+esc(i.color)+' · '+esc(i.size)+' · '+esc(i.sku)+'</div></div></div><b>'+i.qty+' × '+money(i.unit_price)+'</b></div>').join('')}
  <div class="badge">Subtotal ${money(o.subtotal)} − Discount ${money(o.discount)} + Delivery ${money(o.shipping)} = <b>${money(o.total)}</b></div>
  <form id="orderForm"><div class="fieldrow"><div><label>Order Status</label><select name="status">${['Pending','Confirmed','Processing','Ready to Ship','Shipped','Delivered','Cancelled','Return Requested','Returned'].map(v=>'<option '+(v===o.status?'selected':'')+'>'+v+'</option>').join('')}</select></div>
  <div><label>Courier</label><input name="courier" value="${esc(o.courier)}"></div><div><label>Tracking ID</label><input name="tracking_id" value="${esc(o.tracking_id)}"></div><div><label>Internal Note</label><textarea name="internal_note">${esc(o.internal_note)}</textarea></div></div>
@@ -266,13 +270,14 @@ $('newProduct').onclick=()=>editProduct(null);$('addStaff').onclick=()=>editStaf
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer()});
 document.addEventListener('click',e=>{
- const el=e.target.closest('[data-edit-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-edit-order],[data-review],[data-edit-staff]');
+ const el=e.target.closest('[data-edit-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-view-photo],[data-edit-order],[data-review],[data-edit-staff]');
  if(!el)return;
  if(el.dataset.editProduct)editProduct(el.dataset.editProduct);
  else if(el.dataset.newVariant)editVariant(null,el.dataset.newVariant);
  else if(el.dataset.editVariant)editVariant(el.dataset.editVariant);
  else if(el.hasAttribute('data-photos'))editPhotos(el.dataset.photos,el.dataset.variant||'');
  else if(el.dataset.deletePhoto)deletePhoto(el.dataset.deletePhoto);
+ else if(el.dataset.viewPhoto){const hero=$('photoHeroImage');if(hero)hero.src=el.dataset.viewPhoto;}
  else if(el.dataset.editOrder)editOrder(el.dataset.editOrder);
  else if(el.dataset.review)reviewPayment(el.dataset.review);
  else if(el.dataset.editStaff)editStaff(el.dataset.editStaff);
