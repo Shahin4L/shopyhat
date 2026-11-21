@@ -143,27 +143,106 @@ function renderTrack(){
 }
 function switchTab(next){tab=next;render()}
 document.querySelectorAll('[data-care-tab]').forEach(el=>el.onclick=()=>switchTab(el.dataset.careTab));
-function injectProductReview(){
- const body=document.querySelector('#prodBox .pd .body');
- if(!body)return;
- const existing=body.querySelector('#productReviewAction');if(existing){existing.textContent=t('★ Reviews & Write a Review','★ রিভিউ দেখুন ও লিখুন');return;}
- const button=document.createElement('button');button.id='productReviewAction';button.type='button';button.className='btn line';
- button.textContent=t('★ Reviews & Write a Review','★ রিভিউ দেখুন ও লিখুন');
- button.style.marginTop='12px';
- const productId=typeof cur!=='undefined'&&cur?.p?.id;
- button.onclick=()=>{
-  selectedProduct=products.find(p=>String(p.legacy_id)===String(productId))?.id||'';
-  if(typeof closeAll==='function')closeAll();
-  location.hash='#care';tab='reviews';render();
- };
- body.append(button);
+
+/* Product-specific review UX: compact ratings on each card, two-review detail preview,
+   and accessible popup for the complete review list and writing a review. */
+function byLegacy(legacy){return products.find(p=>String(p.legacy_id)===String(legacy))}
+function productReviews(p){return p?reviews.filter(r=>r.product_id===p.id):[]}
+function reviewSummaryHTML(list){
+ if(!list.length)return '<span class="review-count">'+t('No reviews yet','এখনো রিভিউ নেই')+'</span>';
+ const avg=list.reduce((sum,r)=>sum+Number(r.rating||0),0)/list.length;
+ return '<span class="review-stars">★ '+avg.toFixed(1)+'</span><span class="review-count">('+list.length+' '+t('reviews','রিভিউ')+')</span>';
 }
-const prodBox=document.getElementById('prodBox');if(prodBox){new MutationObserver(injectProductReview).observe(prodBox,{childList:true,subtree:false});injectProductReview()}
-window.addEventListener('shopyhat:languagechange',()=>{render();injectProductReview()});
+function itemPreview(r){
+ const text=esc(r.review_text),picture=(reviewPhotos[r.id]||[])[0];
+ return '<div class="sh-review-item"><span class="review-stars">'+('★'.repeat(r.rating))+'</span> <b>'+esc(r.title||r.reviewer_name)+'</b><p>'+text+'</p><small>'+esc(r.reviewer_name)+' · '+formatDate(r.created_at)+'</small>'+
+ (picture?'<div class="care-media-preview"><a target="_blank" rel="noopener noreferrer" href="'+esc(picture)+'"><img loading="lazy" src="'+esc(picture)+'" alt="Customer review photo"></a></div>':'')+
+ (r.staff_response?'<div class="care-hint"><b>'+t('SHOPYHAT response','SHOPYHAT-এর উত্তর')+':</b> '+esc(r.staff_response)+'</div>':'')+'</div>';
+}
+function refreshInlineReviews(){
+ document.querySelectorAll('[data-review-card]').forEach(el=>{
+  const p=byLegacy(el.dataset.reviewCard),list=productReviews(p);
+  el.innerHTML='<div class="sh-review-summary">'+reviewSummaryHTML(list)+'</div>'+
+   (list.length?'<p class="sh-review-snippet">'+esc(list[0].review_text)+'</p>':'')+
+   '<div class="sh-review-actions"><button type="button" data-review-action="write" data-review-product="'+esc(el.dataset.reviewCard)+'">'+t('Write a review','রিভিউ লিখুন')+'</button>'+
+   '<button type="button" data-review-action="view" data-review-product="'+esc(el.dataset.reviewCard)+'">'+t('View all','সব দেখুন')+'</button></div>';
+ });
+ document.querySelectorAll('[data-review-detail]').forEach(el=>{
+  const legacy=el.dataset.reviewDetail,p=byLegacy(legacy),list=productReviews(p);
+  el.innerHTML='<h3>'+t('Customer reviews','ক্রেতাদের রিভিউ')+'</h3><div>'+reviewSummaryHTML(list)+'</div>'+
+  (list.length?'<div class="sh-review-list">'+list.slice(0,2).map(itemPreview).join('')+'</div>':'<p class="care-hint">'+t('No reviews yet. Be the first to write one.','এখনো রিভিউ নেই। প্রথম রিভিউটি লিখতে পারেন।')+'</p>')+
+  '<div class="sh-review-actions"><button type="button" data-review-action="write" data-review-product="'+esc(legacy)+'">'+t('Write a review','রিভিউ লিখুন')+'</button>'+
+  '<button type="button" data-review-action="view" data-review-product="'+esc(legacy)+'">'+t('View all reviews','সব রিভিউ দেখুন')+'</button></div>';
+ });
+}
+function reviewOverlay(title,body){
+ let panel=document.getElementById('shReviewOverlay');
+ if(!panel){
+  panel=document.createElement('div');panel.id='shReviewOverlay';panel.className='sh-review-full-overlay';
+  panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+  panel.addEventListener('click',e=>{if(e.target===panel)panel.remove()});
+  document.body.append(panel);
+ }
+ panel.innerHTML='<div class="sh-review-full-modal"><div class="sh-review-full-head"><h2>'+esc(title)+'</h2><button type="button" data-review-close aria-label="'+t('Close','বন্ধ করুন')+'">×</button></div>'+body+'</div>';
+ panel.querySelector('[data-review-close]').onclick=()=>panel.remove();
+ panel.querySelector('[data-review-close]').focus();
+}
+function showAllProductReviews(legacy){
+ const p=byLegacy(legacy);
+ if(!p){reviewOverlay(t('Reviews','রিভিউ'),'<p>'+t('Product unavailable','পণ্য পাওয়া যায়নি')+'</p>');return}
+ const list=productReviews(p);
+ const body='<p class="care-hint">'+esc(productName(p))+' · '+list.length+' '+t('approved reviews','অনুমোদিত রিভিউ')+'</p>'+
+ (list.length?'<div class="care-cards" style="display:grid;gap:12px">'+list.map(itemPreview).join('')+'</div>':'<p>'+t('No reviews yet.','এখনো কোনো রিভিউ নেই।')+'</p>')+
+ '<div class="sh-review-actions"><button type="button" data-review-action="write" data-review-product="'+esc(legacy)+'">'+t('Write a review','রিভিউ লিখুন')+'</button></div>';
+ reviewOverlay(t('Reviews for ','পণ্যের রিভিউ: ')+productName(p),body);
+}
+function writeReviewForProduct(legacy){
+ const p=byLegacy(legacy);if(!p){reviewOverlay(t('Product unavailable','পণ্য পাওয়া যায়নি'),'<p>'+t('Please refresh and retry.','রিফ্রেশ করে আবার চেষ্টা করুন।')+'</p>');return}
+ const body='<p class="care-intro">'+esc(productName(p))+'</p><form id="shInlineReviewForm" enctype="multipart/form-data">'+honeypot+
+ '<div class="care-grid"><div><label>'+t('Your name','আপনার নাম')+' *</label><input name="reviewer_name" minlength="2" maxlength="90" required autocomplete="name"></div>'+
+ '<div><label>'+t('Rating','রেটিং')+' *</label><select name="rating" required><option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option></select></div></div>'+
+ '<label>'+t('Review title (optional)','রিভিউ শিরোনাম (ঐচ্ছিক)')+'</label><input name="title" maxlength="120">'+
+ '<label>'+t('Your review','আপনার রিভিউ')+' *</label><textarea name="review_text" minlength="12" maxlength="1200" required></textarea>'+
+ '<label>'+t('Photo (optional, 4MB max)','ছবি (ঐচ্ছিক, সর্বোচ্চ ৪MB)')+'</label><input name="review_photo" type="file" accept="image/jpeg,image/png,image/webp">'+
+ '<p class="care-hint">'+t('Reviews appear after moderation. Do not include private contact details.','যাচাইয়ের পর রিভিউ প্রকাশিত হয়। ব্যক্তিগত যোগাযোগের তথ্য লিখবেন না।')+'</p>'+
+ '<div class="sh-review-actions"><button type="submit">'+t('Submit review','রিভিউ জমা দিন')+'</button><button type="button" data-review-action="view" data-review-product="'+esc(legacy)+'">'+t('Back to reviews','রিভিউতে ফিরুন')+'</button></div></form><div id="shInlineReviewMessage" role="status"></div>';
+ reviewOverlay(t('Write a review','রিভিউ লিখুন'),body);
+ const form=document.getElementById('shInlineReviewForm');
+ form.onsubmit=async e=>{
+  e.preventDefault();
+  const button=form.querySelector('button[type=submit]');button.disabled=true;
+  const data=new FormData(form);data.set('action','review');data.set('product_id',p.id);
+  const photo=data.get('review_photo');
+  if(photo instanceof File&&photo.size===0)data.delete('review_photo');
+  if(photo instanceof File&&(photo.size>4194304||!['image/jpeg','image/png','image/webp'].includes(photo.type))){
+   document.getElementById('shInlineReviewMessage').innerHTML='<p class="care-error">'+t('Use a JPG/PNG/WebP photo up to 4MB.','সর্বোচ্চ ৪MB JPG/PNG/WebP ছবি দিন।')+'</p>';button.disabled=false;return;
+  }
+  try{
+   const r=await fetch(endpoint,{method:'POST',headers:{apikey:key},body:data});
+   const response=await r.json();
+   if(!r.ok||!response.ok)throw Error(response.error||'Submission failed');
+   form.reset();document.getElementById('shInlineReviewMessage').innerHTML='<p class="care-success">'+t('Thank you! Your review is pending approval.','ধন্যবাদ! আপনার রিভিউ অনুমোদনের অপেক্ষায় আছে।')+'</p>';
+  }catch(err){document.getElementById('shInlineReviewMessage').innerHTML='<p class="care-error">'+esc(err.message)+'</p>'}
+  finally{button.disabled=false}
+ };
+}
+document.addEventListener('click',e=>{
+ const btn=e.target.closest('[data-review-action]');
+ if(!btn)return;
+ e.preventDefault();e.stopImmediatePropagation();
+ const legacy=btn.dataset.reviewProduct;
+ if(btn.dataset.reviewAction==='write')writeReviewForProduct(legacy);
+ else if(btn.dataset.reviewAction==='view')showAllProductReviews(legacy);
+},true);
+const reviewCardGrids=['homeGrid','saleGrid','rvGrid','shopGrid','sRes'];
+for(const name of reviewCardGrids){const el=document.getElementById(name);if(el)new MutationObserver(refreshInlineReviews).observe(el,{childList:true})}
+const prodBox=document.getElementById('prodBox');
+if(prodBox)new MutationObserver(refreshInlineReviews).observe(prodBox,{childList:true});
+window.addEventListener('shopyhat:languagechange',()=>{render();refreshInlineReviews()});
 Promise.allSettled([getCatalog(),getReviews()]).then(async ([catalog,approved])=>{
  if(catalog.status==='fulfilled')products=catalog.value;else productError=catalog.reason?.message||'Product service unavailable';
  if(approved.status==='fulfilled')reviews=approved.value;else loadError=approved.reason?.message||'Reviews unavailable';
- loading=false;render();if(approved.status==='fulfilled')await loadReviewPhotos();
+ loading=false;render();refreshInlineReviews();if(approved.status==='fulfilled'){await loadReviewPhotos();refreshInlineReviews()}
 });
 render();
 })();
