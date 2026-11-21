@@ -313,16 +313,21 @@ function editProduct(id){
  <p class="muted">Choose JPG, PNG or WebP images (maximum 4 MB each). They upload when the product is saved.</p>
  <input id="productInitialFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple>
  <div id="productInitialPreview" class="photo-upload-preview photo-preview-list"></div></div>
- <button class="btn primary" ${editable?'':'disabled'} type="submit">Save Product & Photos</button></form>
+ <div class="editor-actions">
+ <button type="button" class="btn" id="backFromProduct">← Back to Products</button>
+ <button class="btn primary" ${editable?'':'disabled'} type="submit" data-save-mode="edit">Save Product & Photos</button>
+ <button class="btn" ${editable?'':'disabled'} type="submit" data-save-mode="another">Save & Add Another</button>
+ </div></form>
  ${id?`<div class="media-section">
  <div class="section-heading"><h3>Saved Product Photos</h3><button type="button" class="btn small" data-photos="${id}" data-variant="">Manage Photos</button></div>
  <div class="photos">${productPhotoTiles(group,p.name)}</div>
  <p class="muted">Use × to remove an image.</p></div>
- <div class="media-section"><div class="section-heading"><h3>Step 2 · Color Variants</h3><button type="button" class="btn primary small" data-new-variant="${p.id}">＋ Choose / Add Color</button></div>
+ <div class="media-section"><div class="section-heading"><h3>Step 2 · Color Variants</h3><div class="tools"><button type="button" class="btn primary small" data-new-variant="${p.id}">＋ Add One Color</button><button type="button" class="btn small" data-bulk-variants="${p.id}">＋ Add Multiple Colors</button></div></div>
  ${variantList.map(v=>'<div class="variant-card"><div class="topline"><div><b>'+esc(v.color)+'</b> · '+esc(v.sku||'No SKU')+'<div class="muted">Stock: '+esc(v.stock??'Unlimited')+' · '+money(v.price??p.base_price)+'</div></div><button type="button" class="btn small" data-edit-variant="'+v.id+'">Edit Color / Photos</button></div><div class="photos">'+productPhotoTiles(images.filter(i=>i.variant_id===v.id),v.color)+'</div></div>').join('')||'<p class="muted">No colors yet. Choose a color to create a separate gallery.</p>'}
  </div>`:''}`);
  setupLocalPhotoPreview('productInitialFiles','productInitialPreview');
- $('productForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('productForm');const payload={name:String(f.name).trim(),category:String(f.category).trim(),base_price:Number(f.base_price),old_price:f.old_price?Number(f.old_price):null,description:String(f.description||''),details:String(f.details||''),name_bn:String(f.name_bn||'').trim(),description_bn:String(f.description_bn||'').trim(),details_bn:String(f.details_bn||'').trim(),sizes:String(f.sizes||'').split(',').map(s=>s.trim()).filter(Boolean),status:f.status,is_new:!!f.is_new};
+ $('backFromProduct').onclick=()=>{closeDrawer();showPage('products')};
+ $('productForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('productForm'),saveMode=e.submitter?.dataset?.saveMode||'edit';const payload={name:String(f.name).trim(),category:String(f.category).trim(),base_price:Number(f.base_price),old_price:f.old_price?Number(f.old_price):null,description:String(f.description||''),details:String(f.details||''),name_bn:String(f.name_bn||'').trim(),description_bn:String(f.description_bn||'').trim(),details_bn:String(f.details_bn||'').trim(),sizes:String(f.sizes||'').split(',').map(s=>s.trim()).filter(Boolean),status:f.status,is_new:!!f.is_new};
  try{
  const files=[...($('productInitialFiles')?.files||[])];
  const q=id?db.from('sh_products').update(payload).eq('id',id).select('id').single():db.from('sh_products').insert(payload).select('id').single();
@@ -330,8 +335,9 @@ function editProduct(id){
  let uploaded=0;
  try{uploaded=await uploadProductFiles(r.data.id,null,files)}
  catch(uploadError){await refresh();editProduct(r.data.id);return notice('drawerMsg','Product saved, photo failed: '+uploadError.message,true)}
- await refresh();editProduct(r.data.id);
- notice('drawerMsg','Product saved'+(uploaded?' · '+uploaded+' photos uploaded':'')+'. Choose / Add Color below.');
+ await refresh();
+ if(saveMode==='another'){editProduct(null);notice('drawerMsg','Saved successfully. Add the next product.')}
+ else{editProduct(r.data.id);notice('drawerMsg','Product saved'+(uploaded?' · '+uploaded+' photos uploaded':'')+'. Choose / Add Color below.');}
  }catch(err){notice('drawerMsg',err.message,true)}};
 }
 function editVariant(id,productId){
@@ -340,12 +346,62 @@ function editVariant(id,productId){
  drawer('Color / Variant',`<p class="audit-meta">${id?metaLabel('sh_variants',v):'New variant'}</p><form id="variantForm"><div class="fieldrow"><div><label>Color name</label><input required name="color" value="${esc(v.color)}"></div><div><label>Color hex</label><input name="hex" type="color" value="${esc(/^#[a-f0-9]{6}$/i.test(v.hex||'')?v.hex:'#888888')}"></div>
  <div><label>Variant price (leave blank for product price)</label><input name="price" type="number" min="0" step=".01" value="${esc(v.price??'')}"></div><div><label>Stock (blank = unlimited)</label><input name="stock" type="number" min="0" step="1" value="${esc(v.stock??'')}"></div></div>
  <label>SKU</label><input name="sku" value="${esc(v.sku||'')}"><label><input name="active" type="checkbox" style="width:auto" ${v.active?'checked':''}> Variant enabled</label>
- <button class="btn primary" type="submit">Save Color</button></form>
+ <div class="editor-actions">
+ <button type="button" class="btn" id="backFromVariant">← Back to Product</button>
+ <button class="btn primary" type="submit" data-save-mode="edit">Save Color</button>
+ <button class="btn" type="submit" data-save-mode="another">Save & Add Another Color</button>
+ <button type="button" class="btn" id="openBulkVariants">＋ Add Multiple</button></div></form>
  ${id?'<div class="media-section"><div class="section-heading"><h3>Photos for '+esc(v.color)+'</h3><button type="button" class="btn small" data-photos="'+v.product_id+'" data-variant="'+id+'">＋ Manage Photos</button></div><div class="photos">'+productPhotoTiles(images.filter(i=>i.variant_id===id),v.color)+'</div></div>':''}
  <p class="muted">One color can have multiple photos. Black and Purple maintain separate galleries.</p>`);
- $('variantForm').onsubmit=async e=>{e.preventDefault();if(!roleCan('owner','manager'))return;const f=formData('variantForm');
+ $('backFromVariant').onclick=()=>editProduct(v.product_id);
+ $('openBulkVariants').onclick=()=>bulkVariantEditor(v.product_id);
+ $('variantForm').onsubmit=async e=>{e.preventDefault();if(!roleCan('owner','manager'))return;const f=formData('variantForm'),saveMode=e.submitter?.dataset?.saveMode||'edit';
  const row={product_id:v.product_id,color:String(f.color).trim(),hex:String(f.hex),sku:String(f.sku||'').trim()||null,price:f.price?Number(f.price):null,stock:f.stock===''?null:Number(f.stock),active:!!f.active};
- try{const r=id?await db.from('sh_variants').update(row).eq('id',id).select('id').single():await db.from('sh_variants').insert(row).select('id').single();if(r.error)throw r.error;await refresh();editVariant(r.data.id,v.product_id);notice('drawerMsg','Color saved.')}catch(err){notice('drawerMsg',err.message,true)}};
+ try{const r=id?await db.from('sh_variants').update(row).eq('id',id).select('id').single():await db.from('sh_variants').insert(row).select('id').single();if(r.error)throw r.error;await refresh();if(saveMode==='another'){editVariant(null,v.product_id);notice('drawerMsg','Color saved. Add the next color.')}else{editVariant(r.data.id,v.product_id);notice('drawerMsg','Color saved.')} }catch(err){notice('drawerMsg',err.message,true)}};
+}
+
+function bulkVariantEditor(productId){
+ if(!roleCan('owner','manager'))return;
+ const p=products.find(p=>p.id===productId);if(!p)return;
+ drawer('Add Multiple Colors — '+p.name,`<p class="muted">Add several color variants in one save. Each color can have its own price, stock, SKU and photos afterward. Names must be unique within this product.</p>
+ <div class="badge">Step 1: Add colors → Step 2: Save all → Step 3: Manage photos per color.</div>
+ <form id="bulkVariantForm"><div id="bulkVariantRows"></div>
+ <div class="editor-actions"><button class="btn" type="button" id="bulkAddRow">＋ Add Color Row</button><button class="btn" type="button" id="bulkBack">← Back to Product</button><button type="submit" class="btn primary" id="bulkSave">Save All Colors</button></div></form>`);
+ const rows=$('bulkVariantRows');
+ const addRow=()=>{
+  if(rows.children.length>=20)return notice('drawerMsg','Maximum 20 colors per batch.',true);
+  const row=document.createElement('div');row.className='bulk-variant-row';row.innerHTML=`<div class="bulk-color-name"><label>Color Name</label><input name="bulkColor" maxlength="70" required placeholder="e.g. Purple"></div>
+  <div><label>Color Code</label><input name="bulkHex" type="color" value="#888888"></div>
+  <div><label>Price BDT</label><input name="bulkPrice" type="number" min="0" step=".01" placeholder="Base price"></div>
+  <div><label>Stock</label><input name="bulkStock" type="number" min="0" step="1" placeholder="Unlimited"></div>
+  <div><label>SKU</label><input name="bulkSku" maxlength="90" placeholder="Optional"></div>
+  <button type="button" class="btn small danger" data-bulk-remove>Remove</button>`;
+  row.querySelector('[data-bulk-remove]').onclick=()=>{if(rows.children.length>1)row.remove()};
+  rows.append(row);
+ };
+ $('bulkAddRow').onclick=addRow;
+ $('bulkBack').onclick=()=>editProduct(productId);
+ addRow();addRow();addRow();
+ $('bulkVariantForm').onsubmit=async e=>{
+  e.preventDefault();const button=$('bulkSave');button.disabled=true;
+  try{
+   const data=[...rows.children].map(el=>({
+     product_id:productId,color:el.querySelector('[name=bulkColor]').value.trim(),
+     hex:el.querySelector('[name=bulkHex]').value,
+     price:el.querySelector('[name=bulkPrice]').value===''?null:Number(el.querySelector('[name=bulkPrice]').value),
+     stock:el.querySelector('[name=bulkStock]').value===''?null:Number(el.querySelector('[name=bulkStock]').value),
+     sku:el.querySelector('[name=bulkSku]').value.trim()||null,active:true
+   }));
+   const names=data.map(x=>x.color.toLowerCase());
+   if(data.some(x=>!x.color||x.color.length>70)||new Set(names).size!==names.length)throw Error('Each color must have a unique name.');
+   const existing=new Set(variants.filter(v=>v.product_id===productId).map(v=>v.color.toLowerCase()));
+   if(names.some(x=>existing.has(x)))throw Error('This product already has one of the color names. Edit it instead.');
+   if(data.some(x=>x.stock!==null&&(!Number.isInteger(x.stock)||x.stock<0)))throw Error('Stock must be a non-negative whole number.');
+   const result=await db.from('sh_variants').insert(data).select('id,color');
+   if(result.error)throw result.error;
+   await refresh();editProduct(productId);notice('drawerMsg',result.data.length+' colors added successfully. Open each color to add its photos.');
+  }catch(err){button.disabled=false;notice('drawerMsg',err.message,true)}
+ };
 }
 function editPhotos(productId,variantId){
  const product=products.find(x=>x.id===productId),variant=variants.find(x=>x.id===variantId);
@@ -477,9 +533,10 @@ document.addEventListener('keydown',e=>{
  }
 });
 document.addEventListener('click',e=>{
- const el=e.target.closest('[data-review-customer],[data-edit-case],[data-audit-details],[data-edit-product],[data-delete-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-view-photo],[data-edit-order],[data-review],[data-edit-staff]');
+ const el=e.target.closest('[data-bulk-variants],[data-review-customer],[data-edit-case],[data-audit-details],[data-edit-product],[data-delete-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-view-photo],[data-edit-order],[data-review],[data-edit-staff]');
  if(!el)return;
- if(el.dataset.reviewCustomer)moderateReview(el.dataset.reviewCustomer);
+ if(el.dataset.bulkVariants)bulkVariantEditor(el.dataset.bulkVariants);
+ else if(el.dataset.reviewCustomer)moderateReview(el.dataset.reviewCustomer);
  else if(el.dataset.editCase)manageCase(el.dataset.editCase);
  else if(el.dataset.auditDetails)openAuditDetails(el.dataset.auditDetails);
  else if(el.dataset.editProduct)editProduct(el.dataset.editProduct);
