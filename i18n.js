@@ -1,0 +1,261 @@
+/* SHOPYHAT bilingual UI · intentionally local, no translation API, no customer data sent off-site.
+   New catalog descriptions use their original language unless a Bengali translation is provided. */
+(function(){
+'use strict';
+const EN = new Map();
+const raw = "\nCash on delivery across Bangladesh.\tবাংলাদেশজুড়ে ক্যাশ অন ডেলিভারি।\nDamaged or wrong item? Request a return within 3 days.\tপণ্য ক্ষতিগ্রস্ত বা ভুল হলে ৩ দিনের মধ্যে রিটার্নের অনুরোধ করুন।\nYour choice, our gift.\tআপনার পছন্দ, আমাদের উপহার।\nHome\tহোম\nShop\tশপ\nSarees\tশাড়ি\nTrack order\tঅর্ডার ট্র্যাক করুন\nPolicies\tনীতিমালা\nContact\tযোগাযোগ\nSearch\tখুঁজুন\nSaved\tপছন্দের তালিকা\nCart\tকার্ট\nYour choice,\tআপনার পছন্দ,\nour gift.\tআমাদের উপহার।\nTangail sarees, three-piece sets, hijab and accessories, chosen with care and delivered to your door.\tযত্নে বাছাই করা টাঙ্গাইল শাড়ি, থ্রি-পিস, হিজাব ও ফ্যাশন সামগ্রী পৌঁছে দিই আপনার দোরগোড়ায়।\nShop sarees\tশাড়ি দেখুন\nBrowse everything\tসব পণ্য দেখুন\nCash on delivery\tক্যাশ অন ডেলিভারি\nPay when your order arrives\tপণ্য পৌঁছানোর পর মূল্য দিন\nBangladesh-wide delivery\tসারা বাংলাদেশে ডেলিভারি\nInside and outside Dhaka\tঢাকায় ও ঢাকার বাইরে\n3-day return request\t৩ দিনের রিটার্ন অনুরোধ\nFor damaged, defective or wrong items\tক্ষতিগ্রস্ত, ত্রুটিপূর্ণ বা ভুল পণ্যের ক্ষেত্রে\nEXPLORE THE COLLECTION\tকালেকশন ঘুরে দেখুন\nFind your kind of beautiful.\tআপনার পছন্দের সৌন্দর্য খুঁজে নিন।\nDiscover styles by category, thoughtfully organised for easy shopping.\tসহজ কেনাকাটার জন্য ক্যাটাগরি অনুযায়ী সাজানো আমাদের কালেকশন।\nExplore all\tসব দেখুন\nFRESH FINDS\tনতুন সংগ্রহ\nNew arrivals\tনতুন এসেছে\nFresh picks from SHOPYHAT, ready to explore.\tSHOPYHAT-এর নতুন কালেকশন—এখনই দেখে নিন।\nShop all products\tসব পণ্য দেখুন\nGOOD FINDS, BETTER PRICES\tদারুণ পণ্য, সাশ্রয়ী দাম\nSpecial offers\tবিশেষ অফার\nSelected products at reduced prices while available.\tস্টক থাকা পর্যন্ত নির্বাচিত পণ্যে বিশেষ মূল্যছাড়।\nBrowse the shop\tশপ ঘুরে দেখুন\nTangail sarees for every day and every occasion\tপ্রতিদিন ও প্রতিটি অনুষ্ঠানের জন্য টাঙ্গাইল শাড়ি\nLight cotton for daily wear, rich borders for gatherings, and silk blends for the days that matter. Pick your colour, and we pack it like a gift.\tপ্রতিদিনের জন্য আরামদায়ক সুতি, অনুষ্ঠানের জন্য আকর্ষণীয় পাড় এবং বিশেষ দিনের জন্য সিল্ক ব্লেন্ড। আপনার রং বেছে নিন—উপহারের মতো যত্নে প্যাক করব।\nSoft, breathable fabrics\tনরম ও আরামদায়ক কাপড়\nTraditional borders and decorated pallu\tঐতিহ্যবাহী পাড় ও নকশাদার আঁচল\nBlouse piece included with every saree\tপ্রতিটি শাড়ির সঙ্গে ব্লাউজ পিস\nSee all sarees\tসব শাড়ি দেখুন\nPICK UP WHERE YOU LEFT OFF\tযেখান থেকে শেষ করেছিলেন\nRecently viewed\tসম্প্রতি দেখা\nSIMPLE FROM START TO FINISH\tশুরু থেকে শেষ—সবই সহজ\nShop with confidence.\tনিশ্চিন্তে কেনাকাটা করুন।\nA clear journey from your favourite colour to your doorstep.\tপছন্দের রং নির্বাচন থেকে আপনার দরজায় ডেলিভারি—প্রতিটি ধাপ সহজ।\nChoose\tবেছে নিন\nPick a product, colour and size.\tপণ্য, রং ও সাইজ বেছে নিন।\nAdd to cart\tকার্টে যোগ করুন\nCheck your items and apply a coupon.\tপণ্য যাচাই করুন ও কুপন ব্যবহার করুন।\nPlace your order\tঅর্ডার করুন\nEnter your name, phone and address.\tনাম, ফোন নম্বর ও ঠিকানা দিন।\nWe confirm\tআমরা নিশ্চিত করি\nOur team confirms with you and ships it.\tআমাদের টিম নিশ্চিত করে পণ্য পাঠায়।\nAll products\tসব পণ্য\nWomen's clothing, sarees and accessories.\tনারীদের পোশাক, শাড়ি ও ফ্যাশন সামগ্রী।\nNewest & featured\tনতুন ও নির্বাচিত পণ্য\nPrice: low to high\tদাম: কম থেকে বেশি\nPrice: high to low\tদাম: বেশি থেকে কম\nName: A to Z\tনাম: A থেকে Z\nUp to\tসর্বোচ্চ\nOn sale only\tশুধু অফারের পণ্য\nClear filters\tফিল্টার মুছুন\nTrack your order\tআপনার অর্ডার ট্র্যাক করুন\nEnter your order number and phone number.\tঅর্ডার নম্বর ও ফোন নম্বর দিন।\nFind your order\tআপনার অর্ডার খুঁজুন\nEnter the order number from your confirmation and the phone number you used when ordering.\tকনফার্মেশনে পাওয়া অর্ডার নম্বর এবং অর্ডার দেওয়ার সময় ব্যবহৃত ফোন নম্বর লিখুন।\nOrder number\tঅর্ডার নম্বর\nPhone number\tফোন নম্বর\nContact us\tযোগাযোগ করুন\nQuestions about an order, a return or a product? We will help.\tঅর্ডার, রিটার্ন বা পণ্য নিয়ে প্রশ্ন আছে? আমরা সাহায্য করব।\nFacebook page\tফেসবুক পেজ\nMessage us anytime about orders and support.\tঅর্ডার ও সহায়তার জন্য যেকোনো সময় মেসেজ করুন।\nWhatsApp\tহোয়াটসঅ্যাপ\nBased in Bangladesh\tবাংলাদেশভিত্তিক\nWe deliver across the country.\tসারা দেশে ডেলিভারি দিই।\nReturn or exchange\tরিটার্ন বা এক্সচেঞ্জ\nContact us within 3 calendar days of receiving your order.\tপণ্য পাওয়ার ৩ দিনের মধ্যে যোগাযোগ করুন।\nRead the policy\tনীতিমালা পড়ুন\nSend a message\tমেসেজ পাঠান\nFill in the form and send it to us on WhatsApp or Messenger.\tফর্ম পূরণ করে হোয়াটসঅ্যাপ বা মেসেঞ্জারে পাঠান।\nYour name\tআপনার নাম\nTopic\tবিষয়\nOrder question\tঅর্ডার সংক্রান্ত প্রশ্ন\nReturn or exchange request\tরিটার্ন বা এক্সচেঞ্জ অনুরোধ\nProduct enquiry\tপণ্য সংক্রান্ত জিজ্ঞাসা\nPrivacy request\tগোপনীয়তা সংক্রান্ত অনুরোধ\nOther\tঅন্যান্য\nMessage\tমেসেজ\nSend on WhatsApp\tহোয়াটসঅ্যাপে পাঠান\nSend on Messenger\tমেসেঞ্জারে পাঠান\nCommon questions\tসাধারণ প্রশ্ন\nHow long do I have to request a return?\tরিটার্নের অনুরোধ কতদিনের মধ্যে করতে হবে?\nContact SHOPYHAT within 3 calendar days of receiving the product.\tপণ্য পাওয়ার ৩ দিনের মধ্যে SHOPYHAT-এর সঙ্গে যোগাযোগ করুন।\nWhen can I return or exchange a product?\tকোন অবস্থায় পণ্য রিটার্ন বা এক্সচেঞ্জ করা যাবে?\nWhen the product is damaged or defective, the wrong product, colour or design is delivered, or it is significantly different from the confirmed order. We do not accept returns for a simple change of mind.\tপণ্য ক্ষতিগ্রস্ত বা ত্রুটিপূর্ণ হলে, ভুল পণ্য, রং বা ডিজাইন পেলে অথবা নিশ্চিত করা অর্ডারের সঙ্গে উল্লেখযোগ্য অমিল থাকলে। শুধু মত পরিবর্তনের কারণে রিটার্ন গ্রহণ করা হয় না।\nShould I send the product back right away?\tপণ্যটি কি সঙ্গে সঙ্গে ফেরত পাঠাব?\nNo. Please wait for our confirmation and return instructions before sending anything back.\tনা। আমাদের নিশ্চিতকরণ ও নির্দেশনা পাওয়ার আগে কোনো পণ্য ফেরত পাঠাবেন না।\nWho pays delivery for an approved return?\tঅনুমোদিত রিটার্নের ডেলিভারি খরচ কে বহন করবে?\nIf the return or exchange is approved because we delivered a damaged, defective or incorrect product, SHOPYHAT bears the applicable delivery charges.\tআমাদের পাঠানো পণ্য ক্ষতিগ্রস্ত, ত্রুটিপূর্ণ বা ভুল হওয়ায় রিটার্ন অনুমোদিত হলে প্রযোজ্য ডেলিভারি খরচ SHOPYHAT বহন করবে।\nWill the colour match the photo exactly?\tপণ্যের রং কি ছবির মতোই হবে?\nMinor colour variations can happen because of photography, lighting and screen settings. Please read the product description before you confirm your order.\tআলো, ফটোগ্রাফি ও স্ক্রিনের কারণে রঙে সামান্য পার্থক্য হতে পারে। অর্ডার নিশ্চিত করার আগে পণ্যের বিবরণ পড়ুন।\nOur policies\tআমাদের নীতিমালা\nPrivacy, return, exchange and refund policy. Last updated 21 November 2026.\tগোপনীয়তা, রিটার্ন, এক্সচেঞ্জ ও রিফান্ড নীতিমালা। সর্বশেষ আপডেট ২১ নভেম্বর ২০২৬।\nPrivacy\tগোপনীয়তা\nReturns\tরিটার্ন\nExchange\tএক্সচেঞ্জ\nProcess\tপ্রক্রিয়া\nDelivery\tডেলিভারি\nRefunds\tরিফান্ড\nWelcome to SHOPYHAT!\tSHOPYHAT-এ স্বাগতম!\nWe value your trust and are committed to providing a reliable and convenient shopping experience. Please read our policies carefully before placing an order.\tআপনার আস্থাকে আমরা গুরুত্ব দিই এবং নির্ভরযোগ্য ও সহজ কেনাকাটার অভিজ্ঞতা দিতে প্রতিশ্রুতিবদ্ধ। অর্ডারের আগে নীতিমালা মনোযোগ দিয়ে পড়ুন।\nPrivacy Policy\tগোপনীয়তা নীতিমালা\nSHOPYHAT respects your privacy and is committed to protecting your personal information.\tSHOPYHAT আপনার গোপনীয়তাকে সম্মান করে এবং ব্যক্তিগত তথ্য সুরক্ষায় প্রতিশ্রুতিবদ্ধ।\n1.1 Information We Collect\t১.১ আমরা যে তথ্য সংগ্রহ করি\nWhen you contact us or place an order, we may collect:\tযোগাযোগ বা অর্ডারের সময় আমরা যেসব তথ্য সংগ্রহ করতে পারি:\nCustomer name\tগ্রাহকের নাম\nDelivery address\tডেলিভারি ঠিকানা\nOrder and product details\tঅর্ডার ও পণ্যের বিস্তারিত\nInformation voluntarily shared during customer communication\tগ্রাহক নিজে যোগাযোগের সময় যে তথ্য জানান\n1.2 How We Use Your Information\t১.২ আপনার তথ্য যেভাবে ব্যবহার করি\nTo process and confirm orders.\tঅর্ডার প্রক্রিয়াকরণ ও নিশ্চিত করতে।\nTo arrange product delivery.\tপণ্য ডেলিভারির ব্যবস্থা করতে।\nTo communicate about orders and customer support.\tঅর্ডার ও গ্রাহক সহায়তার জন্য যোগাযোগ করতে।\nTo handle returns, exchanges and complaints.\tরিটার্ন, এক্সচেঞ্জ ও অভিযোগ পরিচালনা করতে।\nTo improve our products and shopping experience.\tপণ্য ও কেনাকাটার অভিজ্ঞতা উন্নত করতে।\n1.3 Information Sharing\t১.৩ তথ্য ভাগাভাগি\nWe do not sell customers' personal information. Necessary information may be shared with delivery partners and service providers to fulfil orders.\tআমরা গ্রাহকের ব্যক্তিগত তথ্য বিক্রি করি না। অর্ডার সম্পন্ন করতে প্রয়োজনীয় তথ্য ডেলিভারি পার্টনার ও সেবাদাতার সঙ্গে শেয়ার করা হতে পারে।\n1.4 Data Security\t১.৪ তথ্য সুরক্ষা\nWe take reasonable steps to protect customer information against unauthorized access, misuse or disclosure.\tঅননুমোদিত প্রবেশ, অপব্যবহার বা তথ্য প্রকাশ থেকে গ্রাহকের তথ্য রক্ষায় যুক্তিসংগত ব্যবস্থা গ্রহণ করি।\n1.5 Customer Privacy Rights\t১.৫ গ্রাহকের গোপনীয়তার অধিকার\nCustomers may contact SHOPYHAT to request correction or deletion of their personal information, subject to applicable legal requirements and necessary transaction records.\tপ্রযোজ্য আইন ও প্রয়োজনীয় লেনদেনের রেকর্ড সাপেক্ষে গ্রাহক তাদের ব্যক্তিগত তথ্য সংশোধন বা মুছে দেওয়ার অনুরোধ করতে পারেন।\nReturn Policy\tরিটার্ন নীতিমালা\nCustomer satisfaction is important to us. We aim to ensure that every customer receives the product they ordered in proper condition.\tগ্রাহকের সন্তুষ্টি আমাদের কাছে গুরুত্বপূর্ণ। প্রতিটি গ্রাহক যেন সঠিক অবস্থায় অর্ডার করা পণ্য পান, সেটাই আমাদের লক্ষ্য।\n3-Day Return Request Period\t৩ দিনের রিটার্ন অনুরোধের সময়সীমা\nCustomers must contact SHOPYHAT within 3 calendar days of receiving the product to request a return.\tপণ্য পাওয়ার ৩ দিনের মধ্যে রিটার্নের অনুরোধ জানাতে SHOPYHAT-এর সঙ্গে যোগাযোগ করতে হবে।\n2.1 Eligible Reasons for Return\t২.১ রিটার্নের গ্রহণযোগ্য কারণ\nThe delivered product is damaged or defective.\tপণ্য ক্ষতিগ্রস্ত বা ত্রুটিপূর্ণ।\nThe wrong product, colour or design is delivered.\tভুল পণ্য, রং বা ডিজাইন ডেলিভারি হয়েছে।\nThe product is significantly different from the confirmed order description.\tপণ্য নিশ্চিত করা অর্ডারের বিবরণ থেকে উল্লেখযোগ্যভাবে ভিন্ন।\n2.2 Change of Mind\t২.২ মত পরিবর্তন\nWe do not accept returns simply because a customer changes their mind, dislikes the selected style or colour, or no longer wants an accurately delivered product.\tশুধু সিদ্ধান্ত পরিবর্তন, পছন্দ করা ডিজাইন বা রং অপছন্দ হওয়া অথবা সঠিকভাবে ডেলিভারি হওয়া পণ্য আর না চাওয়ার কারণে রিটার্ন গ্রহণ করা হয় না।\nThis restriction does not affect any rights available to customers under applicable consumer protection laws.\tপ্রযোজ্য ভোক্তা অধিকার আইনের অধীনে গ্রাহকের অধিকার এতে সীমিত হয় না।\n2.3 Product Condition\t২.৩ পণ্যের অবস্থা\nThe product should remain unused and unwashed.\tপণ্য অব্যবহৃত ও না-ধোয়া অবস্থায় থাকতে হবে।\nOriginal tags, labels and packaging should be retained where applicable.\tপ্রযোজ্য ক্ষেত্রে মূল ট্যাগ, লেবেল ও প্যাকেজিং সংরক্ষণ করতে হবে।\nClear photos or videos may be requested to verify the issue.\tসমস্যা যাচাই করতে স্পষ্ট ছবি বা ভিডিও চাওয়া হতে পারে।\nThe product may be inspected before approval.\tঅনুমোদনের আগে পণ্য পরীক্ষা করা হতে পারে।\nExchange Policy\tএক্সচেঞ্জ নীতিমালা\nExchange requests are accepted for eligible damaged, defective or incorrectly delivered products.\tক্ষতিগ্রস্ত, ত্রুটিপূর্ণ অথবা ভুলভাবে ডেলিভারি হওয়া যোগ্য পণ্যের এক্সচেঞ্জ অনুরোধ গ্রহণ করা হয়।\n3.1 Exchange Eligibility\t৩.১ এক্সচেঞ্জের যোগ্যতা\nWrong product received.\tভুল পণ্য পাওয়া গেছে।\nDamaged or defective product received.\tক্ষতিগ্রস্ত বা ত্রুটিপূর্ণ পণ্য পাওয়া গেছে।\nProduct significantly different from the confirmed order.\tপণ্য নিশ্চিত করা অর্ডারের সঙ্গে উল্লেখযোগ্যভাবে ভিন্ন।\n3.2 Saree & Clothing Exchange\t৩.২ শাড়ি ও পোশাক এক্সচেঞ্জ\nFor sarees, including Tangail sarees, and other clothing items:\tটাঙ্গাইল শাড়িসহ অন্যান্য পোশাকের ক্ষেত্রে:\nPlease review product descriptions and details before confirming an order.\tঅর্ডারের আগে পণ্যের বিবরণ ও বিস্তারিত যাচাই করুন।\nMinor colour variations may occur due to photography, lighting and screen settings.\tআলোকসজ্জা, ছবি তোলা ও স্ক্রিনের কারণে রং সামান্য ভিন্ন হতে পারে।\nGenuine product defects or incorrect deliveries will be reviewed.\tপণ্যের প্রকৃত ত্রুটি বা ভুল ডেলিভারি যাচাই করা হবে।\n3.3 Non-Eligible Exchanges\t৩.৩ এক্সচেঞ্জের অযোগ্য কারণ\nProducts that have been used, washed or altered.\tব্যবহৃত, ধোয়া বা পরিবর্তন করা পণ্য।\nProducts damaged through customer misuse or improper handling.\tগ্রাহকের অপব্যবহার বা ভুল ব্যবহারে ক্ষতিগ্রস্ত পণ্য।\nRequests based only on a change of mind.\tশুধু মত পরিবর্তনের ভিত্তিতে অনুরোধ।\nReturn & Exchange Process\tরিটার্ন ও এক্সচেঞ্জ প্রক্রিয়া\nTo request a return or exchange:\tরিটার্ন বা এক্সচেঞ্জের অনুরোধ করতে:\nContact SHOPYHAT within 3 calendar days of receiving your order.\tঅর্ডার পাওয়ার ৩ দিনের মধ্যে SHOPYHAT-এর সঙ্গে যোগাযোগ করুন।\nProvide your order number and registered contact details.\tঅর্ডার নম্বর ও নিবন্ধিত যোগাযোগের তথ্য দিন।\nExplain the problem clearly.\tসমস্যাটি স্পষ্টভাবে ব্যাখ্যা করুন।\nShare photos or videos of the damaged, defective or incorrect product.\tক্ষতিগ্রস্ত, ত্রুটিপূর্ণ বা ভুল পণ্যের ছবি বা ভিডিও দিন।\nWait for our team to review your request and provide instructions.\tআমাদের টিমের যাচাই ও নির্দেশনার জন্য অপেক্ষা করুন।\nImportant:\tগুরুত্বপূর্ণ:\nPlease do not send products back before receiving confirmation and return instructions from SHOPYHAT.\tSHOPYHAT-এর নিশ্চিতকরণ ও নির্দেশনা পাওয়ার আগে পণ্য ফেরত পাঠাবেন না।\nDelivery Charges\tডেলিভারি চার্জ\nIf a return or exchange is approved because SHOPYHAT delivered a damaged, defective or incorrect product, SHOPYHAT will bear the applicable return or exchange delivery charges.\tSHOPYHAT ভুল, ত্রুটিপূর্ণ বা ক্ষতিগ্রস্ত পণ্য পাঠানোয় রিটার্ন অনুমোদিত হলে প্রযোজ্য রিটার্ন বা এক্সচেঞ্জ ডেলিভারি খরচ SHOPYHAT বহন করবে।\nAny other delivery-charge arrangements will be communicated to the customer before proceeding.\tঅন্যান্য ডেলিভারি চার্জের ব্যবস্থা আগেই গ্রাহককে জানানো হবে।\nRefund Policy\tরিফান্ড নীতিমালা\nIf a refund is approved:\tরিফান্ড অনুমোদিত হলে:\nThe customer will be informed about the refund process.\tগ্রাহককে রিফান্ড প্রক্রিয়া জানানো হবে।\nThe refund will be processed through an agreed payment method.\tসম্মত পেমেন্ট পদ্ধতিতে রিফান্ড করা হবে।\nThe applicable refund amount and estimated processing time will be communicated to the customer.\tরিফান্ডের পরিমাণ ও সম্ভাব্য সময় গ্রাহককে জানানো হবে।\nRefunds will be handled in accordance with applicable laws and the agreed payment arrangements.\tপ্রযোজ্য আইন ও সম্মত পেমেন্ট ব্যবস্থার ভিত্তিতে রিফান্ড প্রক্রিয়া সম্পন্ন হবে।\nPolicy Updates\tনীতিমালা আপডেট\nSHOPYHAT may update these policies when necessary. Updated versions will be published through our official online channels.\tপ্রয়োজন অনুযায়ী SHOPYHAT নীতিমালা আপডেট করতে পারে। নতুন সংস্করণ আমাদের অফিসিয়াল অনলাইন মাধ্যমে প্রকাশ করা হবে।\nCustomers are encouraged to review these policies before placing an order.\tঅর্ডারের আগে গ্রাহকদের নীতিমালা পড়তে উৎসাহিত করা হচ্ছে।\nNeed help?\tসহায়তা দরকার?\nFor privacy-related questions, order assistance, return or exchange requests, contact our team.\tগোপনীয়তা, অর্ডার, রিটার্ন বা এক্সচেঞ্জ বিষয়ে আমাদের টিমের সঙ্গে যোগাযোগ করুন।\nContact SHOPYHAT\tSHOPYHAT-এর সঙ্গে যোগাযোগ করুন\nFashion, clothing and accessories.\tফ্যাশন, পোশাক ও আনুষঙ্গিক সামগ্রী।\nEstablished 2020, Bangladesh.\tপ্রতিষ্ঠিত ২০২০, বাংলাদেশ।\nHelp\tসহায়তা\nReturn and exchange\tরিটার্ন ও এক্সচেঞ্জ\nRefund policy\tরিফান্ড নীতিমালা\nConnect\tযোগাযোগ\nFacebook\tফেসবুক\nPrivacy policy\tগোপনীয়তা নীতিমালা\nSHOPYHAT. All rights reserved.\tSHOPYHAT। সর্বস্বত্ব সংরক্ষিত।\nYour cart\tআপনার কার্ট\nSaved items\tপছন্দের পণ্য\n\n\nSHOPYHAT CHECKOUT\tSHOPYHAT চেকআউট\nOne simple step\tমাত্র একটি সহজ ধাপ\nAlmost yours\tআর মাত্র এক ধাপ\nNo account needed. Enter your delivery details and review your total before placing your order.\tকোনো অ্যাকাউন্ট লাগবে না। ডেলিভারি তথ্য দিন এবং অর্ডার নিশ্চিত করার আগে মোট মূল্য যাচাই করুন।\n01   Delivery details\t০১  ডেলিভারির তথ্য\nDelivery details\tডেলিভারির তথ্য\nFull name\tপুরো নাম\nDelivery area\tডেলিভারি এলাকা\nFull address\tসম্পূর্ণ ঠিকানা\nOrder note (optional)\tঅর্ডার নোট (ঐচ্ছিক)\n02   Payment method\t০২  পেমেন্ট পদ্ধতি\nPayment method\tপেমেন্ট পদ্ধতি\nCash on delivery\tক্যাশ অন ডেলিভারি\nPay after your parcel arrives\tপণ্য হাতে পাওয়ার পর মূল্য দিন\nbKash — Send Money\tবিকাশ — সেন্ড মানি\nNagad — Send Money\tনগদ — সেন্ড মানি\nSend Money via bKash app · manual verification\tবিকাশ অ্যাপ দিয়ে সেন্ড মানি · ম্যানুয়াল যাচাই\nSend Money via Nagad app · manual verification\tনগদ অ্যাপ দিয়ে সেন্ড মানি · ম্যানুয়াল যাচাই\nPayment account not configured yet\tপেমেন্ট অ্যাকাউন্ট এখনো চালু হয়নি\nMANUAL TRANSFER · VERIFICATION REQUIRED\tম্যানুয়াল ট্রান্সফার · যাচাই আবশ্যক\nTransaction ID *\tট্রানজ্যাকশন আইডি *\nSender mobile (last 4 digits) *\tপ্রেরকের মোবাইল নম্বরের শেষ ৪ সংখ্যা *\nI have completed Send Money to the displayed receiving number. I understand SHOPYHAT must verify it before confirming payment.\tপ্রদর্শিত নম্বরে সেন্ড মানি সম্পন্ন করেছি। আমি জানি, পেমেন্ট নিশ্চিত করার আগে SHOPYHAT লেনদেন যাচাই করবে।\nNever share your bKash/Nagad PIN, OTP, login or security code. A Transaction ID is a claim,\tআপনার বিকাশ/নগদের PIN, OTP, লগইন বা নিরাপত্তা কোড কাউকে দেবেন না। ট্রানজ্যাকশন আইডি দেওয়া মানেই\nnot automatic payment confirmation\tপেমেন্ট স্বয়ংক্রিয়ভাবে নিশ্চিত হওয়া নয়\nI have read the\tআমি পড়েছি\nreturn, exchange and privacy policies\tরিটার্ন, এক্সচেঞ্জ ও গোপনীয়তা নীতিমালা\nand my order details are correct.\tএবং আমার অর্ডারের তথ্য সঠিক।\nPlace order\tঅর্ডার নিশ্চিত করুন\nYour delivery charge is included in the total shown in the order summary.\tঅর্ডার সারাংশে দেখানো মোট মূল্যের মধ্যেই ডেলিভারি চার্জ অন্তর্ভুক্ত।\nYOUR SELECTION\tআপনার নির্বাচিত পণ্য\nOrder summary\tঅর্ডারের সারাংশ\nConfirm your selected colours, quantities and delivery address before payment.\tপেমেন্টের আগে নির্বাচিত রং, পরিমাণ ও ডেলিভারি ঠিকানা যাচাই করুন।\nSubtotal\tপণ্যের মোট দাম\nCoupon\tকুপন\nDelivery\tডেলিভারি\nTotal\tসর্বমোট\nFree\tফ্রি\nInside Dhaka\tঢাকার ভিতরে\nOutside Dhaka\tঢাকার বাইরে\nDhaka\tঢাকা\noutside\tঢাকার বাইরে\nCopy number\tনম্বর কপি করুন\nPayment number copied\tপেমেন্ট নম্বর কপি হয়েছে\nPlease copy the displayed payment number\tপ্রদর্শিত পেমেন্ট নম্বরটি কপি করুন\nSelect colour\tরং বেছে নিন\nAvailable colours\tযে রংগুলো আছে\nSold out\tস্টক শেষ\nSize\tসাইজ\nQuantity\tপরিমাণ\nDecrease\tকমান\nIncrease\tবাড়ান\nPhoto\tছবি\nYou save\tআপনার সাশ্রয়\nDetails\tবিস্তারিত\nDelivery and returns\tডেলিভারি ও রিটার্ন\nAbout colour\tরং সম্পর্কে\nColours can look slightly different from the photo because of lighting and screen settings.\tআলো ও স্ক্রিনের পার্থক্যের কারণে পণ্যের রং ছবির তুলনায় সামান্য ভিন্ন দেখাতে পারে।\nYou may also like\tআপনার আরও পছন্দ হতে পারে\nAdd to bag\tব্যাগে যোগ করুন\nBuy now\tএখনই কিনুন\nSave to wishlist\tপছন্দের তালিকায় রাখুন\nSaved to wishlist\tপছন্দের তালিকায় রাখা হয়েছে\nShare\tশেয়ার করুন\nRemove\tসরিয়ে দিন\nAdd something else\tআরও পণ্য দেখুন\nCoupon code\tকুপন কোড\nApply\tপ্রয়োগ করুন\nContinue to checkout\tচেকআউটের জন্য এগিয়ে যান\nNo account needed · Confirm your total at checkout\tঅ্যাকাউন্ট লাগবে না · চেকআউটে মোট মূল্য নিশ্চিত করুন\nYour cart is empty.\tআপনার কার্ট খালি।\nYour cart is empty\tআপনার কার্ট খালি\nFind something you love and add it here.\tআপনার পছন্দের পণ্য খুঁজে কার্টে যোগ করুন।\nStart shopping\tকেনাকাটা শুরু করুন\nNothing saved yet.\tএখনো কোনো পণ্য সংরক্ষিত নেই।\nTap the heart on any product to keep it here.\tপছন্দের পণ্য সংরক্ষণ করতে হার্ট চিহ্নে চাপুন।\nView\tদেখুন\nClose\tবন্ধ করুন\nContinue shopping\tকেনাকাটা চালিয়ে যান\nOrder request placed\tঅর্ডারের অনুরোধ গ্রহণ করা হয়েছে\nPayment verification requested\tপেমেন্ট যাচাইয়ের অনুরোধ করা হয়েছে\nPayment pending verification\tপেমেন্ট যাচাইয়ের অপেক্ষায়\nNo advance payment required. Pay when the parcel is delivered.\tঅগ্রিম পেমেন্ট দরকার নেই। পণ্য পৌঁছালে মূল্য পরিশোধ করুন।\nSend on WhatsApp\tহোয়াটসঅ্যাপে পাঠান\nSend on Messenger\tমেসেঞ্জারে পাঠান\nKeep shopping\tআরও কেনাকাটা করুন\nPlaced\tঅর্ডার করা হয়েছে\nConfirmed\tনিশ্চিত\nPacked\tপ্যাক করা হয়েছে\nShipped\tপাঠানো হয়েছে\nDelivered\tডেলিভারি সম্পন্ন\nCancelled\tবাতিল\nPending\tঅপেক্ষমাণ\nPending verification\tযাচাইয়ের অপেক্ষায়\nVerified - Paid\tযাচাই সম্পন্ন — পরিশোধিত\nPayment method:\tপেমেন্ট পদ্ধতি:\nPayment claim status:\tপেমেন্ট দাবির অবস্থা:\nMessage from SHOPYHAT:\tSHOPYHAT-এর মেসেজ:\nLooking up your order…\tআপনার অর্ডার খোঁজা হচ্ছে…\nLoading products…\tপণ্য লোড হচ্ছে…\nUnable to load products.\tপণ্য লোড করা যাচ্ছে না।\nRefresh to retry.\tআবার চেষ্টা করতে রিফ্রেশ করুন।\nSelect and copy the payment number above\tউপরের পেমেন্ট নম্বরটি নির্বাচন করে কপি করুন\nSelected color is sold out.\tনির্বাচিত রঙের পণ্য স্টক শেষ।\nThis color is sold out right now. Message us to ask when it will be back.\tএই রঙের পণ্যের স্টক শেষ। আবার কখন আসবে জানতে মেসেজ করুন।\nSaved to your wishlist\tপছন্দের তালিকায় যুক্ত হয়েছে\nRemoved from wishlist\tপছন্দের তালিকা থেকে সরানো হয়েছে\nProduct link copied\tপণ্যের লিংক কপি হয়েছে\nEnter your full name.\tআপনার সম্পূর্ণ নাম লিখুন।\nEnter a valid Bangladeshi mobile number.\tবাংলাদেশের সঠিক মোবাইল নম্বর লিখুন।\nEnter your full delivery address.\tসম্পূর্ণ ডেলিভারি ঠিকানা লিখুন।\nThis payment method is not configured.\tএই পেমেন্ট পদ্ধতি চালু করা হয়নি।\nEnter your actual transaction ID.\tসঠিক ট্রানজ্যাকশন আইডি লিখুন।\nEnter the sender mobile last 4 digits.\tপ্রেরকের মোবাইলের শেষ ৪ সংখ্যা লিখুন।\nConfirm the payment transfer first.\tপ্রথমে পেমেন্ট ট্রান্সফার নিশ্চিত করুন।\nAccept the policies to place your order.\tঅর্ডার দিতে নীতিমালা গ্রহণ করুন।\nThis product needs a valid color selection. Please refresh.\tএই পণ্যের জন্য সঠিক রং নির্বাচন করুন। পেজ রিফ্রেশ করুন।\nYour cart is empty.\tআপনার কার্ট খালি।\nSaving your order securely…\tআপনার অর্ডার নিরাপদে সংরক্ষিত হচ্ছে…\nConfirming order…\tঅর্ডার নিশ্চিত করা হচ্ছে…\nUnable to confirm order. Your cart is intact. Please try again.\tঅর্ডার নিশ্চিত করা যায়নি। কার্টের পণ্য অক্ষত আছে। আবার চেষ্টা করুন।\nOrder could not be confirmed.\tঅর্ডার নিশ্চিত করা যায়নি।\nComplete human verification first.\tপ্রথমে মানব যাচাই সম্পন্ন করুন।\nPayment account not configured yet\tপেমেন্ট অ্যাকাউন্ট এখনো চালু হয়নি\nOrder status\tঅর্ডারের অবস্থা\nWe have received your order. Our team will contact you to confirm it.\tআমরা আপনার অর্ডার পেয়েছি। নিশ্চিত করতে আমাদের টিম যোগাযোগ করবে।\nYour order is confirmed. We are getting it ready.\tআপনার অর্ডার নিশ্চিত হয়েছে। আমরা প্রস্তুত করছি।\nYour order is packed and will be handed to the courier soon.\tআপনার অর্ডার প্যাক করা হয়েছে। শিগগির কুরিয়ারে দেওয়া হবে।\nYour order is on its way to you.\tআপনার পণ্য পথে রয়েছে।\nYour order was delivered. Thank you for shopping with SHOPYHAT. Need a return? Contact us within 3 days.\tআপনার অর্ডার ডেলিভারি সম্পন্ন হয়েছে। SHOPYHAT থেকে কেনাকাটার জন্য ধন্যবাদ। রিটার্ন চাইলে ৩ দিনের মধ্যে যোগাযোগ করুন।\nThis order was cancelled. Message us if you have any questions.\tঅর্ডারটি বাতিল হয়েছে। প্রশ্ন থাকলে আমাদের মেসেজ করুন।\nOrder question\tঅর্ডার সংক্রান্ত প্রশ্ন\nTrack order\tঅর্ডার ট্র্যাক করুন\n";
+for(const line of raw.split('\n')){
+ const tab=line.indexOf('\t');
+ if(tab<1)continue;
+ const en=line.slice(0,tab).trim(),bn=line.slice(tab+1).trim();
+ if(en && bn)EN.set(en.replace(/&amp;/g,'&').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim(),bn);
+}
+
+// Additional catalog and checkout vocabulary, including common dynamic labels.
+const EXTRAS = {
+ 'Products':'পণ্যসমূহ','Product':'পণ্য','All':'সব','Explore':'দেখুন','Explore collection':'কালেকশন দেখুন',
+ 'Three-piece':'থ্রি-পিস','Matching sets':'মানানসই সেট',
+ 'Kurti and tops':'কুর্তি ও টপস','Everyday wear':'প্রতিদিনের পোশাক',
+ 'Hijab and orna':'হিজাব ও ওড়না','Soft and light':'নরম ও হালকা',
+ 'Bags and jewellery':'ব্যাগ ও গয়না','Finishing touches':'স্টাইলের পূর্ণতা',
+ 'Tangail, silk and cotton':'টাঙ্গাইল, সিল্ক ও সুতি','New in':'নতুন',
+ 'Just added':'সদ্য যুক্ত','View details':'বিস্তারিত দেখুন',
+ 'Choose options':'বিকল্প বেছে নিন','Currently unavailable':'এই মুহূর্তে পাওয়া যাচ্ছে না',
+ 'Sold out':'স্টক শেষ','Save':'সাশ্রয়','Wishlist':'পছন্দের তালিকা',
+ 'Black':'কালো','Purple':'বেগুনি','Green':'সবুজ','Dark Green':'গাঢ় সবুজ',
+ 'Red':'লাল','Blue':'নীল','Royal Blue':'রয়্যাল ব্লু','Yellow':'হলুদ',
+ 'White':'সাদা','Off-white':'অফ-হোয়াইট','Pink':'গোলাপি','Maroon':'মেরুন',
+ 'Gold':'সোনালি','Orange':'কমলা','Navy':'নেভি','Teal':'টিল',
+ 'Mustard':'সরিষা','Coral':'কোরাল','Olive':'অলিভ','Rose':'গোলাপি',
+ 'Emerald':'পান্না সবুজ','Wine':'ওয়াইন','Sky':'আকাশি',
+ 'Peacock':'ময়ূর রং','Standard':'সাধারণ','Brown':'বাদামি',
+ 'Total':'সর্বমোট','Shop now':'এখনই কিনুন','Shop collection':'কালেকশন দেখুন',
+ 'Color':'রং','Colour':'রং','Choose color':'রং বেছে নিন',
+ 'Choose colour':'রং বেছে নিন','Select size':'সাইজ বেছে নিন',
+ 'See details':'বিস্তারিত দেখুন','Select options':'বিকল্প বেছে নিন',
+ 'Loading...':'লোড হচ্ছে…','No products found':'কোনো পণ্য পাওয়া যায়নি',
+ 'Continue':'এগিয়ে যান','Pay now':'এখন পেমেন্ট করুন',
+ 'Order received':'অর্ডার গ্রহণ করা হয়েছে',
+ 'SHOPYHAT. All rights reserved.':'SHOPYHAT। সর্বস্বত্ব সংরক্ষিত।',
+ 'Your order is being processed':'আপনার অর্ডার প্রক্রিয়াধীন',
+ 'Order ID':'অর্ডার আইডি','Transaction ID':'ট্রানজ্যাকশন আইডি',
+ 'Sender mobile':'প্রেরকের মোবাইল','Payment verification':'পেমেন্ট যাচাই',
+ 'Manual verification':'ম্যানুয়াল যাচাই','Manual transfer':'ম্যানুয়াল ট্রান্সফার',
+ 'Verification required':'যাচাই আবশ্যক','Order placed':'অর্ডার দেওয়া হয়েছে',
+ 'Contact support':'সহায়তার জন্য যোগাযোগ করুন'
+};
+for(const [en,bn] of Object.entries(EXTRAS))EN.set(en,bn);
+// Text fragments are intentionally separate: HTML templates wrap numbers and names
+// in nested <strong> or <a> elements, so the browser produces several text nodes.
+const FRAGMENTS = {
+ 'Open your':'আপনার',
+ 'app, choose':'অ্যাপ খুলে বেছে নিন',
+ 'and send':'এবং পাঠান',
+ ', and send':'এবং পাঠান',
+ 'to the number below.':'নিচের নম্বরে।',
+ 'Steps:':'ধাপগুলো:',
+ 'Thank you,':'ধন্যবাদ,',
+ '. Order total:':'। অর্ডারের মোট মূল্য:',
+ 'Your provided Transaction ID':'আপনার দেওয়া ট্রানজ্যাকশন আইডি',
+ 'must be matched with our official':'আমাদের অফিসিয়াল',
+ 'transaction history before the order is marked paid. Do not pay twice if you have already transferred.':'লেনদেনের ইতিহাসের সঙ্গে মিলিয়ে নেওয়ার পরই অর্ডার পরিশোধিত দেখানো হবে। আগে টাকা পাঠিয়ে থাকলে আবার পেমেন্ট করবেন না।',
+ 'Send your order details to us for manual review. Keep your Order ID for support and tracking.':'ম্যানুয়াল যাচাইয়ের জন্য অর্ডারের তথ্য আমাদের পাঠান। সহায়তা ও ট্র্যাকিংয়ের জন্য অর্ডার আইডি সংরক্ষণ করুন।',
+ 'Cash on delivery · Delivery across Bangladesh':'ক্যাশ অন ডেলিভারি · সারা বাংলাদেশে ডেলিভারি',
+ 'Cash on delivery   ·   Delivery across Bangladesh':'ক্যাশ অন ডেলিভারি · সারা বাংলাদেশে ডেলিভারি',
+ 'Delivery:':'ডেলিভারি:',
+ 'inside Dhaka,':'ঢাকার ভিতরে,',
+ 'outside Dhaka. Pay on delivery. If the item is damaged, defective or wrong, contact us within 3 calendar days.':'ঢাকার বাইরে। পণ্য হাতে পেয়ে টাকা দিন। ক্ষতিগ্রস্ত, ত্রুটিপূর্ণ বা ভুল পণ্য পেলে ৩ দিনের মধ্যে যোগাযোগ করুন।',
+ 'This coupon code is not valid.':'এই কুপন কোডটি গ্রহণযোগ্য নয়।',
+ 'Confirm your selected colours, quantities and delivery address before payment.':'পেমেন্টের আগে নির্বাচিত রং, পরিমাণ ও ডেলিভারি ঠিকানা যাচাই করুন।',
+ 'Search products':'পণ্য খুঁজুন',
+ 'Search products...':'পণ্য খুঁজুন...',
+ 'What are you looking for?':'আপনি কী খুঁজছেন?',
+ 'Your favourites':'আপনার পছন্দের পণ্য',
+ 'Continue shopping':'কেনাকাটা চালিয়ে যান',
+ 'Open menu':'মেনু খুলুন',
+ 'SHOPYHAT home':'SHOPYHAT হোম',
+ 'Inside Dhaka,':'ঢাকার ভিতরে,',
+ 'Outside Dhaka,':'ঢাকার বাইরে,',
+ 'Close':'বন্ধ করুন',
+ 'New pieces are on their way. Explore our shop for more styles.':'নতুন পণ্য আসছে। আরও কালেকশন দেখতে শপ ঘুরে দেখুন।',
+ 'No matching products. Try a different search or clear filters.':'কোনো পণ্য পাওয়া যায়নি। অন্যভাবে খুঁজুন বা ফিল্টার মুছে দিন।',
+ 'No products match your filters.':'আপনার ফিল্টারের সঙ্গে কোনো পণ্য মিলছে না।',
+ 'Available':'পাওয়া যাচ্ছে',
+ 'available':'পাওয়া যাচ্ছে',
+ 'styles':'ধরন',
+ 'style':'ধরন',
+ 'colours':'রং',
+ 'colour':'রং',
+ 'size':'সাইজ',
+ 'Remove from wishlist':'পছন্দের তালিকা থেকে সরান',
+ 'Add to wishlist':'পছন্দের তালিকায় রাখুন'
+};
+for(const [en,bn] of Object.entries(FRAGMENTS))EN.set(en,bn);
+
+
+const EN_TO_BN = EN;
+const saved=(()=>{try{return localStorage.getItem('sh_language')||'en'}catch{return 'en'}})();
+let lang=saved==='bn'?'bn':'en';
+const remembered=new WeakMap();
+const attrRemembered=new WeakMap();
+const skipTags=new Set(['SCRIPT','STYLE','NOSCRIPT','TEXTAREA','CODE','PRE']);
+const clean=s=>String(s||'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
+const paymentRules=[
+ [/^Inside Dhaka, (.+)$/,'ঢাকার ভিতরে, $1'],
+ [/^Outside Dhaka, (.+)$/,'ঢাকার বাইরে, $1'],
+ [/^Open your (bKash|Nagad) app, choose (.+), and send (.+) to the number below\.$/,'আপনার $1 অ্যাপ খুলে $2 নির্বাচন করুন এবং নিচের নম্বরে $3 পাঠান।'],
+ [/^Photo (\d+)$/,'ছবি $1'],
+ [/^(\d+) available$/,'$1টি উপলব্ধ'],
+ [/^You save (.+)$/,'আপনার সাশ্রয় $1'],
+ [/^Order request placed$/,'অর্ডার অনুরোধ গ্রহণ করা হয়েছে'],
+ [/^Thank you, (.+)\. Order total: (.+) \((.+)\)\.$/,'ধন্যবাদ, $1। অর্ডারের মোট মূল্য: $2 ($3)।'],
+ [/^Payment method: (.+)$/,'পেমেন্ট পদ্ধতি: $1'],
+ [/^Coupon (.+)$/,'কুপন $1'],
+ [/^Select colour (.+)$/,'রং বেছে নিন $1'],
+ [/^\d+ styles?$/,'পণ্যের ধরন'],
+ [/^Steps: 1\. Copy the number\..+$/,'ধাপসমূহ: ১. নম্বরটি কপি করুন। ২. পেমেন্ট অ্যাপে Send Money খুলুন। ৩. নম্বর ও সঠিক টাকা দিন। ৪. অ্যাপে পেমেন্ট সম্পন্ন করুন। ৫. এখানে ফিরে সঠিক ট্রানজ্যাকশন আইডি ও প্রেরকের ফোনের শেষ চার সংখ্যা লিখুন। এই ওয়েবসাইট থেকে কোনো টাকা স্বয়ংক্রিয়ভাবে কাটা বা যাচাই করা হয় না।']
+];
+function registerProducts(products){
+ if(!Array.isArray(products))return;
+ for(const p of products){
+  const name=String(p.name||'').trim(),nameBn=String(p.nameBn||p.name_bn||'').trim();
+  const desc=String(p.desc||p.description||'').trim(),descBn=String(p.descBn||p.description_bn||'').trim();
+  if(name&&nameBn)EN_TO_BN.set(name,nameBn);
+  if(desc&&descBn)EN_TO_BN.set(desc,descBn);
+  const original=Array.isArray(p.details)?p.details:String(p.details||'').split(/[\n|]+/).map(x=>x.trim()).filter(Boolean);
+  const translated=Array.isArray(p.detailsBn)?p.detailsBn:String(p.details_bn||'').split(/[\n|]+/).map(x=>x.trim()).filter(Boolean);
+  if(original.length&&translated.length===original.length)original.forEach((en,i)=>{if(translated[i])EN_TO_BN.set(String(en).trim(),translated[i])});
+ }
+ if(document.body)apply(document.body);
+}
+function translate(v){
+ const input=clean(v);
+ if(!input)return null;
+ if(EN_TO_BN.has(input))return EN_TO_BN.get(input);
+ for(const [re,output] of paymentRules)if(re.test(input))return input.replace(re,output);
+ return null;
+}
+function translateNode(node){
+ if(!node||node.nodeType!==3||!node.parentElement)return;
+ const parent=node.parentElement;
+ if(skipTags.has(parent.tagName)||parent.closest('.sh-lang-switch,[contenteditable="true"],[data-no-translate]'))return;
+ const current=node.nodeValue||'';
+ let record=remembered.get(node);
+ if(!record){record={en:current,rendered:current};remembered.set(node,record);}
+ else if(current!==record.rendered){record.en=current;record.rendered=current;}
+ const original=record.en;
+ const start=original.match(/^\s*/)?.[0]||'',end=original.match(/\s*$/)?.[0]||'';
+ const bn=translate(original);
+ const target=lang==='bn'&&bn!=null?start+bn+end:original;
+ if(current!==target){record.rendered=target;node.nodeValue=target}
+}
+function translateAttributes(element){
+ if(!element||element.nodeType!==1||element.closest('.sh-lang-switch,[data-no-translate]'))return;
+ let entries=attrRemembered.get(element);
+ if(!entries){entries={};attrRemembered.set(element,entries)}
+ for(const name of ['placeholder','aria-label','title']){
+  if(!element.hasAttribute(name))continue;
+  const current=element.getAttribute(name)||'';
+  let entry=entries[name];
+  if(!entry)entry=entries[name]={en:current,rendered:current};
+  else if(current!==entry.rendered){entry.en=current;entry.rendered=current}
+  const trans=translate(entry.en);
+  const target=lang==='bn'&&trans!=null?trans:entry.en;
+  if(target!==current){entry.rendered=target;element.setAttribute(name,target)}
+ }
+}
+function apply(root){
+ if(!root)return;
+ if(root.nodeType===3){translateNode(root);return}
+ if(root.nodeType!==1 && root.nodeType!==9 && root.nodeType!==11)return;
+ if(root.nodeType===1)translateAttributes(root);
+ const tree=document.createTreeWalker(root,NodeFilter.SHOW_ELEMENT|NodeFilter.SHOW_TEXT);
+ let child;
+ while((child=tree.nextNode())){
+  if(child.nodeType===3)translateNode(child);
+  else translateAttributes(child);
+ }
+}
+function syncButtons(){
+ document.documentElement.lang=lang;
+ document.documentElement.classList.toggle('sh-bangla',lang==='bn');
+ document.querySelectorAll('.sh-lang-switch').forEach(el=>{
+   for(const btn of el.querySelectorAll('[data-sh-lang]')){
+    const active=btn.dataset.shLang===lang;
+    btn.classList.toggle('selected',active);
+    btn.setAttribute('aria-pressed',String(active));
+   }
+ });
+}
+const css=document.createElement('style');
+css.textContent=`.sh-lang-switch{display:inline-flex;align-items:center;gap:3px;padding:3px;background:#f5f0ea;border:1px solid #e8ded4;border-radius:999px;flex-shrink:0;font-family:var(--sans),sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.035)}
+.sh-lang-switch button{border:0;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:800;color:#66594b;line-height:1.2;transition:all .2s ease;white-space:nowrap}
+.sh-lang-switch button.selected{background:#1c1b19;color:#fff;box-shadow:0 2px 5px rgba(0,0,0,.15)}
+.sh-lang-switch button:focus-visible{outline:2px solid #f47721;outline-offset:2px}
+.sh-lang-switch button:hover:not(.selected){color:#d9640f;background:#fff}
+.sh-lang-switch.sh-modal-lang{position:absolute;left:13px;top:13px;z-index:9;box-shadow:0 3px 15px #0001}
+.sh-lang-switch.sh-header-lang{margin-right:8px}
+.sh-payment-lang-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.sh-payment-lang-row .sh-lang-switch{background:#fff}
+html.sh-bangla body{font-family:"Hind Siliguri",var(--sans),sans-serif}
+html.sh-bangla .hero h1,html.sh-bangla h1,html.sh-bangla h2,html.sh-bangla h3{font-family:"Hind Siliguri",var(--serif),serif;letter-spacing:0;line-height:1.3}
+html.sh-bangla button,html.sh-bangla input,html.sh-bangla select,html.sh-bangla textarea{font-family:"Hind Siliguri",var(--sans),sans-serif}
+@media(max-width:800px){.sh-lang-switch.sh-header-lang{position:fixed;right:14px;bottom:82px;z-index:195;margin:0;box-shadow:0 7px 22px #0003;background:#fff}.sh-lang-switch button{font-size:11px;padding:7px 8px}.sh-lang-switch.sh-modal-lang{top:10px;left:10px}.hd{gap:8px}}
+`;
+document.head.append(css);
+const makeSwitch=(extra)=>{const el=document.createElement('div');el.className='sh-lang-switch '+extra;el.setAttribute('role','group');el.setAttribute('aria-label','Language / ভাষা');
+el.innerHTML='<button type="button" data-sh-lang="en" aria-label="English" title="English">EN</button><button type="button" data-sh-lang="bn" aria-label="বাংলা" title="বাংলা">বাংলা</button>';
+return el};
+function ensureSwitches(){
+ const header=document.querySelector('.hd .icons');
+ if(header&&!header.querySelector('.sh-header-lang'))header.prepend(makeSwitch('sh-header-lang'));
+ for(const id of ['prodModal','coModal','okModal']){
+  const box=document.querySelector('#'+id+' > .box');
+  if(box&&!box.querySelector('.sh-modal-lang'))box.prepend(makeSwitch('sh-modal-lang'));
+ }
+ // Keep a dedicated language control next to Manual Transfer verification,
+ // so the customer can change language where payment instructions are read.
+ const payment=document.querySelector('#payX');
+ if(payment&&!payment.querySelector('.sh-payment-lang-row')){
+   const badge=payment.querySelector('.manual-badge');
+   if(badge){
+     const row=document.createElement('div');
+     row.className='sh-payment-lang-row';
+     payment.insertBefore(row,badge);
+     row.appendChild(badge);
+     row.appendChild(makeSwitch('sh-payment-lang'));
+   }
+ }
+ syncButtons();
+}
+ensureSwitches();
+function setLanguage(next){
+ if(next!=='bn'&&next!=='en')return;
+ lang=next;
+ try{localStorage.setItem('sh_language',next)}catch{}
+ syncButtons();
+ apply(document.body);
+ window.dispatchEvent(new CustomEvent('shopyhat:languagechange',{detail:{language:next}}));
+}
+document.addEventListener('click',e=>{const btn=e.target.closest('[data-sh-lang]');if(!btn)return;e.preventDefault();setLanguage(btn.dataset.shLang)});
+syncButtons();
+apply(document.body);
+let flushing=false;
+const observer=new MutationObserver(records=>{
+ if(flushing)return;
+ flushing=true;
+ try{
+   for(const rec of records){
+    if(rec.type==='characterData')translateNode(rec.target);
+    else if(rec.type==='attributes')translateAttributes(rec.target);
+    else for(const node of rec.addedNodes)apply(node);
+   }
+   // Product and checkout markup are rebuilt by the existing storefront.
+   // Reinsert the switcher whenever drawProduct() replaces #prodBox content.
+   if(records.some(rec=>rec.type==='childList'))ensureSwitches();
+ }finally{flushing=false}
+});
+observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title']});
+window.SHOPYHAT_I18N={setLanguage,getLanguage:()=>lang,translate,registerProducts};
+try{if(typeof PRODUCTS!=='undefined'&&Array.isArray(PRODUCTS))registerProducts(PRODUCTS)}catch(e){console.warn('Catalog language registration pending',e)}
+})();
