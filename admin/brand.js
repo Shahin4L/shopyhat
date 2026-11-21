@@ -31,7 +31,7 @@ export function setupBrandManager({db,roleCan,notify,formatDate}){
  }
  async function reload(){
   if(!roleCan('owner','manager'))return;
-  const result=await db.from('sh_brand_settings').select('logo_url,updated_at,updated_by').eq('id','primary').maybeSingle();
+  const result=await db.from('sh_brand_settings').select('logo_url,updated_at').eq('id','primary').maybeSingle();
   if(result.error){notify('brandLogoMsg','Unable to load brand settings: '+result.error.message,true);return}
   saved=result.data||null;await preview();
  }
@@ -47,7 +47,7 @@ export function setupBrandManager({db,roleCan,notify,formatDate}){
    if(r.error)throw r.error;
    const url=db.storage.from(bucket).getPublicUrl(path).data.publicUrl;
    if(!allowed(url))throw Error('Invalid saved logo URL.');
-   const update=await db.from('sh_brand_settings').update({logo_url:url}).eq('id','primary').select('logo_url,updated_at,updated_by').single();
+   const update=await db.from('sh_brand_settings').update({logo_url:url}).eq('id','primary').select('logo_url,updated_at').single();
    if(update.error)throw update.error;
    saved=update.data;get('brandLogoFile').value='';await preview();
    notify('brandLogoMsg','New logo published. Refresh the storefront to see the update without old image cache.');
@@ -59,7 +59,7 @@ export function setupBrandManager({db,roleCan,notify,formatDate}){
   if(!confirm('Restore the original SHOPYHAT logo on the website? Previous uploads will be preserved.'))return;
   const button=get('resetBrandLogo');button.disabled=true;
   try{
-   const r=await db.from('sh_brand_settings').update({logo_url:''}).eq('id','primary').select('logo_url,updated_at,updated_by').single();
+   const r=await db.from('sh_brand_settings').update({logo_url:''}).eq('id','primary').select('logo_url,updated_at').single();
    if(r.error)throw r.error;saved=r.data;await preview();notify('brandLogoMsg','Original SHOPYHAT logo restored.');
   }catch(e){notify('brandLogoMsg','Restore failed: '+e.message,true)}
   finally{button.disabled=false}
