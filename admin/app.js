@@ -144,7 +144,7 @@ function editVariant(id,productId){
  <div><label>Variant price (leave blank for product price)</label><input name="price" type="number" min="0" step=".01" value="${esc(v.price??'')}"></div><div><label>Stock (blank = unlimited)</label><input name="stock" type="number" min="0" step="1" value="${esc(v.stock??'')}"></div></div>
  <label>SKU</label><input name="sku" value="${esc(v.sku||'')}"><label><input name="active" type="checkbox" style="width:auto" ${v.active?'checked':''}> Variant enabled</label>
  <button class="btn primary" type="submit">Save Color</button></form>
- ${id?'<div class="divider"></div><h3>Color-specific image gallery</h3><div class="photos">'+images.filter(i=>i.variant_id===id).map(i=>imgTag(i.image_url,v.color)).join('')+'</div><button class="btn" data-photos="'+v.product_id+'" data-variant="'+id+'">Manage Photos</button>':''}
+ ${id?'<div class="media-section"><div class="section-heading"><h3>Photos for '+esc(v.color)+'</h3><button type="button" class="btn small" data-photos="'+v.product_id+'" data-variant="'+id+'">＋ Manage Photos</button></div><div class="photos">'+productPhotoTiles(images.filter(i=>i.variant_id===id),v.color)+'</div></div>':''}
  <p class="muted">One color can have multiple photos. Black and Purple maintain separate galleries.</p>`);
  $('variantForm').onsubmit=async e=>{e.preventDefault();if(!roleCan('owner','manager'))return;const f=formData('variantForm');
  const row={product_id:v.product_id,color:String(f.color).trim(),hex:String(f.hex),sku:String(f.sku||'').trim()||null,price:f.price?Number(f.price):null,stock:f.stock===''?null:Number(f.stock),active:!!f.active};
@@ -268,7 +268,13 @@ $('refresh').onclick=refresh;$('closeDrawer').onclick=closeDrawer;
 $('productSearch').oninput=render;$('orderSearch').oninput=render;$('statusFilter').onchange=render;
 $('newProduct').onclick=()=>editProduct(null);$('addStaff').onclick=()=>editStaff(null);$('newOrder').onclick=addOrder;
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDrawer()});
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape')closeDrawer();
+ if((e.key==='Enter'||e.key===' ')&&e.target?.hasAttribute('data-view-photo')){
+  e.preventDefault();
+  const hero=$('photoHeroImage');if(hero)hero.src=e.target.dataset.viewPhoto;
+ }
+});
 document.addEventListener('click',e=>{
  const el=e.target.closest('[data-edit-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-view-photo],[data-edit-order],[data-review],[data-edit-staff]');
  if(!el)return;
