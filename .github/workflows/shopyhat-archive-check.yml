@@ -1,0 +1,27 @@
+name: SHOPYHAT conditional archive capacity check
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 21 * * *' # 03:17 Asia/Dhaka next calendar day
+permissions:
+  contents: read
+jobs:
+  capacity-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check capacity and archive verified eligible data only
+        env:
+          ARCHIVE_URL: ${{ secrets.SHOPYHAT_ARCHIVE_CHECK_URL }}
+          ARCHIVE_TOKEN: ${{ secrets.SHOPYHAT_ARCHIVE_CRON_TOKEN }}
+        run: |
+          if [ -z "$ARCHIVE_URL" ] || [ -z "$ARCHIVE_TOKEN" ]; then
+            echo "Archive connector not yet configured. No changes made."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error --max-time 100 --retry 1 \
+            --request POST \
+            --header "x-shopyhat-archive-token: $ARCHIVE_TOKEN" \
+            --header 'content-type: application/json' \
+            --data '{}' \
+            "$ARCHIVE_URL"
