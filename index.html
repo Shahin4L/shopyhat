@@ -951,6 +951,8 @@ main{overflow:clip}
 .sh-photo-empty{display:flex;width:100%;height:100%;min-height:110px;flex-direction:column;align-items:center;justify-content:center;gap:7px;background:#f2eeea;color:#8b8178;text-align:center;padding:14px;line-height:1.35}
 .sh-photo-empty span{font-size:13px;font-weight:800;letter-spacing:2px;color:#c16a30}.sh-photo-empty small{font-size:11px;max-width:90%;letter-spacing:.2px}
 .sh-real-photo{display:block;width:100%;height:100%;object-fit:cover}
+/* Customer care */
+.sh-care-wrap{max-width:1050px;padding-top:24px;padding-bottom:65px}.sh-care-tabs{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:20px}.sh-care-tab{border:1px solid #e5dcd0;background:white;border-radius:999px;padding:12px 17px;font:750 13px var(--sans)}.sh-care-tab.on{background:#211e1b;color:#fff;border-color:#211e1b}.sh-care-panel{background:#fff;border:1px solid #ede5dd;border-radius:18px;padding:clamp(16px,3vw,28px);box-shadow:0 9px 28px #00000006;min-height:240px}.sh-care-panel h2{font-size:clamp(24px,3vw,35px);margin:0 0 12px}.sh-care-panel .care-intro{font-size:14px;color:#756b62;margin:0 0 22px;line-height:1.75}.sh-care-panel .care-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.sh-care-panel label{font:700 12px var(--sans);display:block;margin:12px 0 5px;color:#4d4137}.sh-care-panel input,.sh-care-panel select,.sh-care-panel textarea{font:inherit;border-radius:9px;border:1px solid #d8d0c7;padding:11px 12px;min-width:0;width:100%;background:white}.sh-care-panel textarea{min-height:115px;resize:vertical}.sh-care-panel .care-success{padding:15px;border:1px solid #aed7b5;background:#f1fff3;border-radius:12px;color:#1c6032;overflow-wrap:anywhere}.sh-care-panel .care-error{padding:14px;border:1px solid #ecc5be;background:#fff1ef;border-radius:12px;color:#a22f22;overflow-wrap:anywhere}.sh-care-panel .care-hint{font-size:12px;color:#756c62;margin:8px 0;line-height:1.65}.sh-care-panel .care-cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.sh-care-panel .care-card{padding:16px;background:#faf8f4;border:1px solid #eee8df;border-radius:12px}.sh-care-panel .care-card p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.7}.sh-care-panel .care-stars{color:#c87b14;letter-spacing:2px}.sh-care-panel .care-honeypot{position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none}.sh-care-panel .care-media-preview{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.sh-care-panel .care-media-preview img,.sh-care-panel .care-media-preview video{width:90px;height:100px;object-fit:cover;border-radius:9px}.sh-care-panel .care-titlebar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.sh-care-panel .care-status{display:inline-block;border:1px solid #e4d2bc;border-radius:99px;padding:5px 12px;background:#fff8ee;color:#70491f;font-size:12px}.sh-care-panel .care-rule{height:1px;background:#eae5de;margin:22px 0}@media(max-width:640px){.sh-care-panel .care-grid{grid-template-columns:1fr}.sh-care-tabs{gap:5px}.sh-care-tab{flex:1 1 100px;padding:9px 8px;font-size:11px}}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -974,7 +976,7 @@ main{overflow:clip}
       <a href="#shop/saree" data-p="saree">Sarees</a>
       <a href="#track" data-p="track">Track order</a>
       <a href="#policies" data-p="policies">Policies</a>
-      <a href="#contact" data-p="contact">Contact</a>
+      <a href="#contact" data-p="contact">Contact</a><a href="#care" data-p="care">Reviews & Support</a>
     </nav>
     <div class="icons">
       <button class="ibtn" id="searchBtn" aria-label="Search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
@@ -1222,7 +1224,8 @@ main{overflow:clip}
     </div>
   </div>
 </div>
-</main>
+<!-- CUSTOMER CARE -->
+<section class="page hidden" id="p-care"><div class="pagehead"><div class="wrap"><h1 id="carePageTitle">Reviews & Customer Support</h1><p id="carePageIntro">Share a review, report an issue with evidence, or track the latest case status.</p></div></div><div class="wrap sh-care-wrap"><div class="sh-care-tabs" role="group" aria-label="Reviews and customer support"><button type="button" class="sh-care-tab on" data-care-tab="reviews">★ Product Reviews</button><button type="button" class="sh-care-tab" data-care-tab="issue">⚑ Report an Issue</button><button type="button" class="sh-care-tab" data-care-tab="track">◷ Track My Case</button></div><div class="sh-care-panel" id="shCareContent" aria-live="polite"></div></div></section></main>
 
 <footer class="site">
   <div class="fg">
@@ -1234,7 +1237,7 @@ main{overflow:clip}
     </div>
     <div><h4>Shop</h4><ul id="fCats"></ul></div>
     <div><h4>Help</h4><ul>
-      <li><a href="#track">Track order</a></li><li><a href="#policies">Return and exchange</a></li><li><a href="#policies">Refund policy</a></li><li><a href="#contact">Contact us</a></li></ul></div>
+      <li><a href="#track">Track order</a></li><li><a href="#policies">Return and exchange</a></li><li><a href="#policies">Refund policy</a></li><li><a href="#contact">Contact us</a></li><li><a href="#care">Reviews & Issue Support</a></li></ul></div>
     <div><h4>Connect</h4><ul>
       <li><a href="https://www.facebook.com/shopyhat/" target="_blank" rel="noopener noreferrer">Facebook</a></li><li><a href="#policies">Privacy policy</a></li></ul></div>
   </div>
@@ -1969,7 +1972,7 @@ function openModal(id){$("#ov").classList.add("show");closeSearch();$$(".modal.s
 function openDrawer(id){$$(".modal.show,.drawer.show").forEach(m=>m.classList.remove("show"));closeSearch();$("#ov").classList.add("show");$("#"+id).classList.add("show");document.body.style.overflow="hidden"}
 function closeAll(){$("#ov").classList.remove("show");$("#sov").classList.remove("show");$$(".modal.show,.drawer.show").forEach(m=>m.classList.remove("show"));document.body.style.overflow=""}
 
-const PAGES=["home","shop","track","contact","policies"];
+const PAGES=["home","shop","track","contact","policies","care"];
 function route(keep){
   const h=(location.hash||"#home").slice(1), [pg,arg]=h.split("/");
   const page=PAGES.includes(pg)?pg:"home";
@@ -2144,5 +2147,6 @@ async function boot(){
 boot();
 </script>
 <script src="./i18n.js" defer></script>
+<script src="./customer-care.js" defer></script>
 </body>
 </html>
