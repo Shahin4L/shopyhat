@@ -7,7 +7,7 @@ const money=v=>'৳'+Number(v||0).toLocaleString('en-BD',{maximumFractionDigits:
 const fmtDate=v=>v?new Date(v).toLocaleString('en-BD',{timeZone:'Asia/Dhaka',dateStyle:'medium',timeStyle:'short'}):'—';
 const roleCan=(...r)=>r.includes(role);
 const imageUrl=v=>{const s=String(v||'');const m=s.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||s.match(/[?&]id=([\w-]+)/);return m&&s.includes('google.com')?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000':s};
-let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],reviews=[],cases=[],caseMedia=[],caseUpdates=[],caseReplies=[],activePage='products';
+let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],reviews=[],cases=[],caseMedia=[],caseUpdates=[],caseReplies=[],dailyStats=[],archiveHealth=null,reviewMedia=[],activePage='products';
 function notice(id,message,error=false){$(id).textContent=message;$(id).classList.toggle('error',!!error)}
 function show(id,on){$(id).classList.toggle('hidden',!on)}
 function drawer(title,html){$('drawerTitle').textContent=title;$('drawerBody').innerHTML=html;notice('drawerMsg','');show('overlay',true)}
@@ -36,6 +36,16 @@ function setupLocalPhotoPreview(fileInputId,previewId){
  };
 }
 async function query(table,selection='*',limit=1000){const q=await db.from(table).select(selection).limit(limit);if(q.error)throw q.error;return q.data||[]}
+async function queryTraffic(){
+ const out=[],batch=1000;
+ for(let offset=0;offset<12000;offset+=batch){
+  const r=await db.from('sh_web_daily_stats').select('*').order('event_date',{ascending:false}).range(offset,offset+batch-1);
+  if(r.error)throw r.error;
+  out.push(...(r.data||[]));
+  if(!r.data||r.data.length<batch)break;
+ }
+ return out;
+}
 
 /* SHOPYHAT Operations — date filtering and verified database audit. */
 const tzDate=v=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dhaka',year:'numeric',month:'2-digit',day:'2-digit'}).format(v instanceof Date?v:new Date(v));
@@ -126,18 +136,19 @@ async function boot(){const {data:{user},error}=await db.auth.getUser();
  const r=await db.from('sh_staff').select('*').eq('email',(user.email||'').toLowerCase()).maybeSingle();
  if(r.error||!r.data?.active){await db.auth.signOut();show('login',true);show('dashboard',false);show('logout',false);return notice('loginMsg','This account is not an active SHOPYHAT staff member. Ask the owner to grant access.',true)}
  actor=user;role=r.data.role;$('profile').textContent=(r.data.display_name||user.email)+' · '+role;
- show('login',false);show('dashboard',true);show('logout',true);show('usersTab',role==='owner');show('addStaff',role==='owner');show('activityTab',roleCan('owner','manager'));
+ show('login',false);show('dashboard',true);show('logout',true);show('usersTab',role==='owner');show('addStaff',role==='owner');show('activityTab',roleCan('owner','manager'));show('insightsTab',roleCan('owner','manager'));
  show('newProduct',roleCan('owner','manager'));show('bulkProducts',roleCan('owner','manager'));show('newOrder',roleCan('owner','manager','operator'));
  await refresh()}
 async function refresh(){notice('appMsg','Loading live data…');
  try{
- const [p,v,i,o,oi,pa,st,rv,cs,cm,cu,cr]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff'),query('sh_reviews'),query('sh_customer_cases'),query('sh_case_media'),query('sh_case_updates'),query('sh_case_replies')]);
- products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;reviews=rv;cases=cs;caseMedia=cm;caseUpdates=cu;caseReplies=cr;
+ const [p,v,i,o,oi,pa,st,rv,cs,cm,cu,cr,ws,rm]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff'),query('sh_reviews'),query('sh_customer_cases'),query('sh_case_media'),query('sh_case_updates'),query('sh_case_replies'),queryTraffic(),query('sh_review_media')]);
+ products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;reviews=rv;cases=cs;caseMedia=cm;caseUpdates=cu;caseReplies=cr;dailyStats=ws;reviewMedia=rm;
  try{await loadAudit()}catch(e){audit=[];console.warn('Audit log not loaded:',e.message)}
+ if(roleCan('owner','manager')){try{const r=await db.rpc('sh_admin_archive_health');archiveHealth=r.error?null:r.data}catch(e){archiveHealth=null}}else archiveHealth=null;
  $('kProducts').textContent=p.length;$('kActive').textContent=p.filter(x=>x.status==='active').length;$('kOrders').textContent=o.length;$('kPending').textContent=o.filter(x=>x.status==='Pending').length;
  render();notice('appMsg','Last refreshed '+new Date().toLocaleTimeString('en-BD'))}
  catch(e){notice('appMsg',e.message,true)}}
-function showPage(page){if(page==='activity'&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity','reviews','cases'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
+function showPage(page){if(['activity','insights'].includes(page)&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity','reviews','cases','insights'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
 function cover(product){const base=images.find(i=>i.product_id===product.id&&!i.variant_id);if(base)return base.image_url;
  const v=variants.find(x=>x.product_id===product.id);return images.find(i=>i.variant_id===v?.id)?.image_url||''}
 function render(){
@@ -155,7 +166,7 @@ function render(){
  '<tr><td>'+orderThumb(o)+'</td><td><b>'+esc(o.order_number)+'</b><div class="muted">'+fmtDate(o.created_at)+'</div></td><td>'+esc(o.customer_name)+'<div class="muted">'+esc(o.customer_phone)+'</div></td><td>'+money(o.total)+'</td><td><span class="pill">'+esc(o.status)+'</span></td><td>'+esc(o.payment_status)+'</td><td>'+metaLabel('sh_orders',o)+'</td><td><button class="btn small" data-edit-order="'+o.id+'">Process / Invoice</button></td></tr>').join('')||'<tr><td colspan="8">No matching orders</td></tr>';
  $('paymentRows').innerHTML=dateFiltered(payments).map(p=>'<tr><td>'+esc(orders.find(o=>o.id===p.order_id)?.order_number||'—')+'</td><td>'+esc(p.method)+'</td><td>'+esc(p.transaction_id)+'</td><td>'+money(p.amount)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+metaLabel('sh_payments',p)+'</td><td>'+ (roleCan('owner','manager')?'<button class="btn small" data-review="'+p.id+'">Review</button>':'Read only')+'</td></tr>').join('')||'<tr><td colspan="7">No payment reviews</td></tr>';
  $('staffRows').innerHTML=dateFiltered(staff).map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(x.display_name)+'</td><td>'+esc(x.role)+'</td><td>'+ (x.active?'Active':'Disabled')+'</td><td>'+metaLabel('sh_staff',x,x.email)+'</td><td>'+(x.role==='owner'?'Protected':'<button class="btn small" data-edit-staff="'+esc(x.email)+'">Edit</button>')+'</td></tr>').join('')||'<tr><td colspan="6">No staff</td></tr>';
- renderAudit();renderReviews();renderCases();
+ renderAudit();renderReviews();renderCases();renderInsights();
 }
 
 function renderReviews(){
@@ -166,9 +177,20 @@ function moderateReview(id){
  const r=reviews.find(r=>r.id===id);if(!r)return;
  const edit=roleCan('owner','manager');
  drawer('Moderate Customer Review',`<p class="muted">${esc(products.find(p=>p.id===r.product_id)?.name||'Product')} · ${fmtDate(r.created_at)}</p><h3>${esc(r.reviewer_name)} · ${'★'.repeat(r.rating)}</h3><h4>${esc(r.title)}</h4><p style="white-space:pre-wrap">${esc(r.review_text)}</p><div class="badge">Customer reviews remain hidden until approved. Reject reviews containing personal contact information, offensive content, or unrelated claims.</div>
+ <h3>Attached Review Photos</h3><div class="case-evidence" id="reviewPhotoEvidence"><p class="muted">Loading private review photos…</p></div>
  <form id="reviewModeration"><label>Moderation Status</label><select name="status" ${edit?'':'disabled'}>${['Pending','Approved','Rejected'].map(x=>'<option '+(x===r.status?'selected':'')+'>'+x+'</option>').join('')}</select>
  <label>Public Staff Response (optional)</label><textarea name="staff_response" maxlength="1000" ${edit?'':'readonly'}>${esc(r.staff_response||'')}</textarea>
  <div class="editor-actions"><button type="button" class="btn" id="backFromReview">← Back to Reviews</button><button class="btn primary" ${edit?'':'disabled'} type="submit">Save Review Decision</button></div></form>`);
+ const media=reviewMedia.filter(m=>m.review_id===id),el=$('reviewPhotoEvidence');
+ if(!media.length)el.innerHTML='<p class="muted">No photo attached.</p>';
+ else{el.innerHTML='';(async()=>{
+   for(const m of media){
+     const file=await db.storage.from('shopyhat-review-photos').createSignedUrl(m.storage_path,300);
+     if(file.error){el.insertAdjacentHTML('beforeend','<span class="muted">Photo unavailable.</span>');continue}
+     const a=document.createElement('a');a.href=file.data.signedUrl;a.target='_blank';a.rel='noopener noreferrer';
+     const img=document.createElement('img');img.src=file.data.signedUrl;img.alt='Customer review photo';a.append(img);el.append(a);
+   }
+ })().catch(err=>console.warn('Review photo preview:',err.message))}
  $('backFromReview').onclick=closeDrawer;
  $('reviewModeration').onsubmit=async e=>{e.preventDefault();if(!edit)return;const f=formData('reviewModeration');
  const res=await db.from('sh_reviews').update({status:f.status,staff_response:String(f.staff_response||'').trim()}).eq('id',id);
@@ -228,6 +250,62 @@ async function manageCase(id){
    await refresh();await manageCase(id);notice('drawerMsg','Case update saved. Customer can track the latest feedback using their Case ID and phone.');
   }catch(err){button.disabled=false;notice('drawerMsg',err.message,true)}
  };
+}
+/* Business analytics: date-aware, based only on real orders and aggregated anonymous traffic. */
+function insightRows(){
+ const from=$('dateFrom').value,to=$('dateTo').value;
+ const within=day=>(!from||day>=from)&&(!to||day<=to);
+ return dailyStats.filter(r=>within(String(r.event_date).slice(0,10)));
+}
+function simpleBars(rows,id,key,label){
+ const root=$(id);if(!root)return;
+ if(!rows.length||rows.every(r=>Number(r[key]||0)===0)){root.innerHTML='<div class="business-empty">No data for this date range</div>';return}
+ const top=Math.max(1,...rows.map(r=>Number(r[key]||0)));
+ root.innerHTML=rows.slice(-21).map(r=>'<div class="business-bar" title="'+esc(label(r)+' · '+Number(r[key]||0))+'"><b>'+Number(r[key]||0).toLocaleString('en-BD')+'</b><span style="height:'+Math.max(4,Math.round(Number(r[key]||0)/top*82))+'px"></span><div class="bar-label">'+esc(label(r))+'</div></div>').join('');
+}
+function getInsights(){
+ const os=dateFiltered(orders).filter(o=>o.status!=='Cancelled'),allOrders=dateFiltered(orders),ids=new Set(os.map(o=>o.id));
+ const lines=orderItems.filter(i=>ids.has(i.order_id));
+ const traffic=insightRows(),site=traffic.filter(r=>r.page_path==='_site');
+ const visitors=site.reduce((n,r)=>n+Number(r.visitors||0),0);
+ const views=site.reduce((n,r)=>n+Number(r.views||0),0);
+ const total=os.reduce((n,o)=>n+Number(o.total||0),0);
+ const paid=os.filter(o=>String(o.payment_status||'').toLowerCase().includes('paid')||String(o.payment_status||'').toLowerCase()==='verified').reduce((n,o)=>n+Number(o.total||0),0);
+ const activeReviews=dateFiltered(reviews),approved=activeReviews.filter(r=>r.status==='Approved');
+ const activeCases=dateFiltered(cases),resolved=activeCases.filter(c=>['Resolved','Closed'].includes(c.status));
+ const pendingPayments=dateFiltered(payments).filter(p=>!['Verified','Verified - Paid','Paid'].includes(String(p.status||''))&&p.status!=='Rejected');
+ const units={};for(const i of lines){const key=i.product_id||i.product_name||'Unknown';const row=units[key]??={name:i.product_name||'Product',qty:0,value:0};row.qty+=Number(i.qty||0);row.value+=Number(i.line_total||0)}
+ const pages={};for(const r of traffic.filter(r=>r.page_path!=='_site')){const row=pages[r.page_path]??={page:r.page_path,views:0,visitors:0};row.views+=Number(r.views||0);row.visitors+=Number(r.visitors||0)}
+ const status={};for(const o of allOrders)status[o.status]=(status[o.status]||0)+1;
+ return {orders:allOrders.length,visitors,views,paid,total,avg:os.length?total/os.length:0,pending:pendingPayments.length,
+  conversion:visitors?allOrders.length/visitors*100:null,products:products.filter(p=>p.status==='active').length,
+  rating:approved.length?approved.reduce((n,r)=>n+Number(r.rating||0),0)/approved.length:null,reviewCount:activeReviews.length,
+  cases:activeCases.filter(c=>!['Closed','Resolved'].includes(c.status)).length,resolution:activeCases.length?resolved.length/activeCases.length*100:null,
+  site,top:Object.values(units).sort((a,b)=>b.qty-a.qty).slice(0,10),pages:Object.values(pages).sort((a,b)=>b.views-a.views),status:Object.entries(status).map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count)};
+}
+function renderInsights(){
+ if(!roleCan('owner','manager'))return;
+ const r=getInsights();
+ $('biVisitors').textContent=r.visitors.toLocaleString('en-BD');
+ $('biViews').textContent=r.views.toLocaleString('en-BD');
+ $('biOrders').textContent=r.orders.toLocaleString('en-BD');
+ $('biConversion').textContent=r.conversion===null?'—':r.conversion.toFixed(2)+'%';
+ $('biGross').textContent=money(r.total);$('biPaid').textContent=money(r.paid);
+ $('biAov').textContent=money(r.avg);$('biPendingPay').textContent=r.pending;
+ $('biProducts').textContent=r.products;
+ $('biRatings').textContent=r.reviewCount+(r.rating===null?' / —':' / '+r.rating.toFixed(1)+'★');
+ $('biCases').textContent=r.cases;$('biResolved').textContent=r.resolution===null?'—':r.resolution.toFixed(1)+'%';
+ simpleBars(r.site.sort((a,b)=>String(a.event_date).localeCompare(String(b.event_date))).map(x=>({label:String(x.event_date).slice(5),value:Number(x.views||0)})),'biTrafficChart','value',x=>x.label);
+ simpleBars(r.status.map(x=>({label:x.name.replace('Ready to Ship','Ready'),value:x.count})),'biOrderMix','value',x=>x.label);
+ $('biTopProducts').innerHTML=r.top.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.qty+'</td><td>'+money(x.value)+'</td></tr>').join('')||'<tr><td colspan="3">No product sales in this period.</td></tr>';
+ $('biPages').innerHTML=r.pages.map(x=>'<tr><td>'+esc(x.page)+'</td><td>'+x.views+'</td><td>'+x.visitors+'</td></tr>').join('')||'<tr><td colspan="3">No recorded traffic yet.</td></tr>';
+ const h=archiveHealth;
+ $('biArchiveHealth').textContent=h?'Database: '+(Number(h.database_bytes)/1024/1024).toFixed(1)+' MB · Files: '+(Number(h.storage_bytes||0)/1024/1024).toFixed(1)+' MB ('+Number(h.storage_files||0)+' files) · Audit threshold: '+(Number(h.threshold_bytes)/1024/1024).toFixed(0)+' MB · 6+ month audit rows: '+h.eligible_audit_rows+' · '+(h.needs_archive?'Verified archive required.':'Archive not required.')+' · Google Sheets auto-sync: '+(h.archive_configured?'Configured':'Inactive; setup required.'):'Capacity data unavailable (only Owner / Manager can view).';
+}
+function exportInsightReport(){
+ if(!roleCan('owner','manager'))return;
+ const r=getInsights(),rows=[{metric:'Visitors (sum of daily uniques)',value:r.visitors},{metric:'Page Views',value:r.views},{metric:'Orders Placed',value:r.orders},{metric:'Conversion estimate %',value:r.conversion===null?'':r.conversion.toFixed(2)},{metric:'Order Value BDT',value:r.total},{metric:'Verified Paid Value BDT',value:r.paid},{metric:'AOV BDT',value:r.avg},{metric:'Open Cases',value:r.cases},{metric:'Review Count',value:r.reviewCount}];
+ exportCSV('SHOPYHAT_Management_Report_'+todayBD()+'.csv',['metric','value'],rows);
 }
 function confirmProductDelete(id){
  if(!roleCan('owner','manager'))return;
@@ -557,6 +635,7 @@ function exportOrders(){
  document.body.append(a);a.click();a.remove();URL.revokeObjectURL(u);
 }
 $('exportOrders').onclick=exportOrders;
+$('exportInsight').onclick=exportInsightReport;
 $('exportAudit').onclick=()=>{if(!roleCan('owner','manager'))return;const rows=filteredAudit().map(a=>({...a,changes:JSON.stringify(a.changes||{})}));exportCSV('SHOPYHAT_Audit_'+todayBD()+'.csv',['created_at','actor_email','actor_role','entity','action','record_id','record_label','changes'],rows)};
 for(const field of ['dateFrom','dateTo','dateBasis','auditEntity','auditAction','auditSearch','reviewStatusFilter','caseStatusFilter','casePriorityFilter','caseSearch']){const el=$(field);if(el)el.addEventListener(['auditSearch','caseSearch'].includes(field)?'input':'change',()=>{document.querySelectorAll('[data-range]').forEach(b=>b.classList.remove('on'));render()})}
 document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>setDatePreset(b.dataset.range));
