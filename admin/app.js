@@ -472,7 +472,8 @@ function editVariant(id,productId){
 function bulkProductEditor(){
  if(!roleCan('owner','manager'))return;
  drawer('Bulk Add Products',`<div class="badge">Add multiple draft products in one batch (up to 20). After saving, open each product to add photos, Bengali descriptions and color variants, then activate when ready.</div>
- <form id="bulkProductForm"><div id="bulkProductRows"></div><div class="editor-actions"><button class="btn" id="addBulkProductRow" type="button">＋ Add Product Row</button><button class="btn" id="backFromBulkProducts" type="button">← Back to Products</button><button class="btn primary" id="bulkSaveProducts" type="submit">Save All Draft Products</button></div></form>`);
+ <form id="bulkProductForm">${catalog.productPickerHTML({category_id:null,subcategory_id:null,brand_partner_id:null})}<div id="bulkProductRows"></div><div class="editor-actions"><button class="btn" id="addBulkProductRow" type="button">＋ Add Product Row</button><button class="btn" id="backFromBulkProducts" type="button">← Back to Products</button><button class="btn primary" id="bulkSaveProducts" type="submit">Save All Draft Products</button></div></form>`);
+ catalog.bindProductPicker();
  const rows=$('bulkProductRows');
  const append=()=>{
   if(rows.children.length>=20)return notice('drawerMsg','Maximum 20 products in one batch.',true);
@@ -492,9 +493,12 @@ function bulkProductEditor(){
  $('bulkProductForm').onsubmit=async e=>{
   e.preventDefault();const btn=$('bulkSaveProducts');btn.disabled=true;
   try{
+   const taxonomy=catalog.selectionPayload(formData('bulkProductForm'));
+   const root=catalog.getCategories().find(c=>c.id===taxonomy.category_id);
    const items=[...rows.children].map(el=>({
      name:el.querySelector('[name=name]').value.trim(),
-     category:el.querySelector('[name=category]').value.trim(),
+     category:root?.name||el.querySelector('[name=category]').value.trim(),
+     ...taxonomy,
      base_price:Number(el.querySelector('[name=price]').value),
      old_price:el.querySelector('[name=old_price]').value===''?null:Number(el.querySelector('[name=old_price]').value),
      sizes:el.querySelector('[name=sizes]').value.split(',').map(x=>x.trim()).filter(Boolean),
