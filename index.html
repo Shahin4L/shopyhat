@@ -1243,7 +1243,7 @@ function buildHero(){
   let html="";
   picks.forEach(([p,f,r,d])=>{
     if(!p)return; const pt=path.getPointAtLength(L*f), ax=pt.x, ay=pt.y;
-    const real=imgOf(p), a=real?`<svg x="${ax-66}" y="${ay+56}" width="132" height="165" viewBox="0 0 132 165"><image href="${esc(real)}" width="132" height="165" preserveAspectRatio="xMidYMid slice"/></svg>`:art(p).replace("<svg ",`<svg x="${ax-66}" y="${ay+56}" width="132" height="165" `);
+    const real=storefrontCover(p), a=real?`<svg x="${ax-66}" y="${ay+56}" width="132" height="165" viewBox="0 0 132 165"><image href="${esc(real)}" width="132" height="165" preserveAspectRatio="xMidYMid slice"/></svg>`:art(p).replace("<svg ",`<svg x="${ax-66}" y="${ay+56}" width="132" height="165" `);
     html+=`<g class="tag" style="transform-origin:${ax}px ${ay}px;--r:${r}deg;animation-delay:${d}s">
       <line x1="${ax}" y1="${ay}" x2="${ax}" y2="${ay+52}" stroke="#f4efe6" stroke-width="1.6"/>
       <circle cx="${ax}" cy="${ay}" r="4.5" fill="#fff"/>
@@ -1324,7 +1324,7 @@ function cardHTML(p){
   return `<article class="card" data-id="${p.id}">
     ${p.soldOut?`<span class="nb">Sold out</span>`:sale?`<span class="nb sale">Save ${Math.round((1-p.price/p.old)*100)}%</span>`:p.isNew?`<span class="nb">New</span>`:""}
     <div class="im" data-open="${p.id}">
-      <div class="art">${variantsFor(p).length?variantArt(p,variantsFor(p)[0].color):art(p)}</div>
+      <div class="art">${storefrontArt(p)}</div>
       <button class="wish ${on?"on":""}" data-wish="${p.id}" aria-label="Save to wishlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button>
       <div class="ptag ${sale?"sale":""}">${money(p.price)}${sale?`<s>${money(p.old)}</s>`:""}</div>
       <button class="qa" data-open="${p.id}" aria-label="Quick view">+</button>
@@ -1350,8 +1350,8 @@ function renderRV(){
 function renderHome(){
   const cnt=id=>PRODUCTS.filter(p=>p.cat===id).length;
   $("#mosaic").innerHTML=CATS.slice(0,5).map((c,i)=>{const p=PRODUCTS.find(x=>x.cat===c.id);
-    return `<a class="mt ${i===0?"big":""}" href="#shop/${c.id}"><div class="art">${p?art(p):""}</div><span class="ml"><b>${esc(c.name)}</b><small>${cnt(c.id)} style${cnt(c.id)===1?"":"s"}${c.note?", "+esc(c.note):""}</small></span></a>`}).join("");
-  const sp=PRODUCTS.find(p=>catKey(p.cat)==="saree")||PRODUCTS[0]; $("#bandArt").innerHTML=sp?art(sp,sp.colors[0]):"";
+    return `<a class="mt ${i===0?"big":""}" href="#shop/${c.id}"><div class="art">${p?storefrontArt(p):""}</div><span class="ml"><b>${esc(c.name)}</b><small>${cnt(c.id)} style${cnt(c.id)===1?"":"s"}${c.note?", "+esc(c.note):""}</small></span></a>`}).join("");
+  const sp=PRODUCTS.find(p=>catKey(p.cat)==="saree")||PRODUCTS[0]; $("#bandArt").innerHTML=sp?storefrontArt(sp):"";
   $("#fCats").innerHTML=CATS.map(c=>`<li><a href="#shop/${c.id}">${esc(c.name)}</a></li>`).join("");
   const pays=["Cash on delivery"];if(CONFIG.bkash)pays.push("bKash");if(CONFIG.nagad)pays.push("Nagad");
   $("#payBadges").innerHTML=pays.map(x=>`<span>${x}</span>`).join("");
@@ -1380,13 +1380,26 @@ function renderSearch(q){
   q=q.trim().toLowerCase(); const box=$("#sRes");
   if(!q){box.innerHTML=`<div style="margin-top:14px;color:var(--muted);font-size:14px">Popular searches</div><div class="sq">${["Tangail","Silk","Kurti","Hijab","Earrings"].map(t=>`<button class="chip" data-sq="${t}">${t}</button>`).join("")}</div>`;return}
   const a=PRODUCTS.filter(p=>(p.name+" "+catName(p.cat)+" "+p.colors.map(c=>c.n).join(" ")+" "+p.desc).toLowerCase().includes(q));
-  box.innerHTML=a.length?a.slice(0,6).map(p=>`<button class="sr" data-open="${p.id}"><div class="art">${art(p)}</div><div><b>${esc(p.name)}</b><small>${esc(catName(p.cat))} · ${money(p.price)}</small></div></button>`).join("")+`<div style="margin-top:14px"><button class="link" data-seeall="${esc(q)}">See all results</button></div>`:`<div class="empty" style="margin-top:14px">No results for “${esc(q)}”. Try a different word.</div>`;
+  box.innerHTML=a.length?a.slice(0,6).map(p=>`<button class="sr" data-open="${p.id}"><div class="art">${storefrontArt(p)}</div><div><b>${esc(p.name)}</b><small>${esc(catName(p.cat))} · ${money(p.price)}</small></div></button>`).join("")+`<div style="margin-top:14px"><button class="link" data-seeall="${esc(q)}">See all results</button></div>`:`<div class="empty" style="margin-top:14px">No results for “${esc(q)}”. Try a different word.</div>`;
 }
 
 /* =====================================================================
    PRODUCT MODAL
    ===================================================================== */
 let cur=null;
+/* Consistent storefront cover: first listed colour's own image, then another uploaded variant,
+   then the original base product image, then generated illustration. */
+function storefrontCover(p){
+  const variants=variantsFor(p), first=p.colors&&p.colors[0];
+  const selected=first&&chosenVariant(p,first.n);
+  const picked=(selected&&selected.images&&selected.images.find(Boolean))||
+               (variants.map(v=>(v.images||[]).find(Boolean)).find(Boolean));
+  return picked?fixImg(picked):imgOf(p);
+}
+function storefrontArt(p){
+  const src=storefrontCover(p);
+  return src?`<img src="${esc(src)}" alt="${esc(p.name)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:art(p);
+}
 function variantsFor(p){return Array.isArray(p.variants)?p.variants:[]}
 function chosenVariant(p,color){return variantsFor(p).find(v=>String(v.color).toLowerCase()===String(color).toLowerCase())||null}
 function variantPrice(p,color){const v=chosenVariant(p,color);return v&&Number(v.price)>0?Number(v.price):p.price}
