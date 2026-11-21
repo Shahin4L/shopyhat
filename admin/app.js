@@ -127,7 +127,7 @@ async function boot(){const {data:{user},error}=await db.auth.getUser();
  if(r.error||!r.data?.active){await db.auth.signOut();show('login',true);show('dashboard',false);show('logout',false);return notice('loginMsg','This account is not an active SHOPYHAT staff member. Ask the owner to grant access.',true)}
  actor=user;role=r.data.role;$('profile').textContent=(r.data.display_name||user.email)+' · '+role;
  show('login',false);show('dashboard',true);show('logout',true);show('usersTab',role==='owner');show('addStaff',role==='owner');show('activityTab',roleCan('owner','manager'));
- show('newProduct',roleCan('owner','manager'));show('newOrder',roleCan('owner','manager','operator'));
+ show('newProduct',roleCan('owner','manager'));show('bulkProducts',roleCan('owner','manager'));show('newOrder',roleCan('owner','manager','operator'));
  await refresh()}
 async function refresh(){notice('appMsg','Loading live data…');
  try{
@@ -360,6 +360,46 @@ function editVariant(id,productId){
  try{const r=id?await db.from('sh_variants').update(row).eq('id',id).select('id').single():await db.from('sh_variants').insert(row).select('id').single();if(r.error)throw r.error;await refresh();if(saveMode==='another'){editVariant(null,v.product_id);notice('drawerMsg','Color saved. Add the next color.')}else{editVariant(r.data.id,v.product_id);notice('drawerMsg','Color saved.')} }catch(err){notice('drawerMsg',err.message,true)}};
 }
 
+
+function bulkProductEditor(){
+ if(!roleCan('owner','manager'))return;
+ drawer('Bulk Add Products',`<div class="badge">Add multiple draft products in one batch (up to 20). After saving, open each product to add photos, Bengali descriptions and color variants, then activate when ready.</div>
+ <form id="bulkProductForm"><div id="bulkProductRows"></div><div class="editor-actions"><button class="btn" id="addBulkProductRow" type="button">＋ Add Product Row</button><button class="btn" id="backFromBulkProducts" type="button">← Back to Products</button><button class="btn primary" id="bulkSaveProducts" type="submit">Save All Draft Products</button></div></form>`);
+ const rows=$('bulkProductRows');
+ const append=()=>{
+  if(rows.children.length>=20)return notice('drawerMsg','Maximum 20 products in one batch.',true);
+  const row=document.createElement('div');row.className='bulk-variant-row';
+  row.innerHTML=`<div class="bulk-color-name"><label>Product Name *</label><input required name="name" minlength="3" maxlength="160" placeholder="Product name"></div>
+   <div><label>Category *</label><input required name="category" maxlength="70" value="Saree"></div>
+   <div><label>Price (BDT) *</label><input required name="price" type="number" min="1" step=".01"></div>
+   <div><label>Old Price</label><input name="old_price" type="number" min="0" step=".01"></div>
+   <div><label>Sizes</label><input name="sizes" placeholder="S, M, L"></div>
+   <button class="btn small danger" type="button" data-bulk-product-remove>Remove</button>`;
+  row.querySelector('[data-bulk-product-remove]').onclick=()=>{if(rows.children.length>1)row.remove()};
+  rows.append(row);
+ };
+ $('addBulkProductRow').onclick=append;
+ $('backFromBulkProducts').onclick=()=>{closeDrawer();showPage('products')};
+ append();append();append();
+ $('bulkProductForm').onsubmit=async e=>{
+  e.preventDefault();const btn=$('bulkSaveProducts');btn.disabled=true;
+  try{
+   const items=[...rows.children].map(el=>({
+     name:el.querySelector('[name=name]').value.trim(),
+     category:el.querySelector('[name=category]').value.trim(),
+     base_price:Number(el.querySelector('[name=price]').value),
+     old_price:el.querySelector('[name=old_price]').value===''?null:Number(el.querySelector('[name=old_price]').value),
+     sizes:el.querySelector('[name=sizes]').value.split(',').map(x=>x.trim()).filter(Boolean),
+     description:'',details:'',status:'draft',is_new:false
+   }));
+   if(items.some(x=>x.name.length<3||x.category.length<2||!Number.isFinite(x.base_price)||x.base_price<=0||x.old_price!==null&&x.old_price<0))throw Error('Every product requires a name, category and valid price.');
+   if(new Set(items.map(x=>x.name.toLowerCase())).size!==items.length)throw Error('Duplicate product names in the batch. Please use unique names.');
+   const result=await db.from('sh_products').insert(items).select('id');
+   if(result.error)throw result.error;
+   await refresh();closeDrawer();showPage('products');notice('appMsg',result.data.length+' draft products added. Edit them to upload photos and colors.');
+  }catch(err){btn.disabled=false;notice('drawerMsg',err.message,true)}
+ };
+}
 function bulkVariantEditor(productId){
  if(!roleCan('owner','manager'))return;
  const p=products.find(p=>p.id===productId);if(!p)return;
@@ -523,7 +563,7 @@ $('email').onkeydown=e=>{if(e.key==='Enter')loginSend()};$('otp').onkeydown=e=>{
 $('logout').onclick=async()=>{await db.auth.signOut();location.reload()};
 $('refresh').onclick=refresh;$('closeDrawer').onclick=closeDrawer;
 $('productSearch').oninput=render;$('orderSearch').oninput=render;$('statusFilter').onchange=render;
-$('newProduct').onclick=()=>editProduct(null);$('addStaff').onclick=()=>editStaff(null);$('newOrder').onclick=addOrder;
+$('bulkProducts').onclick=bulkProductEditor;$('newProduct').onclick=()=>editProduct(null);$('addStaff').onclick=()=>editStaff(null);$('newOrder').onclick=addOrder;
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape')closeDrawer();
