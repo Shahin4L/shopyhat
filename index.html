@@ -1279,6 +1279,7 @@ const CONFIG = {
   sheetUrl: "",          // Paste your Google Sheet Web app URL here. Products load from the sheet and orders are saved to it.
                          // Leave "" to show the sample products below instead.
   delivery: { dhaka: 70, outside: 130 },   // delivery charge (BDT)
+  turnstileSiteKey: "", // Free Cloudflare Turnstile site key (configure before launch)
   freeDeliveryOver: 0,   // free delivery above this subtotal. 0 = disabled
   coupons: { WELCOME10: { pct: 10, min: 1000 } }   // sample coupon — edit or remove
 };
@@ -1767,12 +1768,21 @@ function openCheckout(){
        <div class="pay-warning">Never share your bKash/Nagad PIN, OTP, login or security code. A Transaction ID is a claim, <strong>not automatic payment confirmation</strong>.</div>
      </div>
     <label class="agree"><input type="checkbox" id="kAgree"><span>I have read the <a href="#policies" target="_blank" rel="noopener">return, exchange and privacy policies</a> and my order details are correct.</span></label>
+    ${CONFIG.turnstileSiteKey?'<div class="cf-turnstile" data-sitekey="'+esc(CONFIG.turnstileSiteKey)+'"></div>':''}
     <div class="err" id="kErr"></div>
     <button class="btn block" type="submit" id="placeBtn">Place order <span aria-hidden="true">→</span></button>
     <p class="checkout-footnote">Your delivery charge is included in the total shown in the order summary.</p>
   </form>
   <div class="s"><div class="summary-heading"><span class="summary-icon" aria-hidden="true">◈</span><div><span class="summary-kicker">YOUR SELECTION</span><h2 style="font-size:28px">Order summary</h2></div></div><div id="coSum"></div><p class="summary-hint">Confirm your selected colours, quantities and delivery area before placing your order.</p></div>`;
   renderSummary();openModal("coModal");
+  if(CONFIG.turnstileSiteKey){
+    const host=document.querySelector("#coBox .cf-turnstile");
+    if(host&&window.turnstile?.render)window.turnstile.render(host,{sitekey:CONFIG.turnstileSiteKey});
+    else if(!document.querySelector("script[data-sh-turnstile]")){
+      const sc=document.createElement("script");sc.src="https://challenges.cloudflare.com/turnstile/v0/api.js";
+      sc.async=true;sc.defer=true;sc.dataset.shTurnstile="1";document.head.appendChild(sc);
+    }
+  }
 }
 function calcTotals(){
   const sub=subtotal(), cp=couponInfo(sub), zone=($("#kZone")||{}).value||"dhaka";
@@ -1837,6 +1847,8 @@ async function submitOrder(e){
  if(!pending||pending.fingerprint!==fingerprint){
   pending={fingerprint,id:crypto.randomUUID()};LS.set("sh_pending_checkout_v2",pending)
  }
+ const tt=CONFIG.turnstileSiteKey?(window.turnstile?.getResponse()||""):"";
+ if(CONFIG.turnstileSiteKey&&!tt){err.textContent="Complete human verification first.";return}
  const button=e.currentTarget.querySelector('[type="submit"]');
  if(button){button.disabled=true;button.dataset.oldText=button.textContent;button.textContent="Confirming order…"}
  err.textContent="Saving your order securely…";
@@ -1846,7 +1858,7 @@ async function submitOrder(e){
      body:JSON.stringify({request_id:pending.id,name,phone,address:addr,zone:t.zone,
        payment_method:pay,transaction_id:pay==="cod"?"":trx,
        sender_last4:pay==="cod"?"":senderLast4,coupon:lastCoupon||"",
-       note:$("#kNote").value.trim(),items})
+       note:$("#kNote").value.trim(),turnstile_token:tt,items})
    });
    const saved=await response.json();
    if(!response.ok||!saved.ok)throw Error(saved.error||"Order could not be confirmed.");
@@ -1860,6 +1872,7 @@ async function submitOrder(e){
    cart=[];saveCart();renderCart();closeAll();showSuccess(order);
  }catch(error){
    err.textContent=(error&&error.message)||"Unable to confirm order. Your cart is intact. Please try again.";
+   if(CONFIG.turnstileSiteKey&&window.turnstile?.reset)window.turnstile.reset();
  }finally{
    if(button){button.disabled=false;button.textContent=button.dataset.oldText||"Place order"}
  }
