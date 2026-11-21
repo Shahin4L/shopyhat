@@ -36,7 +36,8 @@
     return result;
   }
   function refreshGallery(){
-    const gallery=document.getElementById('aboutRealGallery');
+    document.getElementById('p-about')?.classList.add('about-animations-ready');
+  const gallery=document.getElementById('aboutRealGallery');
     if(!gallery)return;
     const items=getProductImages();
     if(!items.length){
