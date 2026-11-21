@@ -98,7 +98,21 @@ function renderTrack(){
   try{const p=Object.fromEntries(new FormData(f).entries());p.action='status';
    const r=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json','apikey':key},body:JSON.stringify(p)});
    const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Case not found');
-   const box=document.getElementById('careMsg');box.innerHTML='<div class="care-card" style="margin-top:18px"><div class="care-titlebar"><b>'+esc(j.case_number)+'</b><span class="care-status">'+esc(j.status)+'</span></div><p>'+t('Last updated: ','সর্বশেষ আপডেট: ')+formatDate(j.updated_at)+'</p><h3>'+t('Feedback from SHOPYHAT','SHOPYHAT-এর উত্তর')+'</h3><p>'+esc(j.feedback||t('Your case is being reviewed.','আপনার অভিযোগ পর্যালোচনা করা হচ্ছে।'))+'</p></div>';
+   const box=document.getElementById('careMsg');
+   const isOpen=!['Closed','Resolved'].includes(j.status);
+   box.innerHTML='<div class="care-card" style="margin-top:18px"><div class="care-titlebar"><b>'+esc(j.case_number)+'</b><span class="care-status">'+esc(j.status)+'</span></div><p>'+t('Last updated: ','সর্বশেষ আপডেট: ')+formatDate(j.updated_at)+'</p><h3>'+t('Feedback from SHOPYHAT','SHOPYHAT-এর উত্তর')+'</h3><p>'+esc(j.feedback||t('Your case is being reviewed.','আপনার অভিযোগ পর্যালোচনা করা হচ্ছে।'))+'</p>'+
+   (isOpen?'<div class="care-rule"></div><h3>'+t('Add Information / Reply','অতিরিক্ত তথ্য / উত্তর দিন')+'</h3><form id="careReplyForm"><label for="careReplyText">'+t('Your Response','আপনার উত্তর')+'</label><textarea id="careReplyText" minlength="10" maxlength="2000" required placeholder="'+t('Share requested information or a useful update…','প্রয়োজনীয় তথ্য বা নতুন আপডেট লিখুন…')+'"></textarea><div class="care-spaced"><button class="btn" type="submit">'+t('Send Reply','উত্তর পাঠান')+'</button></div></form><div id="careReplyMsg"></div>':'<p class="care-hint">'+t('This case is closed. Submit a new issue if you need further assistance.','কেসটি বন্ধ। আরও সহায়তা লাগলে নতুন অভিযোগ জমা দিন।')+'</p>')+'</div>';
+   const form=box.querySelector('#careReplyForm');
+   if(form)form.onsubmit=async ev=>{
+     ev.preventDefault();const b=form.querySelector('button[type=submit]');b.disabled=true;
+     try{
+       const payload={action:'reply',case_number:j.case_number,phone:p.phone,message:form.querySelector('textarea').value};
+       const response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json',apikey:key},body:JSON.stringify(payload)});
+       const out=await response.json();if(!response.ok||!out.ok)throw Error(out.error||'Reply not saved');
+       form.reset();box.querySelector('#careReplyMsg').innerHTML='<div class="care-success">'+t('Reply added. Our team can now review your information.','আপনার উত্তর জমা হয়েছে। আমাদের টিম এখন তথ্যটি পর্যালোচনা করতে পারবে।')+'</div>';
+     }catch(err){box.querySelector('#careReplyMsg').innerHTML='<div class="care-error">'+esc(err.message)+'</div>'}
+     finally{b.disabled=false}
+   };
   }catch(err){msg(err.message,true)}finally{button.disabled=false}
  };
 }
