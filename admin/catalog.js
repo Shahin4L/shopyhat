@@ -18,7 +18,16 @@ export function setupCatalogManager({db,roleCan,notify,fmtDate}){
   if(cat.error)throw cat.error;
   if(partner.error)throw partner.error;
   categories=cat.data||[];brands=partner.data||[];
-  render();
+  render();refreshProductFilterOptions();
+ }
+ function refreshProductFilterOptions(){
+  const root=by('productCategoryFilter'),sub=by('productSubcategoryFilter');
+  if(!root||!sub)return;
+  const selected=root.value,subSelected=sub.value;
+  root.innerHTML='<option value="">All Collections</option>'+parents().map(c=>opt(c.id,c.name+(c.is_active?'':' (Draft)'),selected)).join('');
+  if(selected&&!categories.some(c=>c.id===selected))root.value='';
+  sub.innerHTML='<option value="">All Subcategories</option>'+children(root.value).map(c=>opt(c.id,c.name+(c.is_active?'':' (Draft)'),subSelected)).join('');
+  if(subSelected&&!children(root.value).some(c=>c.id===subSelected))sub.value='';
  }
  function render(){
   const tree=by('taxCategoryRows');
@@ -155,5 +164,5 @@ export function setupCatalogManager({db,roleCan,notify,fmtDate}){
   if(cat)editCategory(cat.dataset.taxEdit);
   if(brand)editBrand(brand.dataset.brandEdit);
  });
- return {reload,render,productPickerHTML,bindProductPicker,selectionPayload,getCategories:()=>categories,getBrands:()=>brands,categoryName:parentName};
+ return {reload,render,refreshProductFilterOptions,productPickerHTML,bindProductPicker,selectionPayload,getCategories:()=>categories,getBrands:()=>brands,categoryName:parentName};
 }
