@@ -934,6 +934,30 @@ main{overflow:clip}
 .pay-status-info{background:#fff6ed;border-left:3px solid var(--ribbon);padding:12px 14px;border-radius:6px;margin-top:12px;color:#665348;font-size:13px;line-height:1.65}
 @media(max-width:560px){.pay-manual .payment-proof-fields{grid-template-columns:1fr}.pay-choice{padding:13px!important}.swatches .sw-name{font-size:11px}.swatches .sw-dot{width:22px;height:22px;flex-basis:22px}.swatches .sw{min-height:39px;padding:5px 10px 5px 5px!important}}
 
+
+/* FINAL OMS V2 — display real product photography, never generated sample clothing */
+.photo-missing{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:9px;min-height:100%;min-width:100%;padding:18px;background:linear-gradient(140deg,#f4eee7,#ece5dc);color:#786e63;font:600 13px/1.5 var(--sans);letter-spacing:.01em}
+.photo-missing small{font-size:10px;letter-spacing:2px;font-weight:800;color:#a58c78}
+.photo-missing[hidden]{display:none!important}
+#heroArt{min-height:300px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#heroArt .hero-ribbon{width:94%;height:68px;overflow:visible;margin-bottom:-7px;position:relative;z-index:1;flex:none}
+.hero-real-products{position:relative;display:flex;align-items:flex-start;justify-content:center;gap:clamp(6px,1.8vw,17px);width:100%;padding:22px 4px 25px}
+.hero-real-tag{display:block;width:31%;min-width:0;position:relative;transform:rotate(var(--turn));text-decoration:none;transition:transform .22s ease;animation:heroPhotoEnter .65s both;animation-delay:var(--delay)}
+.hero-real-tag:nth-child(2){margin-top:55px}.hero-real-tag:nth-child(3){margin-top:14px}
+.hero-real-tag:hover{transform:rotate(0) translateY(-6px)}
+.hero-thread{position:absolute;width:1.5px;height:31px;background:#ded4ca;top:-27px;left:50%;z-index:2}
+.hero-photo-frame{display:block;padding:8px 8px 28px;background:#fff;box-shadow:0 10px 23px #0005;color:#1c1c1c}
+.hero-photo-frame img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;background:#f3ebe5}
+.hero-photo-frame>.photo-missing{height:125px;min-height:125px}
+.hero-price{display:block;color:#27201c;text-align:center;font:bold clamp(11px,1.5vw,17px)/1.7 Georgia,serif;padding-top:5px}
+.hero-photo-empty{display:flex;flex-direction:column;align-items:flex-start;gap:16px;border:1px solid #ffffff36;border-radius:20px;padding:42px 35px;background:#ffffff08;max-width:420px;color:white}
+.hero-photo-empty strong{font:600 clamp(23px,3vw,32px)/1.1 var(--serif)}
+.hero-photo-empty span{font:14px/1.7 var(--sans);color:#c7c2ba}
+.hero-photo-empty .btn{background:#fff;color:#1b1b1b}
+@keyframes heroPhotoEnter{from{opacity:0;translate:0 15px}to{opacity:1;translate:0 0}}
+@media(max-width:600px){.hero-real-products{gap:7px}.hero-real-tag:nth-child(2){margin-top:23px}.hero-photo-frame{padding:5px 5px 19px}.hero-price{font-size:12px}.hero-thread{height:22px;top:-18px}#heroArt{min-height:215px}.hero-photo-empty{margin:15px 0;padding:22px}}
+@media(prefers-reduced-motion:reduce){.hero-real-tag{animation:none}}
+
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1390,62 +1414,10 @@ function shade(hex,a){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b
 let uid=0;
 function imgOf(p){return p.img||(p.imgs&&p.imgs[0])||""}
 function art(p,col){
-  col=col||p.colors[0];
-  const real=imgOf(p); if(real) return `<img src="${esc(real)}" alt="${esc(p.name)}" loading="lazy">`;
-  const id="g"+(++uid), h=col.h, h2=col.h2, light=shade(h,.84), mid=shade(h,.6), dark=shade(h,-.25);
-  let s=`<svg viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(p.name)}"><defs>
-  <linearGradient id="${id}b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${light}"/><stop offset="1" stop-color="${mid}"/></linearGradient>
-  <linearGradient id="${id}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${shade(h,.18)}"/><stop offset="1" stop-color="${dark}"/></linearGradient>
-  <pattern id="${id}p" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M17 5l6 12-6 12-6-12z" fill="${h2}" opacity=".35"/></pattern>
-  </defs><rect width="400" height="500" fill="url(#${id}b)"/>`;
-  const T=p.type;
-  if(T==="saree"){
-    s+=`<path d="M60 70C140 30 250 100 340 52L356 430C270 478 170 410 46 462Z" fill="url(#${id}f)"/>
-    <path d="M60 70C140 30 250 100 340 52L356 430C270 478 170 410 46 462Z" fill="url(#${id}p)"/>`;
-    for(let i=1;i<7;i++){const x=60+i*43;s+=`<path d="M${x} ${62+((i%2)*8)}C${x+10} 200 ${x-12} 330 ${x+4} ${452-i*6}" stroke="#fff" stroke-opacity=".16" stroke-width="3" fill="none"/>`}
-    s+=`<path d="M46 462C170 410 270 478 356 430L360 470C272 520 170 456 42 506Z" fill="${h2}"/>
-    <path d="M46 474C170 422 270 490 358 444" stroke="${shade(h2,-.35)}" stroke-opacity=".5" stroke-width="3" fill="none" stroke-dasharray="6 6"/>
-    <path d="M250 70C290 150 330 150 346 118L340 52C310 66 280 74 250 70Z" fill="${h2}" opacity=".9"/>
-    <circle cx="298" cy="98" r="9" fill="${dark}" opacity=".5"/>`;
-  }else if(T==="three"){
-    s+=`<path d="M150 70h30q20 28 40 0h30l62 44-30 40-24-18 10 280H132l10-280-24 18-30-40z" fill="url(#${id}f)"/>
-    <path d="M150 70h30q20 28 40 0h30l62 44-30 40-24-18 10 280H132l10-280-24 18-30-40z" fill="url(#${id}p)"/>
-    <path d="M180 70q20 30 40 0" stroke="${h2}" stroke-width="5" fill="none"/>
-    <rect x="132" y="396" width="136" height="16" fill="${h2}"/>
-    <path d="M300 80C350 170 330 300 360 440" stroke="${h2}" stroke-width="26" stroke-linecap="round" fill="none" opacity=".75"/>
-    <path d="M150 428h45v60h-45zM205 428h45v60h-45z" fill="${dark}" opacity=".85"/>`;
-  }else if(T==="kurti"){
-    s+=`<path d="M150 56h30q20 30 40 0h30l56 44-28 40-22-16 14 330H130l14-330-22 16-28-40z" fill="url(#${id}f)"/>
-    <path d="M200 86v110" stroke="${h2}" stroke-width="3"/>
-    ${[110,134,158].map(y=>`<circle cx="200" cy="${y}" r="4" fill="${h2}"/>`).join("")}
-    <path d="M170 220q30-20 60 0" stroke="${h2}" stroke-width="3" fill="none" opacity=".8"/>
-    <rect x="130" y="400" width="140" height="22" fill="${h2}" opacity=".85"/>
-    ${[0,1,2,3,4,5].map(i=>`<circle cx="${148+i*21}" cy="411" r="4" fill="${light}"/>`).join("")}`;
-  }else if(T==="top"){
-    s+=`<path d="M145 90h35q20 24 40 0h35l62 50-30 44-26-18 8 210H131l8-210-26 18-30-44z" fill="url(#${id}f)"/>
-    <path d="M180 90q20 24 40 0" stroke="${h2}" stroke-width="5" fill="none"/>
-    <path d="M139 366h122" stroke="${h2}" stroke-width="6"/>`;
-  }else if(T==="scarf"){
-    s+=`<path d="M70 90C140 40 260 150 330 80L350 190C280 260 200 160 120 250L60 190Z" fill="url(#${id}f)"/>
-    <path d="M120 250C200 160 280 260 350 190L360 320C280 400 190 300 100 390L90 330Z" fill="${shade(h,.1)}" opacity=".95"/>
-    <path d="M100 390C190 300 280 400 360 320L350 400C270 470 190 380 80 450Z" fill="${dark}" opacity=".9"/>
-    <path d="M60 190C140 130 240 230 340 140" stroke="${h2}" stroke-opacity=".5" stroke-width="3" fill="none"/>`;
-  }else if(T==="bag"){
-    s+=`<path d="M135 190C135 90 265 90 265 190" stroke="${dark}" stroke-width="14" fill="none" stroke-linecap="round"/>
-    <path d="M85 190h230l30 240q0 30-30 30H85q-30 0-30-30z" fill="url(#${id}f)"/>
-    <path d="M85 190h230l8 60H77z" fill="${shade(h,-.12)}"/>
-    <rect x="178" y="226" width="44" height="40" rx="8" fill="${h2}"/><circle cx="200" cy="246" r="6" fill="${dark}"/>
-    <path d="M85 330h230" stroke="${h2}" stroke-width="3" stroke-dasharray="7 7" opacity=".8"/>`;
-  }else if(T==="neck"){
-    s+=`<path d="M90 90Q200 400 310 90" stroke="${h2}" stroke-width="3" fill="none"/>`;
-    for(let i=0;i<=16;i++){const t=i/16,x=90+220*t,y=90+(1-(2*t-1)**2)*232; s+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="13" fill="${h}" stroke="${h2}" stroke-width="2"/><circle cx="${(x-4).toFixed(1)}" cy="${(y-4).toFixed(1)}" r="4" fill="#fff" opacity=".7"/>`}
-    s+=`<path d="M200 330l-16 34 16 30 16-30z" fill="${h2}"/><circle cx="130" cy="432" r="11" fill="${h}" stroke="${h2}" stroke-width="2"/><circle cx="270" cy="432" r="11" fill="${h}" stroke="${h2}" stroke-width="2"/>`;
-  }else{
-    [150,250].forEach(x=>{s+=`<path d="M${x} 90v40" stroke="${h2}" stroke-width="4"/><circle cx="${x}" cy="150" r="20" fill="${h}" stroke="${h2}" stroke-width="3"/><path d="M${x-45} 330q45-170 90 0z" fill="url(#${id}f)" stroke="${h2}" stroke-width="3"/>`;
-      for(let i=0;i<5;i++) s+=`<circle cx="${x-36+i*18}" cy="352" r="5" fill="${h2}"/>`;
-      s+=`<circle cx="${x}" cy="280" r="9" fill="${h2}" opacity=".8"/>`});
-  }
-  return s+"</svg>";
+  // Real product photography ONLY. We intentionally do not draw sample sarees.
+  const actual=imgOf(p);
+  return actual ? '<img src="'+esc(fixImg(actual))+'" alt="'+esc(p.name)+'" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="photo-missing" hidden>Product photo unavailable</span>'
+    : '<div class="photo-missing" role="img" aria-label="Photo unavailable for '+esc(p.name)+'"><span>Photo not available</span><small>SHOPYHAT</small></div>';
 }
 
 /* =====================================================================
@@ -1453,45 +1425,35 @@ function art(p,col){
    ===================================================================== */
 function buildHero(){
   const host=$("#heroArt"); if(!host)return;
-  const D="M 548 78 C 420 92 500 262 366 312 S 150 372 128 508 S 236 664 352 704";
-  host.innerHTML=`<svg viewBox="0 0 680 800" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9a4d"/><stop offset="1" stop-color="#f47721"/></linearGradient>
-  <filter id="hsh" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#000" flood-opacity=".55"/></filter></defs>
-  <path class="rp" id="rpath" d="${D}" pathLength="1" fill="none" stroke="url(#rg)" stroke-width="22"/>
-  <path class="rp" d="${D}" pathLength="1" transform="translate(-6 -3)" fill="none" stroke="#ffc08a" stroke-opacity=".55" stroke-width="3"/>
-  <g class="bow">
-    <path d="M548 78C508 8 428 18 446 66C458 98 524 92 548 78Z" fill="url(#rg)"/>
-    <path d="M548 78C592 8 672 30 650 78C638 106 574 96 548 78Z" fill="url(#rg)"/>
-    <path d="M548 78C510 40 470 46 470 64C470 80 520 84 548 78Z" fill="#d9640f" opacity=".55"/>
-    <path d="M548 78C588 42 628 52 624 70C620 86 574 88 548 78Z" fill="#d9640f" opacity=".55"/>
-    <path d="M552 90L520 150L548 140L560 104Z" fill="#d9640f"/>
-    <rect x="534" y="62" width="28" height="32" rx="7" fill="#ff8a33"/>
-  </g></svg>`;
-  const svg=host.querySelector("svg"), path=host.querySelector("#rpath"), L=path.getTotalLength();
-  const pool=[],seenC=new Set();
-  PRODUCTS.forEach(p=>{if(!seenC.has(p.cat)){seenC.add(p.cat);pool.push(p)}});
-  PRODUCTS.forEach(p=>{if(pool.length<3&&!pool.includes(p))pool.push(p)});
-  const picks=[[pool[0],.3,-7,1.45],[pool[1],.52,5,1.75],[pool[2],.74,-4,2.05]];
-  let html="";
-  picks.forEach(([p,f,r,d])=>{
-    if(!p)return; const pt=path.getPointAtLength(L*f), ax=pt.x, ay=pt.y;
-    const real=storefrontCover(p), a=real?`<svg x="${ax-66}" y="${ay+56}" width="132" height="165" viewBox="0 0 132 165"><image href="${esc(real)}" width="132" height="165" preserveAspectRatio="xMidYMid slice"/></svg>`:art(p).replace("<svg ",`<svg x="${ax-66}" y="${ay+56}" width="132" height="165" `);
-    html+=`<g class="tag" style="transform-origin:${ax}px ${ay}px;--r:${r}deg;animation-delay:${d}s">
-      <line x1="${ax}" y1="${ay}" x2="${ax}" y2="${ay+52}" stroke="#f4efe6" stroke-width="1.6"/>
-      <circle cx="${ax}" cy="${ay}" r="4.5" fill="#fff"/>
-      <g filter="url(#hsh)"><rect x="${ax-74}" y="${ay+50}" width="148" height="206" fill="#fff"/></g>
-      ${a}
-      <text x="${ax}" y="${ay+242}" text-anchor="middle" font-family="Bodoni Moda,Georgia,serif" font-size="15" font-weight="600" fill="#0b0b0a">${money(p.price)}</text></g>`;
-  });
-  svg.insertAdjacentHTML("beforeend",html);
+  // Only use photographs actually provided for products/colour variants in Sheets.
+  // If the catalogue has no usable photographs, show a text CTA, never fake products or fake prices.
+  const seenCats=new Set();
+  const withPhoto=PRODUCTS.filter(p=>!!storefrontCover(p));
+  const ordered=[...withPhoto.filter(p=>{if(seenCats.has(p.cat))return false;seenCats.add(p.cat);return true}),...withPhoto];
+  const picks=[];for(const p of ordered){if(!picks.some(x=>x.id===p.id))picks.push(p);if(picks.length===3)break}
+  const ribbon='<svg class="hero-ribbon" aria-hidden="true" viewBox="0 0 660 120" xmlns="http://www.w3.org/2000/svg"><path d="M5 92C112 28 216 42 298 58S475 135 648 12" fill="none" stroke="#f47721" stroke-width="18" stroke-linecap="round"/><path d="M5 86C112 22 216 36 298 52S475 129 648 6" fill="none" stroke="#ffa35d" stroke-width="3" opacity=".65"/></svg>';
+  if(!picks.length){
+    host.innerHTML='<div class="hero-photo-empty"><strong>Discover the collection</strong><span>Original product photographs will appear here once added to your catalogue.</span><a href="#shop" class="btn">Explore products</a></div>';
+    return;
+  }
+  host.innerHTML=ribbon+'<div class="hero-real-products">'+picks.map((p,i)=>{
+    const photo=storefrontCover(p);
+    const href='#p/'+encodeURIComponent(p.id);
+    return '<a class="hero-real-tag" href="'+href+'" aria-label="View '+esc(p.name)+'" style="--turn:'+[-7,4,-4][i]+'deg;--delay:'+i*.12+'s">'
+      +'<span class="hero-thread" aria-hidden="true"></span><span class="hero-photo-frame">'
+      +'<img src="'+esc(photo)+'" alt="'+esc(p.name)+'" loading="'+(i===0?'eager':'lazy')+'" onerror="this.hidden=true;this.nextElementSibling.hidden=false">'
+      +'<span class="photo-missing" hidden>Photo unavailable</span>'
+      +'<small class="hero-price">'+money(variantPrice(p,p.colors&&p.colors[0]?p.colors[0].n:''))+'</small></span></a>';
+  }).join('')+'</div>';
 }
-
 
 /* =====================================================================
    PRODUCT DATA — from Google Sheet (or the sample list above)
    ===================================================================== */
-const SHEET=CONFIG.sheetUrl||"";
-const VARIANT_FEED_URL="https://script.google.com/macros/s/AKfycbxYZdwDnsjYMgNxYDbGqclJvThHuHCHIqjSS7gz04ZwjOJUAe9WJUPJA7uoF7c0QO99/exec";
+// One Public Orders Receiver can also provide public PRODUCTS and COLOUR VARIANTS.
+// Once CONFIG.orderUrl is set, images and order snapshots use the SAME authoritative Sheet.
+const SHEET=CONFIG.orderUrl||CONFIG.sheetUrl||"";
+const VARIANT_FEED_URL=CONFIG.orderUrl||"https://script.google.com/macros/s/AKfycbxYZdwDnsjYMgNxYDbGqclJvThHuHCHIqjSS7gz04ZwjOJUAe9WJUPJA7uoF7c0QO99/exec";
 let VARIANT_MAP={};
 const slug=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const catKey=s=>slug(s).replace(/-/g,"").replace(/s$/,"");
@@ -1519,9 +1481,14 @@ function guessType(s){s=String(s).toLowerCase();
   if(/three|3 ?piece|salwar|suit/.test(s))return"three";
   if(/kurti|kameez|panjabi|punjabi/.test(s))return"kurti";
   return"top"}
-function fixImg(u){u=u.trim();
-  const m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||u.match(/drive\.google\.com\/(?:open|uc)\?(?:[^#]*&)?id=([\w-]+)/);
-  return m?"https://drive.google.com/thumbnail?id="+m[1]+"&sz=w1000":u}
+function fixImg(u){
+  u=String(u||'').trim();
+  if(!/^https:\/\//i.test(u))return '';
+  const m=u.match(/drive\.google\.com\/file\/d\/([\w-]+)/i)
+    ||u.match(/drive\.google\.com\/(?:open|uc|thumbnail)\?[^#]*[?&]?id=([\w-]+)/i)
+    ||u.match(/drive\.google\.com\/(?:open|uc|thumbnail)\?id=([\w-]+)/i);
+  return m?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000':u;
+}
 function parseProduct(r,i){
   const num=v=>{const n=parseFloat(String(v==null?"":v).replace(/[^0-9.]/g,""));return isFinite(n)?n:0};
   const list=(v,re)=>String(v==null?"":v).split(re).map(x=>x.trim()).filter(Boolean);
@@ -1530,7 +1497,7 @@ function parseProduct(r,i){
   if(/^hid/i.test(String(r.availability||"")))return null;
   const catName=String(r.category||"Products").trim()||"Products";
   const types=["saree","three","kurti","top","scarf","bag","neck","ear"], t=String(r.type||"").trim().toLowerCase();
-  const sizes=list(r.sizes,/,/), imgs=list(r.images,/[\n,]+/).map(fixImg), old=num(r.old);
+  const sizes=list(r.sizes,/,/), imgs=list(r.images,/[\r\n,;|]+/).map(fixImg).filter(Boolean), old=num(r.old);
   return{id:+r.id||i+1,name,cat:slug(catName),catName,price,old:old>price?old:0,
     isNew:/^(y|yes|true|1|new)/i.test(String(r.isNew==null?"":r.isNew)),
     soldOut:/sold/i.test(String(r.availability||"")),
@@ -1542,6 +1509,11 @@ function parseProduct(r,i){
       }
       base.forEach(c=>{const match=variants.find(v=>String(v.color||'').trim().toLowerCase()===c.n.trim().toLowerCase());
         if(match&&/^#[0-9a-f]{6}$/i.test(match.hex||'')){c.h=match.hex;c.h2=accentFor(c.h)} });
+      // Include any new colour added in ProductVariants but not yet copied to Products.colors.
+      variants.forEach(v=>{const n=String(v.color||'').trim();if(!n||base.some(c=>c.n.toLowerCase()===n.toLowerCase()))return;
+        const h=/^#[0-9a-f]{6}$/i.test(v.hex||'')?v.hex:(CNAME[n.toLowerCase()]||cssHex(n)||'#9c9188');
+        base.push({n,h,h2:accentFor(h)});
+      });
       return base;
     })(),sizes:sizes.length?sizes:undefined,imgs:imgs.length?imgs:undefined,
     type:types.includes(t)?t:guessType(catName+" "+name),
@@ -1647,14 +1619,14 @@ function storefrontCover(p){
 }
 function storefrontArt(p){
   const src=storefrontCover(p);
-  return src?`<img src="${esc(src)}" alt="${esc(p.name)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:art(p);
+  return src?`<img src="${esc(src)}" alt="${esc(p.name)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="photo-missing" hidden>Photo unavailable</span>`:art(p);
 }
 function variantsFor(p){return Array.isArray(p.variants)?p.variants:[]}
 function chosenVariant(p,color){return variantsFor(p).find(v=>String(v.color).toLowerCase()===String(color).toLowerCase())||null}
 function variantPrice(p,color){const v=chosenVariant(p,color);return v&&Number(v.price)>0?Number(v.price):p.price}
 function variantStock(p,color){const v=chosenVariant(p,color);return v&&v.stock!==null&&v.stock!==''&&Number.isFinite(Number(v.stock))?Number(v.stock):null}
 function variantImage(p,color){const v=chosenVariant(p,color);return v&&v.images&&v.images.length?fixImg(v.images[0]):imgOf(p)}
-function variantArt(p,color){const src=variantImage(p,color);return src?`<img src="${esc(src)}" alt="${esc(p.name+' '+color)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:art(p,p.colors.find(c=>c.n===color))}
+function variantArt(p,color){const src=variantImage(p,color);return src?`<img src="${esc(src)}" alt="${esc(p.name+' '+color)}" loading="lazy" style="width:100%;height:100%;object-fit:cover" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="photo-missing" hidden>Photo unavailable</span>`:art(p,p.colors.find(c=>c.n===color))}
 function openProduct(id){
   const p=byId(id); if(!p)return;
   cur={p,ci:0,gi:0,size:"",qty:1};
@@ -1666,7 +1638,7 @@ function drawProduct(){
   const variant=chosenVariant(p,col.n), imgs=variant&&variant.images&&variant.images.length?variant.images.map(fixImg):(p.imgs||(p.img?[p.img]:[]));
   const selectedPrice=variantPrice(p,col.n),selectedStock=variantStock(p,col.n),variantSoldOut=p.soldOut||selectedStock===0;
   const rel=PRODUCTS.filter(x=>x.cat===p.cat&&x.id!==p.id).slice(0,3);
-  const main=imgs.length?`<div class="main z" id="pdMain"><img src="${esc(imgs[gi]||imgs[0])}" alt="${esc(p.name+" "+col.n)}" loading="eager"></div>`:`<div class="main">${art(p,col)}</div>`;
+  const main=imgs.length?`<div class="main z" id="pdMain"><img src="${esc(imgs[gi]||imgs[0])}" alt="${esc(p.name+" "+col.n)}" loading="eager" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="photo-missing" hidden>Photo unavailable for this colour</span></div>`:`<div class="main">${art(p,col)}</div>`;
   const thumbs=imgs.length>1?`<div class="thumbs">${imgs.map((u,i)=>`<button class="${i===gi?"on":""}" data-gi="${i}" aria-label="Photo ${i+1}"><img src="${esc(u)}" alt="" style="width:100%;height:100%;object-fit:cover"></button>`).join("")}</div>`:"";
   $("#prodBox").innerHTML=`<button class="x" data-close aria-label="Close">×</button>
   <div class="pd"><div class="gal">${main}${thumbs}</div>
@@ -2068,13 +2040,24 @@ function fetchVariantsJSONP(url){
     window[callback]=data=>done(null,data&&data.ok&&data.variants?data.variants:{});
     s.onerror=()=>done(Error('Variant feed unavailable'));
     const timer=setTimeout(()=>done(Error('Variant feed timeout')),9000);
-    s.src=url+(url.includes('?')?'&':'?')+'callback='+encodeURIComponent(callback);
+    s.src=url+(url.includes('?')?'&':'?')+(CONFIG.orderUrl?'action=variants&':'')+'callback='+encodeURIComponent(callback);
+    document.head.appendChild(s);
+  });
+}
+function fetchPublicProductsJSONP(url){
+  return new Promise((resolve,reject)=>{
+    const callback='SHOPYHATProductCallback'+Date.now(),s=document.createElement('script');let finished=false;
+    const done=(error,data)=>{if(finished)return;finished=true;clearTimeout(timer);delete window[callback];s.remove();error?reject(error):resolve(data)};
+    window[callback]=data=>done(null,data);
+    s.onerror=()=>done(Error('Catalog feed unavailable'));
+    const timer=setTimeout(()=>done(Error('Catalog feed timeout')),10000);
+    s.src=url+(url.includes('?')?'&':'?')+'action=products&callback='+encodeURIComponent(callback);
     document.head.appendChild(s);
   });
 }
 async function boot(){
-  if(!SHEET){applyProducts(defaultList());renderAll();return}
-  const cached=LS.get("sh_products",null);
+  if(!SHEET){applyProducts([]);renderAll();const msg='<div class="empty">Product feed is not configured. Add the Apps Script Products URL in CONFIG.sheetUrl.</div>';["#homeGrid","#shopGrid"].forEach(x=>$(x).innerHTML=msg);return}
+  const cached=LS.get("sh_products_live_v2",null);
   if(cached&&cached.length){applyProducts(cached.map(parseProduct).filter(Boolean));renderAll()}
   else{renderAll();showLoading()}
   try{
@@ -2082,10 +2065,10 @@ async function boot(){
       try{VARIANT_MAP=await fetchVariantsJSONP(VARIANT_FEED_URL)}
       catch(e){console.warn('Variant feed unavailable; base products still load',e)}
     }
-    const r=await fetch(SHEET+"?action=products"), j=await r.json();
+    const j=CONFIG.orderUrl?await fetchPublicProductsJSONP(SHEET):await (await fetch(SHEET+"?action=products")).json();
     if(!j||!j.ok||!Array.isArray(j.products))throw new Error("bad response");
     const changed=JSON.stringify(j.products)!==JSON.stringify(cached);
-    LS.set("sh_products",j.products);
+    LS.set("sh_products_live_v2",j.products);
     if(changed||!cached||Object.keys(VARIANT_MAP).length){applyProducts(j.products.map(parseProduct).filter(Boolean));renderAll(!!cached);openDeepLink()}
   }catch(e){
     if(cached&&cached.length&&Object.keys(VARIANT_MAP).length){applyProducts(cached.map(parseProduct).filter(Boolean));renderAll(true)}
