@@ -44,10 +44,10 @@ Deno.serve(async req=>{
   if(Number(req.headers.get('content-length')||0)>22*1024*1024)return send({error:'Upload too large'},413);
   const p=isForm?await req.formData():await req.json();
   const field=k=>String(isForm?(p.get(k)||''):(p[k]||'')).trim();
-  const action=field('action'),valid=['review','case','status'];
+  const action=field('action'),valid=['review','case','status','reply'];
   if(!valid.includes(action)||field('website'))return send({error:'Invalid request'},400);
   const phone=field('phone').replace(/^(?:\+?88)/,'');
-  const fp=await hash(action+'|'+(req.headers.get('cf-connecting-ip')||req.headers.get('x-forwarded-for')||'unknown').split(',')[0].slice(0,75)+'|'+(action==='case'?phone:''));
+  const fp=await hash(action+'|'+(req.headers.get('cf-connecting-ip')||req.headers.get('x-forwarded-for')||'unknown').split(',')[0].slice(0,75)+'|'+(['case','reply'].includes(action)?phone:''));
   if(!await allowed(fp,action,action==='status'?25:action==='review'?5:3))return send({error:'Too many requests. Please try later.'},429);
   if(!await human(field('turnstile_token')))return send({error:'Complete human verification'},403);
   if(action==='status'){
@@ -57,6 +57,19 @@ Deno.serve(async req=>{
    await stamp(fp,action);
    if(r.error||!r.data)return send({error:'No matching case found'},404);
    return send({ok:true,case_number:r.data.case_number,status:r.data.status,updated_at:r.data.updated_at,feedback:r.data.last_staff_feedback||''});
+  }
+  if(action==='reply'){
+   const id=field('case_number').toUpperCase(),message=field('message');
+   if(!/^CS-[A-Z0-9]{10}$/.test(id)||!/^01[3-9]\d{8}$/.test(phone)||message.length<10||message.length>2000)return send({error:'Provide a valid case reference, phone and reply (10–2000 characters)'},400);
+   const lookup=await db.from('sh_customer_cases').select('id,status').eq('case_number',id).eq('phone',phone).maybeSingle();
+   if(lookup.error||!lookup.data)return send({error:'No matching case found'},404);
+   if(['Resolved','Closed'].includes(lookup.data.status))return send({error:'This case is closed. Please submit a new issue if you need more help.'},409);
+   const ins=await db.from('sh_case_replies').insert({case_id:lookup.data.id,message});
+   if(ins.error)throw Error('Unable to save customer reply');
+   const change=await db.from('sh_customer_cases').update({status:'Under Review',last_staff_feedback:'Thank you for the additional information. Our support team is reviewing your reply.'}).eq('id',lookup.data.id);
+   if(change.error)console.warn('Case status update after reply failed',change.error.message);
+   await stamp(fp,action);
+   return send({ok:true,message:'Your reply has been added to the support case.'});
   }
   if(action==='review'){
    const product_id=field('product_id'),rating=Number(field('rating')),name=field('reviewer_name'),title=field('title'),text=field('review_text');
