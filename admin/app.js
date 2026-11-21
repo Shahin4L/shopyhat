@@ -4,10 +4,10 @@ const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSessio
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=v=>'৳'+Number(v||0).toLocaleString('en-BD',{maximumFractionDigits:2});
-const fmtDate=v=>v?new Date(v).toLocaleString('en-BD'):'—';
+const fmtDate=v=>v?new Date(v).toLocaleString('en-BD',{timeZone:'Asia/Dhaka',dateStyle:'medium',timeStyle:'short'}):'—';
 const roleCan=(...r)=>r.includes(role);
 const imageUrl=v=>{const s=String(v||'');const m=s.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||s.match(/[?&]id=([\w-]+)/);return m&&s.includes('google.com')?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000':s};
-let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],activePage='products';
+let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],activePage='products';
 function notice(id,message,error=false){$(id).textContent=message;$(id).classList.toggle('error',!!error)}
 function show(id,on){$(id).classList.toggle('hidden',!on)}
 function drawer(title,html){$('drawerTitle').textContent=title;$('drawerBody').innerHTML=html;notice('drawerMsg','');show('overlay',true)}
@@ -36,6 +36,65 @@ function setupLocalPhotoPreview(fileInputId,previewId){
  };
 }
 async function query(table,selection='*',limit=1000){const q=await db.from(table).select(selection).limit(limit);if(q.error)throw q.error;return q.data||[]}
+
+/* SHOPYHAT Operations — date filtering and verified database audit. */
+const tzDate=v=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dhaka',year:'numeric',month:'2-digit',day:'2-digit'}).format(v instanceof Date?v:new Date(v));
+function dateOK(record,table=''){
+ const from=$('dateFrom')?.value||'',to=$('dateTo')?.value||'';
+ if(!from&&!to)return true;
+ const basis=$('dateBasis')?.value||'created';
+ const val=table==='audit'?record.created_at:(basis==='updated'?(record.updated_at||record.reviewed_at||record.created_at):(record.created_at||record.updated_at));
+ if(!val)return false;
+ const day=tzDate(val);return (!from||day>=from)&&(!to||day<=to);
+}
+function rangeValid(){const from=$('dateFrom')?.value||'',to=$('dateTo')?.value||'';return !from||!to||from<=to}
+function dateFiltered(rows,table=''){return rows.filter(r=>dateOK(r,table))}
+function todayBD(){return tzDate(new Date())}
+function dateAgo(days){const d=new Date();d.setUTCDate(d.getUTCDate()-days);return tzDate(d)}
+function setDatePreset(choice){
+ const t=todayBD();
+ $('dateBasis').value='created';
+ $('dateTo').value=choice==='all'?'':t;
+ $('dateFrom').value=choice==='all'?'':choice==='today'?t:dateAgo(Number(choice)-1);
+ document.querySelectorAll('[data-range]').forEach(b=>b.classList.toggle('on',b.dataset.range===choice));
+ render();
+}
+function actorFor(entity,id,fallback){
+ const item=audit.find(a=>a.entity===entity&&a.record_id===String(id));
+ return item?{name:item.actor_email,date:item.created_at}:{name:fallback?.updated_by||'Not tracked',date:fallback?.updated_at||fallback?.reviewed_at||fallback?.created_at};
+}
+function metaLabel(entity,record,id=record?.id){
+ const m=actorFor(entity,id,record);
+ return '<div class="meta-stack"><b>'+esc(m.name)+'</b><div>'+fmtDate(m.date)+'</div></div>';
+}
+function auditFields(a){const changes=a.changes||{};return Object.keys(changes).join(', ')||'Metadata update'}
+function exportCSV(filename,columns,rows){
+ const cell=v=>'"'+String(v??'').replace(/^[=+\-@\t\r]/,"'$&").replace(/"/g,'""')+'"';
+ const csv=[columns.join(','),...rows.map(row=>columns.map(k=>cell(row[k])).join(','))].join('\r\n');
+ const url=URL.createObjectURL(new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8'}));
+ const link=document.createElement('a');link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function filteredAudit(){
+ const entity=$('auditEntity')?.value||'',action=$('auditAction')?.value||'',term=($('auditSearch')?.value||'').toLowerCase().trim();
+ return dateFiltered(audit,'audit').filter(a=>(!entity||a.entity===entity)&&(!action||a.action===action)&&(!term||(a.actor_email+' '+a.record_label+' '+a.record_id+' '+a.entity).toLowerCase().includes(term)));
+}
+function renderAudit(){
+ if(!roleCan('owner','manager'))return;
+ const rows=filteredAudit();
+ $('auditCount').textContent=rows.length+' matching changes (latest 1,000 audited events loaded).';
+ $('auditRows').innerHTML=rows.map(a=>'<tr class="audit-row"><td>'+fmtDate(a.created_at)+'</td><td><span class="actor">'+esc(a.actor_email)+'</span><div class="muted">'+esc(a.actor_role)+'</div></td><td>'+esc(a.entity.replace(/^sh_/,''))+'</td><td><span class="pill">'+esc(a.action)+'</span></td><td>'+esc(a.record_label)+'<div class="muted">'+esc(a.record_id.slice(0,8))+'</div></td><td><div class="changed-list">'+esc(auditFields(a))+'</div><button class="btn small" data-audit-details="'+a.id+'" type="button">View changes</button></td></tr>').join('')||'<tr><td colspan="6">No activity matches the filters.</td></tr>';
+}
+function openAuditDetails(id){
+ if(!roleCan('owner','manager'))return;
+ const row=audit.find(a=>String(a.id)===String(id));if(!row)return;
+ const entries=Object.entries(row.changes||{});
+ drawer('Change Details · '+row.entity.replace(/^sh_/,''),'<p class="muted">Record: '+esc(row.record_label)+'<br>Updated by: '+esc(row.actor_email)+' · '+esc(row.actor_role)+'<br>When: '+fmtDate(row.created_at)+'</p><div class="scroll"><table><thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead><tbody>'+entries.map(([field,d])=>'<tr><td>'+esc(field)+'</td><td>'+esc(JSON.stringify(d?.before??'—'))+'</td><td>'+esc(JSON.stringify(d?.after??'—'))+'</td></tr>').join('')+'</tbody></table></div>');
+}
+async function loadAudit(){
+ if(!roleCan('owner','manager')){audit=[];return}
+ const response=await db.from('sh_audit_log').select('id,created_at,entity,record_id,record_label,action,actor_email,actor_role,changes').order('created_at',{ascending:false}).limit(1000);
+ if(response.error)throw response.error;audit=response.data||[];
+}
 async function loginSend(){
  const email=$('email').value.trim().toLowerCase();
  if(!/^\S+@\S+\.\S+$/.test(email))return notice('loginMsg','Enter a valid email.',true);
@@ -67,27 +126,31 @@ async function boot(){const {data:{user},error}=await db.auth.getUser();
  const r=await db.from('sh_staff').select('*').eq('email',(user.email||'').toLowerCase()).maybeSingle();
  if(r.error||!r.data?.active){await db.auth.signOut();show('login',true);show('dashboard',false);show('logout',false);return notice('loginMsg','This account is not an active SHOPYHAT staff member. Ask the owner to grant access.',true)}
  actor=user;role=r.data.role;$('profile').textContent=(r.data.display_name||user.email)+' · '+role;
- show('login',false);show('dashboard',true);show('logout',true);show('usersTab',role==='owner');show('addStaff',role==='owner');
+ show('login',false);show('dashboard',true);show('logout',true);show('usersTab',role==='owner');show('addStaff',role==='owner');show('activityTab',roleCan('owner','manager'));
  show('newProduct',roleCan('owner','manager'));show('newOrder',roleCan('owner','manager','operator'));
  await refresh()}
 async function refresh(){notice('appMsg','Loading live data…');
  try{
  const [p,v,i,o,oi,pa,st]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff')]);
  products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;
+ try{await loadAudit()}catch(e){audit=[];console.warn('Audit log not loaded:',e.message)}
  $('kProducts').textContent=p.length;$('kActive').textContent=p.filter(x=>x.status==='active').length;$('kOrders').textContent=o.length;$('kPending').textContent=o.filter(x=>x.status==='Pending').length;
  render();notice('appMsg','Last refreshed '+new Date().toLocaleTimeString('en-BD'))}
  catch(e){notice('appMsg',e.message,true)}}
-function showPage(page){activePage=page;for(const n of ['products','orders','payments','users'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
+function showPage(page){if(page==='activity'&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
 function cover(product){const base=images.find(i=>i.product_id===product.id&&!i.variant_id);if(base)return base.image_url;
  const v=variants.find(x=>x.product_id===product.id);return images.find(i=>i.variant_id===v?.id)?.image_url||''}
 function render(){
+ if(!rangeValid()){notice('appMsg','From date must be on or before To date.',true);return;}
  const search=$('productSearch').value.toLowerCase().trim(),oq=$('orderSearch').value.toLowerCase().trim(),filter=$('statusFilter').value;
- $('productRows').innerHTML=products.filter(p=>(p.name+' '+p.legacy_id+' '+p.category).toLowerCase().includes(search)).map(p=>
- '<tr><td><div class="row" style="justify-content:flex-start">'+imgTag(cover(p),p.name)+'<div><b>'+esc(p.name)+'</b><div class="muted">#'+esc(p.legacy_id||p.id.slice(0,7))+' · '+esc(p.category)+'</div></div></div></td><td>'+money(p.base_price)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+variants.filter(v=>v.product_id===p.id).length+'</td><td><div class="tools"><button class="btn small" data-edit-product="'+p.id+'">Edit / Photos</button>'+(roleCan("owner","manager")?'<button type="button" class="btn small danger" data-delete-product="'+p.id+'">Delete</button>':'')+'</div></td></tr>').join('')||'<tr><td colspan="5">No products found</td></tr>';
- $('orderRows').innerHTML=orders.filter(o=>(!filter||o.status===filter)&&(!oq||[o.order_number,o.customer_name,o.customer_phone].some(v=>String(v||'').toLowerCase().includes(oq)))).map(o=>
- '<tr><td>'+orderThumb(o)+'</td><td><b>'+esc(o.order_number)+'</b><div class="muted">'+fmtDate(o.created_at)+'</div></td><td>'+esc(o.customer_name)+'<div class="muted">'+esc(o.customer_phone)+'</div></td><td>'+money(o.total)+'</td><td><span class="pill">'+esc(o.status)+'</span></td><td>'+esc(o.payment_status)+'</td><td><button class="btn small" data-edit-order="'+o.id+'">Process / Invoice</button></td></tr>').join('')||'<tr><td colspan="7">No matching orders</td></tr>';
- $('paymentRows').innerHTML=payments.map(p=>'<tr><td>'+esc(orders.find(o=>o.id===p.order_id)?.order_number||'—')+'</td><td>'+esc(p.method)+'</td><td>'+esc(p.transaction_id)+'</td><td>'+money(p.amount)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+ (roleCan('owner','manager')?'<button class="btn small" data-review="'+p.id+'">Review</button>':'Read only')+'</td></tr>').join('')||'<tr><td colspan="6">No payment reviews</td></tr>';
- $('staffRows').innerHTML=staff.map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(x.display_name)+'</td><td>'+esc(x.role)+'</td><td>'+ (x.active?'Active':'Disabled')+'</td><td>'+(x.role==='owner'?'Protected':'<button class="btn small" data-edit-staff="'+esc(x.email)+'">Edit</button>')+'</td></tr>').join('')||'<tr><td colspan="5">No staff</td></tr>';
+ $('rangeSummary').textContent=($('dateFrom').value||'All dates')+' → '+($('dateTo').value||'Today / future')+' · '+($('dateBasis').value==='updated'?'Updated Date':'Created Date');
+ $('productRows').innerHTML=dateFiltered(products).filter(p=>(p.name+' '+p.legacy_id+' '+p.category).toLowerCase().includes(search)).map(p=>
+ '<tr><td><div class="row" style="justify-content:flex-start">'+imgTag(cover(p),p.name)+'<div><b>'+esc(p.name)+'</b><div class="muted">#'+esc(p.legacy_id||p.id.slice(0,7))+' · '+esc(p.category)+'</div></div></div></td><td>'+money(p.base_price)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+variants.filter(v=>v.product_id===p.id).length+'</td><td>'+metaLabel('sh_products',p)+'</td><td><div class="tools"><button class="btn small" data-edit-product="'+p.id+'">Edit / Photos</button>'+(roleCan("owner","manager")?'<button type="button" class="btn small danger" data-delete-product="'+p.id+'">Delete</button>':'')+'</div></td></tr>').join('')||'<tr><td colspan="6">No products found</td></tr>';
+ $('orderRows').innerHTML=dateFiltered(orders).filter(o=>(!filter||o.status===filter)&&(!oq||[o.order_number,o.customer_name,o.customer_phone].some(v=>String(v||'').toLowerCase().includes(oq)))).map(o=>
+ '<tr><td>'+orderThumb(o)+'</td><td><b>'+esc(o.order_number)+'</b><div class="muted">'+fmtDate(o.created_at)+'</div></td><td>'+esc(o.customer_name)+'<div class="muted">'+esc(o.customer_phone)+'</div></td><td>'+money(o.total)+'</td><td><span class="pill">'+esc(o.status)+'</span></td><td>'+esc(o.payment_status)+'</td><td>'+metaLabel('sh_orders',o)+'</td><td><button class="btn small" data-edit-order="'+o.id+'">Process / Invoice</button></td></tr>').join('')||'<tr><td colspan="8">No matching orders</td></tr>';
+ $('paymentRows').innerHTML=dateFiltered(payments).map(p=>'<tr><td>'+esc(orders.find(o=>o.id===p.order_id)?.order_number||'—')+'</td><td>'+esc(p.method)+'</td><td>'+esc(p.transaction_id)+'</td><td>'+money(p.amount)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+ (roleCan('owner','manager')?'<button class="btn small" data-review="'+p.id+'">Review</button>':'Read only')+'</td></tr>').join('')||'<tr><td colspan="7">No payment reviews</td></tr>';
+ $('staffRows').innerHTML=dateFiltered(staff).map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(x.display_name)+'</td><td>'+esc(x.role)+'</td><td>'+ (x.active?'Active':'Disabled')+'</td><td>'+metaLabel('sh_staff',x,x.email)+'</td><td>'+(x.role==='owner'?'Protected':'<button class="btn small" data-edit-staff="'+esc(x.email)+'">Edit</button>')+'</td></tr>').join('')||'<tr><td colspan="6">No staff</td></tr>';
+ renderAudit();
 }
 function confirmProductDelete(id){
  if(!roleCan('owner','manager'))return;
@@ -157,7 +220,7 @@ function editProduct(id){
  const editable=roleCan('owner','manager');
  const variantList=variants.filter(x=>x.product_id===id);
  const group=images.filter(i=>i.product_id===id&&!i.variant_id);
- drawer(id?'Edit Product':'Add Product',`
+ drawer(id?'Edit Product':'Add Product',`\n ${id?'<p class="audit-meta">'+metaLabel('sh_products',p)+'</p>':''}
  <form id="productForm"><label>Product name</label><input name="name" required minlength="3" value="${esc(p.name)}">
  <div class="fieldrow"><div><label>Category</label><input name="category" required value="${esc(p.category)}"></div><div><label>Status</label><select name="status">${['active','draft','hidden','sold_out'].map(v=>'<option '+(p.status===v?'selected':'')+'>'+v+'</option>').join('')}</select></div>
  <div><label>Price (BDT)</label><input name="base_price" type="number" min="0" step=".01" required value="${esc(p.base_price)}"></div><div><label>Previous price</label><input name="old_price" type="number" min="0" step=".01" value="${esc(p.old_price||'')}"></div></div>
@@ -200,7 +263,7 @@ function editProduct(id){
 function editVariant(id,productId){
  const v=variants.find(v=>v.id===id)||{product_id:productId,color:'',hex:'#888888',sku:'',price:null,stock:null,active:true};
  const p=products.find(p=>p.id===v.product_id);
- drawer('Color / Variant',`<form id="variantForm"><div class="fieldrow"><div><label>Color name</label><input required name="color" value="${esc(v.color)}"></div><div><label>Color hex</label><input name="hex" type="color" value="${esc(/^#[a-f0-9]{6}$/i.test(v.hex||'')?v.hex:'#888888')}"></div>
+ drawer('Color / Variant',`<p class="audit-meta">${id?metaLabel('sh_variants',v):'New variant'}</p><form id="variantForm"><div class="fieldrow"><div><label>Color name</label><input required name="color" value="${esc(v.color)}"></div><div><label>Color hex</label><input name="hex" type="color" value="${esc(/^#[a-f0-9]{6}$/i.test(v.hex||'')?v.hex:'#888888')}"></div>
  <div><label>Variant price (leave blank for product price)</label><input name="price" type="number" min="0" step=".01" value="${esc(v.price??'')}"></div><div><label>Stock (blank = unlimited)</label><input name="stock" type="number" min="0" step="1" value="${esc(v.stock??'')}"></div></div>
  <label>SKU</label><input name="sku" value="${esc(v.sku||'')}"><label><input name="active" type="checkbox" style="width:auto" ${v.active?'checked':''}> Variant enabled</label>
  <button class="btn primary" type="submit">Save Color</button></form>
@@ -263,7 +326,7 @@ async function editOrder(id){
  <div><label>Courier</label><input name="courier" value="${esc(o.courier)}"></div><div><label>Tracking ID</label><input name="tracking_id" value="${esc(o.tracking_id)}"></div><div><label>Internal Note</label><textarea name="internal_note">${esc(o.internal_note)}</textarea></div></div>
  <button class="btn primary" ${editable?'':'disabled'} type="submit">Save Order Changes</button>
  <button class="btn" id="printInvoice" type="button">Print Invoice</button></form>
- <div class="divider"></div><h3>Activity History</h3><p class="muted">${(history.data||[]).map(h=>esc(h.action)+' · '+fmtDate(h.created_at)).join('<br>')||'No history yet'}</p>`;
+ <div class="divider"></div><h3>Activity History</h3><p class="muted">${(history.data||[]).map(h=>esc(h.action)+' · '+esc(h.actor||'system')+' · '+fmtDate(h.created_at)).join('<br>')||'No history yet'}</p>`;
  $('orderForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('orderForm');
  const changes={status:f.status,courier:f.courier,tracking_id:f.tracking_id,internal_note:f.internal_note,updated_at:new Date().toISOString()};
  const r=await db.from('sh_orders').update(changes).eq('id',id);if(r.error)return notice('drawerMsg',r.error.message,true);
@@ -277,7 +340,7 @@ function printInvoice(o,items){const w=window.open('','_blank','width=840,height
 function reviewPayment(id){
  if(!roleCan('owner','manager'))return;
  const p=payments.find(x=>x.id===id),o=orders.find(x=>x.id===p?.order_id);if(!p)return;
- drawer('Review Payment',`<p>Order: <b>${esc(o?.order_number||'—')}</b></p><p>Method: ${esc(p.method)} · ${money(p.amount)}<br>Transaction: <b>${esc(p.transaction_id)}</b><br>Sender last 4: ${esc(p.sender_last4)}</p>
+ drawer('Review Payment',`<p class="audit-meta">${metaLabel('sh_payments',p)}</p><p>Order: <b>${esc(o?.order_number||'—')}</b></p><p>Method: ${esc(p.method)} · ${money(p.amount)}<br>Transaction: <b>${esc(p.transaction_id)}</b><br>Sender last 4: ${esc(p.sender_last4)}</p>
  <p class="badge">Check the actual bKash/Nagad transaction history before marking a payment verified.</p>
  <form id="paymentForm"><label>Review Result</label><select name="status">${['Pending Verification','Review Required','Verified - Paid','Refund Pending','Refunded','Rejected'].map(x=>'<option '+(p.status===x?'selected':'')+'>'+x+'</option>').join('')}</select><button class="btn primary" type="submit">Save Review</button></form>`);
  $('paymentForm').onsubmit=async e=>{e.preventDefault();const status=formData('paymentForm').status;if(status==='Verified - Paid'&&!confirm('I checked the transaction in the payment provider account. Confirm verified?'))return;
@@ -286,7 +349,7 @@ function reviewPayment(id){
 }
 function editStaff(email){
  if(role!=='owner')return;const s=staff.find(s=>s.email===email)||{email:'',display_name:'',role:'viewer',active:true};if(s.role==='owner')return;
- drawer('Staff Access',`<form id="staffForm"><label>Email</label><input type="email" required name="email" value="${esc(s.email)}" ${email?'readonly':''}><label>Display Name</label><input name="display_name" value="${esc(s.display_name)}">
+ drawer('Staff Access',`<p class="audit-meta">${email?metaLabel('sh_staff',s,email):'New staff account'}</p><form id="staffForm"><label>Email</label><input type="email" required name="email" value="${esc(s.email)}" ${email?'readonly':''}><label>Display Name</label><input name="display_name" value="${esc(s.display_name)}">
  <div class="fieldrow"><div><label>Role</label><select name="role">${['manager','operator','viewer'].map(v=>'<option '+(s.role===v?'selected':'')+'>'+v+'</option>').join('')}</select></div><div><label>Status</label><select name="active"><option value="true" ${s.active?'selected':''}>Active</option><option value="false" ${!s.active?'selected':''}>Disabled</option></select></div></div>
  <button class="btn primary" type="submit">Save Staff Access</button></form>`);
  $('staffForm').onsubmit=async e=>{e.preventDefault();const f=formData('staffForm'),row={email:String(f.email).toLowerCase().trim(),display_name:String(f.display_name||''),role:f.role,active:f.active==='true'};
@@ -311,16 +374,20 @@ function addOrder(){if(!roleCan('owner','manager','operator'))return;
 }
 
 function exportOrders(){
- if(!orders.length)return notice('appMsg','No orders available to export.',true);
+ const exportRows=dateFiltered(orders);if(!exportRows.length)return notice('appMsg','No orders match the selected date range.',true);
  const columns=['order_number','created_at','customer_name','customer_phone','address','zone','status','payment_method','payment_status','subtotal','discount','shipping','total','courier','tracking_id'];
  const cell=v=>'"'+String(v??'').replace(/^[=+\-@\t\r]/,"'$&").replace(/"/g,'""')+'"';
- const csv=[columns.join(','),...orders.map(o=>columns.map(k=>cell(o[k])).join(','))].join('\r\n');
+ const csv=[columns.join(','),...exportRows.map(o=>columns.map(k=>cell(o[k])).join(','))].join('\r\n');
  const blob=new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8'});
  const u=URL.createObjectURL(blob);const a=document.createElement('a');
- a.href=u;a.download='SHOPYHAT_Orders_'+new Date().toISOString().slice(0,10)+'.csv';
+ a.href=u;a.download='SHOPYHAT_Orders_'+($('dateFrom').value||'all')+'_'+($('dateTo').value||todayBD())+'.csv';
  document.body.append(a);a.click();a.remove();URL.revokeObjectURL(u);
 }
 $('exportOrders').onclick=exportOrders;
+$('exportAudit').onclick=()=>{if(!roleCan('owner','manager'))return;const rows=filteredAudit().map(a=>({...a,changes:JSON.stringify(a.changes||{})}));exportCSV('SHOPYHAT_Audit_'+todayBD()+'.csv',['created_at','actor_email','actor_role','entity','action','record_id','record_label','changes'],rows)};
+for(const field of ['dateFrom','dateTo','dateBasis','auditEntity','auditAction','auditSearch']){const el=$(field);if(el)el.addEventListener(field==='auditSearch'?'input':'change',()=>{document.querySelectorAll('[data-range]').forEach(b=>b.classList.remove('on'));render()})}
+document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>setDatePreset(b.dataset.range));
+
 $('sendOtp').onclick=loginSend;$('verifyOtp').onclick=loginVerify;
 $('email').onkeydown=e=>{if(e.key==='Enter')loginSend()};$('otp').onkeydown=e=>{if(e.key==='Enter')loginVerify()};
 $('logout').onclick=async()=>{await db.auth.signOut();location.reload()};
@@ -336,9 +403,10 @@ document.addEventListener('keydown',e=>{
  }
 });
 document.addEventListener('click',e=>{
- const el=e.target.closest('[data-edit-product],[data-delete-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-view-photo],[data-edit-order],[data-review],[data-edit-staff]');
+ const el=e.target.closest('[data-audit-details],[data-edit-product],[data-delete-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-view-photo],[data-edit-order],[data-review],[data-edit-staff]');
  if(!el)return;
- if(el.dataset.editProduct)editProduct(el.dataset.editProduct);
+ if(el.dataset.auditDetails)openAuditDetails(el.dataset.auditDetails);
+ else if(el.dataset.editProduct)editProduct(el.dataset.editProduct);
  else if(el.dataset.deleteProduct)confirmProductDelete(el.dataset.deleteProduct);
  else if(el.dataset.newVariant)editVariant(null,el.dataset.newVariant);
  else if(el.dataset.editVariant)editVariant(el.dataset.editVariant);
