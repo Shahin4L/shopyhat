@@ -1547,12 +1547,15 @@ function parseProduct(r,i){
       return base;
     })(),sizes:sizes.length?sizes:undefined,imgs:imgs.length?imgs:undefined,
     type:types.includes(t)?t:guessType(catName+" "+name),
-    desc:String(r.desc||"").trim(),details:list(r.details,/[\n|]+/)}
+    desc:String(r.desc||"").trim(),details:list(r.details,/[\n|]+/),
+    nameBn:String(r.name_bn||"").trim(),descBn:String(r.description_bn||"").trim(),
+    detailsBn:list(r.details_bn,/[\n|]+/)}
 }
 function applyProducts(list){
   const seenIds=new Set();let top=Math.max(0,...list.map(p=>p.id));
   list.forEach(p=>{if(seenIds.has(p.id))p.id=++top;seenIds.add(p.id)});
-  PRODUCTS=list;const seen=[],cats=[];
+  PRODUCTS=list;window.SHOPYHAT_I18N?.registerProducts(list);
+  const seen=[],cats=[];
   list.forEach(p=>{if(!seen.includes(p.cat)){seen.push(p.cat);
     const d=DEFAULT_CATS.find(c=>catKey(c.id)===catKey(p.cat));cats.push({id:p.cat,name:p.catName,note:d?d.note:""})}});
   CATS=cats;maxPrice=Math.max(1000,...list.map(p=>p.price));F.max=0;
@@ -2107,11 +2110,12 @@ async function fetchShopyhatCatalog(){
     images:imgs.filter(i=>i.variant_id===v.id).map(i=>i.image_url)
   }));
   const photos=imgs.filter(i=>i.product_id===p.id&&!i.variant_id).map(i=>i.image_url);
-  return {id:p.legacy_id,name:p.name,category:p.category,price:p.base_price,
+  return {id:p.legacy_id,name:p.name,name_bn:p.name_bn||"",category:p.category,price:p.base_price,
     old:p.old_price,availability:p.status==="active"?"Available":"Hidden",
     isNew:p.is_new?"YES":"NO",type:"",sizes:(p.sizes||[]).join(","),
     colors:pv.map(v=>v.color+(v.hex?":"+v.hex:"")).join(","),
-    images:photos.join("\n"),desc:p.description,details:p.details};
+    images:photos.join("\n"),desc:p.description,details:p.details,
+    description_bn:p.description_bn||"",details_bn:p.details_bn||""};
  });
  return rows;
 }
