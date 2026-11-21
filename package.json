@@ -1,0 +1,11 @@
+{
+  "name": "shopyhat-site",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node scripts/build.mjs --check"
+  },
+  "description": "Static SHOPYHAT Cloudflare Pages storefront and admin. No dependencies required."
+}
