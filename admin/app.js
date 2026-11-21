@@ -7,13 +7,34 @@ const money=v=>'৳'+Number(v||0).toLocaleString('en-BD',{maximumFractionDigits:
 const fmtDate=v=>v?new Date(v).toLocaleString('en-BD'):'—';
 const roleCan=(...r)=>r.includes(role);
 const imageUrl=v=>{const s=String(v||'');const m=s.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||s.match(/[?&]id=([\w-]+)/);return m&&s.includes('google.com')?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000':s};
-let actor=null,role='',products=[],variants=[],images=[],orders=[],payments=[],staff=[],activePage='products';
+let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],activePage='products';
 function notice(id,message,error=false){$(id).textContent=message;$(id).classList.toggle('error',!!error)}
 function show(id,on){$(id).classList.toggle('hidden',!on)}
 function drawer(title,html){$('drawerTitle').textContent=title;$('drawerBody').innerHTML=html;notice('drawerMsg','');show('overlay',true)}
 function closeDrawer(){show('overlay',false)}
 function formData(id){return Object.fromEntries(new FormData($(id)).entries())}
 function imgTag(url,label='Product photo'){return url?'<img src="'+esc(imageUrl(url))+'" alt="'+esc(label)+'" loading="lazy" onerror="this.style.visibility=\'hidden\'">':''}
+
+function orderThumb(o){
+ const item=orderItems.find(i=>i.order_id===o.id && i.image_url);
+ if(!item)return '<span class="order-thumb" aria-label="No image">—</span>';
+ const src=esc(imageUrl(item.image_url)),title=esc(item.product_name);
+ return '<span class="order-thumb" tabindex="0" aria-label="Preview '+title+'"><img src="'+src+'" alt="'+title+'" loading="lazy"><span class="image-popover" aria-hidden="true"><img src="'+src+'" alt=""></span></span>';
+}
+function productPhotoTiles(rows,label,canDelete=true){
+ return rows.map(i=>'<figure>'+imgTag(i.image_url,label)+(canDelete&&roleCan('owner','manager')?'<button type="button" class="photo-delete" title="Remove photo" aria-label="Remove photo" data-delete-photo="'+esc(i.id)+'">×</button>':'')+'<figcaption>'+esc(i.alt_text||'Photo')+'</figcaption></figure>').join('');
+}
+function setupLocalPhotoPreview(fileInputId,previewId){
+ const input=$(fileInputId),preview=$(previewId);
+ if(!input||!preview)return;
+ let urls=[];
+ input.onchange=()=>{urls.forEach(URL.revokeObjectURL);urls=[];
+   const files=[...input.files];preview.innerHTML=files.map(file=>{
+     const url=URL.createObjectURL(file);urls.push(url);
+     return '<figure><img src="'+esc(url)+'" alt="Selected image"><figcaption>'+esc(file.name)+'</figcaption></figure>';
+   }).join('');
+ };
+}
 async function query(table,selection='*',limit=1000){const q=await db.from(table).select(selection).limit(limit);if(q.error)throw q.error;return q.data||[]}
 async function loginSend(){
  const email=$('email').value.trim().toLowerCase();
@@ -45,8 +66,8 @@ async function boot(){const {data:{user},error}=await db.auth.getUser();
  await refresh()}
 async function refresh(){notice('appMsg','Loading live data…');
  try{
- const [p,v,i,o,pa,st]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_payments'),query('sh_staff')]);
- products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));payments=pa;staff=st;
+ const [p,v,i,o,oi,pa,st]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff')]);
+ products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;
  $('kProducts').textContent=p.length;$('kActive').textContent=p.filter(x=>x.status==='active').length;$('kOrders').textContent=o.length;$('kPending').textContent=o.filter(x=>x.status==='Pending').length;
  render();notice('appMsg','Last refreshed '+new Date().toLocaleTimeString('en-BD'))}
  catch(e){notice('appMsg',e.message,true)}}
@@ -58,7 +79,7 @@ function render(){
  $('productRows').innerHTML=products.filter(p=>(p.name+' '+p.legacy_id+' '+p.category).toLowerCase().includes(search)).map(p=>
  '<tr><td><div class="row" style="justify-content:flex-start">'+imgTag(cover(p),p.name)+'<div><b>'+esc(p.name)+'</b><div class="muted">#'+esc(p.legacy_id||p.id.slice(0,7))+' · '+esc(p.category)+'</div></div></div></td><td>'+money(p.base_price)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+variants.filter(v=>v.product_id===p.id).length+'</td><td><button class="btn small" data-edit-product="'+p.id+'">Edit / Photos</button></td></tr>').join('')||'<tr><td colspan="5">No products found</td></tr>';
  $('orderRows').innerHTML=orders.filter(o=>(!filter||o.status===filter)&&(!oq||[o.order_number,o.customer_name,o.customer_phone].some(v=>String(v||'').toLowerCase().includes(oq)))).map(o=>
- '<tr><td><b>'+esc(o.order_number)+'</b><div class="muted">'+fmtDate(o.created_at)+'</div></td><td>'+esc(o.customer_name)+'<div class="muted">'+esc(o.customer_phone)+'</div></td><td>'+money(o.total)+'</td><td><span class="pill">'+esc(o.status)+'</span></td><td>'+esc(o.payment_status)+'</td><td><button class="btn small" data-edit-order="'+o.id+'">Process / Invoice</button></td></tr>').join('')||'<tr><td colspan="6">No matching orders</td></tr>';
+ '<tr><td>'+orderThumb(o)+'</td><td><b>'+esc(o.order_number)+'</b><div class="muted">'+fmtDate(o.created_at)+'</div></td><td>'+esc(o.customer_name)+'<div class="muted">'+esc(o.customer_phone)+'</div></td><td>'+money(o.total)+'</td><td><span class="pill">'+esc(o.status)+'</span></td><td>'+esc(o.payment_status)+'</td><td><button class="btn small" data-edit-order="'+o.id+'">Process / Invoice</button></td></tr>').join('')||'<tr><td colspan="7">No matching orders</td></tr>';
  $('paymentRows').innerHTML=payments.map(p=>'<tr><td>'+esc(orders.find(o=>o.id===p.order_id)?.order_number||'—')+'</td><td>'+esc(p.method)+'</td><td>'+esc(p.transaction_id)+'</td><td>'+money(p.amount)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+ (roleCan('owner','manager')?'<button class="btn small" data-review="'+p.id+'">Review</button>':'Read only')+'</td></tr>').join('')||'<tr><td colspan="6">No payment reviews</td></tr>';
  $('staffRows').innerHTML=staff.map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(x.display_name)+'</td><td>'+esc(x.role)+'</td><td>'+ (x.active?'Active':'Disabled')+'</td><td>'+(x.role==='owner'?'Protected':'<button class="btn small" data-edit-staff="'+esc(x.email)+'">Edit</button>')+'</td></tr>').join('')||'<tr><td colspan="5">No staff</td></tr>';
 }
@@ -193,7 +214,7 @@ function addOrder(){if(!roleCan('owner','manager','operator'))return;
 function exportOrders(){
  if(!orders.length)return notice('appMsg','No orders available to export.',true);
  const columns=['order_number','created_at','customer_name','customer_phone','address','zone','status','payment_method','payment_status','subtotal','discount','shipping','total','courier','tracking_id'];
- const cell=v=>'"'+String(v??'').replace(/^[=+\-@\t\r]/,"'$('sendOtp').onclick=loginSend;").replace(/"/g,'""')+'"';
+ const cell=v=>'"'+String(v??'').replace(/^[=+\-@\t\r]/,"'$&").replace(/"/g,'""')+'"';
  const csv=[columns.join(','),...orders.map(o=>columns.map(k=>cell(o[k])).join(','))].join('\r\n');
  const blob=new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8'});
  const u=URL.createObjectURL(blob);const a=document.createElement('a');
