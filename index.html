@@ -3,6 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>
+/* Supabase may redirect approved Magic Links to the Site URL root.
+   Before loading storefront scripts, route only Auth callbacks to /admin/.
+   Keep the original query/hash intact; never send tokens to third parties. */
+(function(){
+ const query=window.location.search||'';
+ const hash=window.location.hash||'';
+ const hasAuthFragment=/(?:^#|[&#])(?:access_token|refresh_token|error|error_description|token_hash)=/.test(hash);
+ const hasPkceCode=/(?:^\?|[&])code=/.test(query);
+ if((hasAuthFragment||hasPkceCode)&&window.location.pathname.replace(/\/+$/,'')!=='/admin'){
+   window.location.replace('/admin/'+query+hash);
+ }
+})();
+</script>
 <title>SHOPYHAT | Tangail Sarees, Women's Clothing & Accessories</title>
 <meta name="description" content="Shop Tangail sarees, three-piece sets, kurti, hijab and accessories at SHOPYHAT. Your Choice, Our Gift. Delivery across Bangladesh.">
 <meta name="theme-color" content="#191817">
@@ -1276,9 +1290,10 @@ const CONFIG = {
   nagad: "01772222668",             // Your actual 11-digit Nagad number enabled for receiving Send Money. Replace the current invalid number.
   paymentMode: {bkash:"Send Money",nagad:"Send Money"}, // Manual Send Money only. NEVER request PIN or OTP.
   paymentSupport: "",   // Optional support contact for manual payment queries. Do not paste private account keys.
-  sheetUrl: "https://script.google.com/macros/s/AKfycbysUef65k8syzZ-S4RYIpQHnrQfzkEatBeKon8jUP-FieUpt5s28wQDfc5EQl9gYunj/exec",          // Paste your Google Sheet Web app URL here. Products load from the sheet and orders are saved to it.
+  sheetUrl: "",          // Paste your Google Sheet Web app URL here. Products load from the sheet and orders are saved to it.
                          // Leave "" to show the sample products below instead.
   delivery: { dhaka: 70, outside: 130 },   // delivery charge (BDT)
+  turnstileSiteKey: "", // Free Cloudflare Turnstile site key (configure before launch)
   freeDeliveryOver: 0,   // free delivery above this subtotal. 0 = disabled
   coupons: { WELCOME10: { pct: 10, min: 1000 } }   // sample coupon — edit or remove
 };
@@ -1401,10 +1416,17 @@ function imageEntries(value){
 function imgOf(p){return (p.imgs&&p.imgs[0])||p.img||''}
 function art(p){return `<div class="sh-photo-empty" role="img" aria-label="Photo not available for ${esc(p.name)}"><span>SHOPYHAT</span><small>Product photo coming soon</small></div>`}
 function shImgCandidates(p,color){
-  const vs=variantsFor(p),selected=color?chosenVariant(p,color):null;
-  const main=selected&&selected.images||[];
-  const rest=vs.flatMap(v=>v.images||[]);
-  return imageEntries([...main,...(p.imgs||[]),p.img||'',...rest]);
+ const variants=variantsFor(p);
+ const selected=color?chosenVariant(p,color):null;
+ if(selected){
+  const own=imageEntries(selected.images||[]);
+  if(own.length)return own;
+  // Keep color galleries isolated: never show another color's photos.
+  if(variants.some(v=>imageEntries(v.images||[]).length))return [];
+  return imageEntries([...(p.imgs||[]),p.img||""]);
+ }
+ for(const v of variants){const own=imageEntries(v.images||[]);if(own.length)return own}
+ return imageEntries([...(p.imgs||[]),p.img||""]);
 }
 function shPhotoMarkup(p,color,css=''){
   const urls=shImgCandidates(p,color);
@@ -1463,8 +1485,11 @@ function buildHero(){
 /* =====================================================================
    PRODUCT DATA — from Google Sheet (or the sample list above)
    ===================================================================== */
-const SHEET=CONFIG.sheetUrl||"";
-const VARIANT_FEED_URL="https://script.google.com/macros/s/AKfycbxYZdwDnsjYMgNxYDbGqclJvThHuHCHIqjSS7gz04ZwjOJUAe9WJUPJA7uoF7c0QO99/exec";
+const SHEET="";
+const SH_DB_URL="https://xwfqgmgiunlxzvzoermn.supabase.co";
+const SH_DB_KEY="sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP";
+const SH_CHECKOUT_URL=SH_DB_URL+"/functions/v1/shopyhat-checkout";
+const VARIANT_FEED_URL="";
 let VARIANT_MAP={};
 const slug=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const catKey=s=>slug(s).replace(/-/g,"").replace(/s$/,"");
@@ -1757,12 +1782,21 @@ function openCheckout(){
        <div class="pay-warning">Never share your bKash/Nagad PIN, OTP, login or security code. A Transaction ID is a claim, <strong>not automatic payment confirmation</strong>.</div>
      </div>
     <label class="agree"><input type="checkbox" id="kAgree"><span>I have read the <a href="#policies" target="_blank" rel="noopener">return, exchange and privacy policies</a> and my order details are correct.</span></label>
+    ${CONFIG.turnstileSiteKey?'<div class="cf-turnstile" data-sitekey="'+esc(CONFIG.turnstileSiteKey)+'"></div>':''}
     <div class="err" id="kErr"></div>
     <button class="btn block" type="submit" id="placeBtn">Place order <span aria-hidden="true">→</span></button>
     <p class="checkout-footnote">Your delivery charge is included in the total shown in the order summary.</p>
   </form>
   <div class="s"><div class="summary-heading"><span class="summary-icon" aria-hidden="true">◈</span><div><span class="summary-kicker">YOUR SELECTION</span><h2 style="font-size:28px">Order summary</h2></div></div><div id="coSum"></div><p class="summary-hint">Confirm your selected colours, quantities and delivery area before placing your order.</p></div>`;
   renderSummary();openModal("coModal");
+  if(CONFIG.turnstileSiteKey){
+    const host=document.querySelector("#coBox .cf-turnstile");
+    if(host&&window.turnstile?.render)window.turnstile.render(host,{sitekey:CONFIG.turnstileSiteKey});
+    else if(!document.querySelector("script[data-sh-turnstile]")){
+      const sc=document.createElement("script");sc.src="https://challenges.cloudflare.com/turnstile/v0/api.js";
+      sc.async=true;sc.defer=true;sc.dataset.shTurnstile="1";document.head.appendChild(sc);
+    }
+  }
 }
 function calcTotals(){
   const sub=subtotal(), cp=couponInfo(sub), zone=($("#kZone")||{}).value||"dhaka";
@@ -1800,35 +1834,62 @@ function orderText(o){
   o.items.map(i=>`• ${i.name} (${i.color}${i.size?", "+i.size:""}) × ${i.qty} = ${money(i.price*i.qty)}`).join("\n")+
   `\n\nSubtotal: ${money(o.sub)}${o.disc?`\nCoupon ${o.coupon}: −${money(o.disc)}`:""}\nDelivery: ${o.ship?money(o.ship):"Free"}\nTOTAL: ${money(o.total)}\nPayment: ${o.pay.toUpperCase()}${o.trx?` (TrxID: ${o.trx})`:""}${o.senderLast4?` | Sender last 4: ${o.senderLast4}`:""}\nPayment status: ${o.paymentStatus||'Not verified'}${o.note?`\nNote: ${o.note}`:""}`;
 }
-function submitOrder(e){
-  e.preventDefault();
-  const name=$("#kName").value.trim(), phone=normPhone($("#kPhone").value.trim()), addr=$("#kAddr").value.trim(), err=$("#kErr");
-   const pay=document.querySelector('input[name="pay"]:checked').value, trx=($("#kTrx")||{value:""}).value.trim().toUpperCase(),senderLast4=($("#kSender")||{value:""}).value.trim();
-  $$("#coForm .fld").forEach(f=>f.classList.remove("bad"));
-  const bad=(sel,msg)=>{$(sel).closest(".fld").classList.add("bad");$(sel).focus();err.textContent=msg};
-  if(name.length<2)return bad("#kName","Enter your full name.");
-  if(!PHONE_RE.test(phone))return bad("#kPhone","Enter a valid Bangladeshi mobile number, like 01712345678.");
-  if(addr.length<10)return bad("#kAddr","Enter your full delivery address.");
-   if(pay!=="cod"){
-     const payNo=pay==='bkash'?CONFIG.bkash:CONFIG.nagad;
-     if(!isConfiguredMFS(payNo)){err.textContent='This payment method is not configured. Choose Cash on Delivery.';return}
-     if(!/^[A-Z0-9-]{6,40}$/.test(trx))return bad('#kTrx','Enter your actual transaction ID (6–40 letters/numbers).');
-     if(!/^\d{4}$/.test(senderLast4))return bad('#kSender','Enter the last 4 digits of the sender mobile number.');
-     if(!$('#kPaidAck').checked){err.textContent='Confirm that you have completed the payment transfer.';return}
-   }
-  if(!$("#kAgree").checked){err.textContent="Accept the policies to place your order.";return}
-  err.textContent="";
-  const t=calcTotals(), L=cartLines();
-   const o={id:checkoutRef||genId(),date:new Date().toISOString(),status:"Placed",name,phone,addr,zone:t.zone,note:$("#kNote").value.trim(),pay,trx,senderLast4:pay==='cod'?'':senderLast4,paymentStatus:pay==='cod'?'Cash on delivery':'Pending verification',
-    items:L.map(i=>({pid:i.p.id,name:i.p.name,color:i.color,size:i.size,qty:i.qty,price:i.unitPrice})),
-    sub:t.sub,disc:t.disc,coupon:t.disc?lastCoupon.toUpperCase():"",ship:t.ship,total:t.total};
-  const orders=LS.get("sh_orders",[]);orders.unshift(o);LS.set("sh_orders",orders);
-  LS.set("sh_cust",{name,phone,addr});
-   // Existing public order endpoint remains unchanged. Preserve transfer details in text fields
-   // as well as new metadata; older endpoints may ignore new fields.
-   postEndpoint({type:"order",...o});
-  cart=[];saveCart();renderCart();
-  closeAll();showSuccess(o);
+async function submitOrder(e){
+ e.preventDefault();
+ const name=$("#kName").value.trim(),phone=normPhone($("#kPhone").value.trim()),addr=$("#kAddr").value.trim(),err=$("#kErr");
+ const pay=document.querySelector('input[name="pay"]:checked')?.value||"cod";
+ const trx=($("#kTrx")||{value:""}).value.trim().toUpperCase(),senderLast4=($("#kSender")||{value:""}).value.trim();
+ $$("#coForm .fld").forEach(f=>f.classList.remove("bad"));
+ const bad=(sel,msg)=>{const el=$(sel);if(el){el.closest(".fld")?.classList.add("bad");el.focus()}err.textContent=msg};
+ if(name.length<2)return bad("#kName","Enter your full name.");
+ if(!PHONE_RE.test(phone))return bad("#kPhone","Enter a valid Bangladeshi mobile number.");
+ if(addr.length<10)return bad("#kAddr","Enter your full delivery address.");
+ if(pay!=="cod"){
+   const payNo=pay==="bkash"?CONFIG.bkash:CONFIG.nagad;
+   if(!isConfiguredMFS(payNo)){err.textContent="This payment method is not configured.";return}
+   if(!/^[A-Z0-9-]{6,40}$/.test(trx))return bad("#kTrx","Enter your actual transaction ID.");
+   if(!/^\d{4}$/.test(senderLast4))return bad("#kSender","Enter the sender mobile last 4 digits.");
+   if(!$("#kPaidAck")?.checked){err.textContent="Confirm the payment transfer first.";return}
+ }
+ if(!$("#kAgree").checked){err.textContent="Accept the policies to place your order.";return}
+ const lines=cartLines(),t=calcTotals();
+ if(!lines.length){err.textContent="Your cart is empty.";return}
+ const items=lines.map(i=>({variant_id:chosenVariant(i.p,i.color)?.id,qty:i.qty,size:i.size||""}));
+ if(items.some(i=>!i.variant_id)){err.textContent="This product needs a valid color selection. Please refresh.";return}
+ const fingerprint=JSON.stringify({name,phone,addr,zone:t.zone,pay,trx,senderLast4,items,coupon:lastCoupon||""});
+ let pending=LS.get("sh_pending_checkout_v2",null);
+ if(!pending||pending.fingerprint!==fingerprint){
+  pending={fingerprint,id:crypto.randomUUID()};LS.set("sh_pending_checkout_v2",pending)
+ }
+ const tt=CONFIG.turnstileSiteKey?(window.turnstile?.getResponse()||""):"";
+ if(CONFIG.turnstileSiteKey&&!tt){err.textContent="Complete human verification first.";return}
+ const button=e.currentTarget.querySelector('[type="submit"]');
+ if(button){button.disabled=true;button.dataset.oldText=button.textContent;button.textContent="Confirming order…"}
+ err.textContent="Saving your order securely…";
+ try{
+   const response=await fetch(SH_CHECKOUT_URL,{
+     method:"POST",headers:{"content-type":"application/json","apikey":SH_DB_KEY},
+     body:JSON.stringify({request_id:pending.id,name,phone,address:addr,zone:t.zone,
+       payment_method:pay,transaction_id:pay==="cod"?"":trx,
+       sender_last4:pay==="cod"?"":senderLast4,coupon:lastCoupon||"",
+       note:$("#kNote").value.trim(),turnstile_token:tt,items})
+   });
+   const saved=await response.json();
+   if(!response.ok||!saved.ok)throw Error(saved.error||"Order could not be confirmed.");
+   const order={id:saved.orderId,date:new Date().toISOString(),status:"Pending",
+      name,phone,addr,zone:t.zone,note:$("#kNote").value.trim(),pay,trx,senderLast4,
+      paymentStatus:saved.paymentStatus||"Unpaid - COD",
+      items:lines.map(i=>({pid:i.p.id,name:i.p.name,color:i.color,size:i.size,qty:i.qty,price:i.unitPrice})),
+      sub:t.sub,disc:Number(saved.discount||0),coupon:lastCoupon||"",ship:Number(saved.shipping||0),total:Number(saved.total)};
+   const orders=LS.get("sh_orders",[]);orders.unshift(order);LS.set("sh_orders",orders);
+   LS.set("sh_cust",{name,phone,addr});LS.set("sh_pending_checkout_v2",null);
+   cart=[];saveCart();renderCart();closeAll();showSuccess(order);
+ }catch(error){
+   err.textContent=(error&&error.message)||"Unable to confirm order. Your cart is intact. Please try again.";
+   if(CONFIG.turnstileSiteKey&&window.turnstile?.reset)window.turnstile.reset();
+ }finally{
+   if(button){button.disabled=false;button.textContent=button.dataset.oldText||"Place order"}
+ }
 }
 function postEndpoint(payload){
   if(!SHEET)return;
@@ -2025,25 +2086,51 @@ function fetchVariantsJSONP(url){
     document.head.appendChild(s);
   });
 }
+async function fetchShopyhatCatalog(){
+ const h={apikey:SH_DB_KEY}, base=SH_DB_URL+"/rest/v1/";
+ const endpoints=[
+  "sh_products?select=*&status=eq.active&order=created_at.asc",
+  "sh_variants?select=*&order=sort_order.asc",
+  "sh_product_images?select=*&order=sort_order.asc"
+ ];
+ const data=await Promise.all(endpoints.map(async path=>{
+  const response=await fetch(base+path,{headers:h,cache:"no-store"});
+  if(!response.ok)throw Error("Catalog service unavailable ("+response.status+")");
+  return response.json();
+ }));
+ const [prods,vs,imgs]=data;
+ VARIANT_MAP={};
+ const rows=prods.map(p=>{
+  const pv=vs.filter(v=>v.product_id===p.id&&v.active);
+  VARIANT_MAP[String(p.legacy_id)]=pv.map(v=>({
+    id:v.id,color:v.color,hex:v.hex||"",sku:v.sku||"",price:v.price,stock:v.stock,
+    images:imgs.filter(i=>i.variant_id===v.id).map(i=>i.image_url)
+  }));
+  const photos=imgs.filter(i=>i.product_id===p.id&&!i.variant_id).map(i=>i.image_url);
+  return {id:p.legacy_id,name:p.name,category:p.category,price:p.base_price,
+    old:p.old_price,availability:p.status==="active"?"Available":"Hidden",
+    isNew:p.is_new?"YES":"NO",type:"",sizes:(p.sizes||[]).join(","),
+    colors:pv.map(v=>v.color+(v.hex?":"+v.hex:"")).join(","),
+    images:photos.join("\n"),desc:p.description,details:p.details};
+ });
+ return rows;
+}
 async function boot(){
-  if(!SHEET){applyProducts(defaultList());renderAll();return}
-  const cached=LS.get("sh_products",null);
-  if(cached&&cached.length){applyProducts(cached.map(parseProduct).filter(Boolean));renderAll()}
-  else{renderAll();showLoading()}
-  try{
-    if(VARIANT_FEED_URL.startsWith('https://')){
-      try{VARIANT_MAP=await fetchVariantsJSONP(VARIANT_FEED_URL)}
-      catch(e){console.warn('Variant feed unavailable; base products still load',e)}
-    }
-    const r=await fetch(SHEET+"?action=products"), j=await r.json();
-    if(!j||!j.ok||!Array.isArray(j.products))throw new Error("bad response");
-    const changed=JSON.stringify(j.products)!==JSON.stringify(cached);
-    LS.set("sh_products",j.products);
-    if(changed||!cached||Object.keys(VARIANT_MAP).length){applyProducts(j.products.map(parseProduct).filter(Boolean));renderAll(!!cached);openDeepLink()}
-  }catch(e){
-    if(cached&&cached.length&&Object.keys(VARIANT_MAP).length){applyProducts(cached.map(parseProduct).filter(Boolean));renderAll(true)}
-    if(!cached||!cached.length){const m=`<div class="empty" style="grid-column:1/-1"><b style="color:var(--ink)">We couldn't load the products.</b><br>Check your connection and try again.<br><br><button class="btn ink" onclick="location.reload()">Reload</button></div>`;["#homeGrid","#shopGrid"].forEach(i=>$(i).innerHTML=m)}
+ const cached=LS.get("sh_products_v2",null);
+ if(cached?.length){applyProducts(cached.map(parseProduct).filter(Boolean));renderAll()}
+ else{renderAll();showLoading()}
+ try{
+  const raw=await fetchShopyhatCatalog();
+  LS.set("sh_products_v2",raw);
+  applyProducts(raw.map(parseProduct).filter(Boolean));
+  renderAll(!!cached);openDeepLink();
+ }catch(error){
+  console.warn("Catalog currently unavailable",error);
+  if(!cached?.length){
+    const msg='<div class="empty" style="grid-column:1/-1"><b>Unable to load products.</b><br>Refresh to retry.</div>';
+    ["#homeGrid","#shopGrid"].forEach(id=>$(id).innerHTML=msg);
   }
+ }
 }
 boot();
 </script>

@@ -1,0 +1,6 @@
+# SHOPYHAT Cloudflare Pages — no-build static deployment.
+# The current Pages deployment has no configured build command.
+# Publish HTML files directly from the repository root, avoiding a missing dist folder.
+name = "shopyhat"
+pages_build_output_dir = "."
+compatibility_date = "2026-11-20"
