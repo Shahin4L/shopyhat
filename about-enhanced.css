@@ -66,6 +66,6 @@
 #p-about .about-v2-social h3{font-size:22px}
 #p-about .about-v2-social .btn{margin-top:10px}
 #p-about .about-reveal{opacity:1;transform:none}
-@media(prefers-reduced-motion:no-preference){#p-about .about-reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}#p-about .about-reveal.is-visible{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:no-preference){#p-about.about-animations-ready .about-reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}#p-about.about-animations-ready .about-reveal.is-visible{opacity:1;transform:translateY(0)}}
 @media(max-width:920px){#p-about .about-v2-grid,#p-about .about-v2-history,#p-about .about-v2-social{grid-template-columns:1fr}#p-about .about-v2-brand{min-height:340px}#p-about .about-v2-values,#p-about .about-v2-purpose-grid{grid-template-columns:1fr 1fr}#p-about .about-v2-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){#p-about .about-v2-hero{padding:46px 0}#p-about .about-v2-facts{grid-template-columns:1fr 1fr}#p-about .about-v2-values,#p-about .about-v2-purpose-grid,#p-about .about-v2-gallery{grid-template-columns:1fr}#p-about .about-v2-gallery-card,#p-about .about-v2-gallery-card:first-child{min-height:290px}#p-about .about-v2-promise{flex-direction:column;align-items:stretch}#p-about .about-v2-promise-actions{flex:initial}#p-about .about-v2-history{padding:23px}#p-about .about-v2-social{padding:20px}}
