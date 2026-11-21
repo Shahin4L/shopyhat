@@ -45,17 +45,61 @@ const EXTRAS = {
  'Contact support':'সহায়তার জন্য যোগাযোগ করুন'
 };
 for(const [en,bn] of Object.entries(EXTRAS))EN.set(en,bn);
+// Text fragments are intentionally separate: HTML templates wrap numbers and names
+// in nested <strong> or <a> elements, so the browser produces several text nodes.
+const FRAGMENTS = {
+ 'Open your':'আপনার',
+ 'app, choose':'অ্যাপ খুলে বেছে নিন',
+ 'and send':'এবং পাঠান',
+ ', and send':'এবং পাঠান',
+ 'to the number below.':'নিচের নম্বরে।',
+ 'Steps:':'ধাপগুলো:',
+ 'Thank you,':'ধন্যবাদ,',
+ '. Order total:':'। অর্ডারের মোট মূল্য:',
+ 'Your provided Transaction ID':'আপনার দেওয়া ট্রানজ্যাকশন আইডি',
+ 'must be matched with our official':'আমাদের অফিসিয়াল',
+ 'transaction history before the order is marked paid. Do not pay twice if you have already transferred.':'লেনদেনের ইতিহাসের সঙ্গে মিলিয়ে নেওয়ার পরই অর্ডার পরিশোধিত দেখানো হবে। আগে টাকা পাঠিয়ে থাকলে আবার পেমেন্ট করবেন না।',
+ 'Send your order details to us for manual review. Keep your Order ID for support and tracking.':'ম্যানুয়াল যাচাইয়ের জন্য অর্ডারের তথ্য আমাদের পাঠান। সহায়তা ও ট্র্যাকিংয়ের জন্য অর্ডার আইডি সংরক্ষণ করুন।',
+ 'Cash on delivery · Delivery across Bangladesh':'ক্যাশ অন ডেলিভারি · সারা বাংলাদেশে ডেলিভারি',
+ 'Cash on delivery   ·   Delivery across Bangladesh':'ক্যাশ অন ডেলিভারি · সারা বাংলাদেশে ডেলিভারি',
+ 'Delivery:':'ডেলিভারি:',
+ 'inside Dhaka,':'ঢাকার ভিতরে,',
+ 'outside Dhaka. Pay on delivery. If the item is damaged, defective or wrong, contact us within 3 calendar days.':'ঢাকার বাইরে। পণ্য হাতে পেয়ে টাকা দিন। ক্ষতিগ্রস্ত, ত্রুটিপূর্ণ বা ভুল পণ্য পেলে ৩ দিনের মধ্যে যোগাযোগ করুন।',
+ 'This coupon code is not valid.':'এই কুপন কোডটি গ্রহণযোগ্য নয়।',
+ 'Confirm your selected colours, quantities and delivery address before payment.':'পেমেন্টের আগে নির্বাচিত রং, পরিমাণ ও ডেলিভারি ঠিকানা যাচাই করুন।',
+ 'Search products':'পণ্য খুঁজুন',
+ 'Search products...':'পণ্য খুঁজুন...',
+ 'What are you looking for?':'আপনি কী খুঁজছেন?',
+ 'Your favourites':'আপনার পছন্দের পণ্য',
+ 'Continue shopping':'কেনাকাটা চালিয়ে যান',
+ 'Open menu':'মেনু খুলুন',
+ 'SHOPYHAT home':'SHOPYHAT হোম',
+ 'Inside Dhaka,':'ঢাকার ভিতরে,',
+ 'Outside Dhaka,':'ঢাকার বাইরে,',
+ 'Close':'বন্ধ করুন',
+ 'New pieces are on their way. Explore our shop for more styles.':'নতুন পণ্য আসছে। আরও কালেকশন দেখতে শপ ঘুরে দেখুন।',
+ 'No matching products. Try a different search or clear filters.':'কোনো পণ্য পাওয়া যায়নি। অন্যভাবে খুঁজুন বা ফিল্টার মুছে দিন।',
+ 'No products match your filters.':'আপনার ফিল্টারের সঙ্গে কোনো পণ্য মিলছে না।',
+ 'Available':'পাওয়া যাচ্ছে',
+ 'available':'পাওয়া যাচ্ছে',
+ 'styles':'ধরন',
+ 'style':'ধরন',
+ 'colours':'রং',
+ 'colour':'রং',
+ 'size':'সাইজ',
+ 'Remove from wishlist':'পছন্দের তালিকা থেকে সরান',
+ 'Add to wishlist':'পছন্দের তালিকায় রাখুন'
+};
+for(const [en,bn] of Object.entries(FRAGMENTS))EN.set(en,bn);
+
 
 const EN_TO_BN = EN;
-const BN_TO_EN = new Map([...EN].map(([en,bn])=>[bn,en]));
 const saved=(()=>{try{return localStorage.getItem('sh_language')||'en'}catch{return 'en'}})();
 let lang=saved==='bn'?'bn':'en';
 const remembered=new WeakMap();
 const attrRemembered=new WeakMap();
 const skipTags=new Set(['SCRIPT','STYLE','NOSCRIPT','TEXTAREA','CODE','PRE']);
-const placeholderElements='input[placeholder],textarea[placeholder],button[aria-label],a[aria-label],[title]';
 const clean=s=>String(s||'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
-const exact=v=>EN_TO_BN.get(clean(v))||null;
 const paymentRules=[
  [/^Inside Dhaka, (.+)$/,'ঢাকার ভিতরে, $1'],
  [/^Outside Dhaka, (.+)$/,'ঢাকার বাইরে, $1'],
