@@ -553,6 +553,161 @@ a,button,input,select,textarea{-webkit-tap-highlight-color:transparent}
 @media(max-width:560px){.wrap{padding:0 18px}.hero .wrap{padding-top:42px;padding-bottom:20px}.hero h1{font-size:clamp(59px,14vw,82px);margin-bottom:20px}.hero p{font-size:14px}.hero .btns{gap:8px}.hero .btn{padding:11px 16px;font-size:12px}.sec{padding:53px 0}.sec-h h2{font-size:39px}.mosaic{gap:10px}.mt{border-radius:11px}.mt .ml{left:14px;bottom:13px}.mt .ml b{font-size:23px}.mt.big .ml b{font-size:36px}.grid{gap:20px 11px}.card .im{border-radius:11px}.card .info{gap:3px}.card .cname{font-size:12.5px}.card .ccat{font-size:11.5px}.qa{width:35px;height:35px;border-radius:9px}.band .wrap{gap:27px}.band h2{font-size:42px}.pagehead{padding:42px 0}.pagehead h1{font-size:54px}.fab{width:43px;height:43px}.fab svg{width:22px;height:22px}}
 @media(prefers-reduced-motion:reduce){.btn,.card,.fab,.chip,.ibtn,.card .im .art,.mt .art svg,.mt .art img{transition:none!important}}
 
+
+/* Smart variants */
+.swatches{gap:12px}.sw{width:38px;height:38px;transition:transform .18s ease,box-shadow .18s ease}.sw:hover{transform:translateY(-2px) scale(1.06)}.sw.on{box-shadow:0 0 0 2px var(--ribbon),inset 0 0 0 3px #fff,0 4px 14px rgba(0,0,0,.12)}.gal .main img{width:100%;height:100%;object-fit:cover}.thumbs{overflow-x:auto;scrollbar-width:thin}.thumbs button{flex:0 0 auto;border-radius:7px}.gal{overflow:hidden}.pd .price b{font-size:25px}
+
+/* ========================================================
+   SHOPYHAT FLUID RESPONSIVE SYSTEM — Nov 2026
+   Presentation-only; existing APIs / variant/cart JS untouched.
+   ======================================================== */
+:root{--sh-edge:clamp(12px,3.2vw,28px)}
+html{max-width:100%;overflow-x:clip}
+body{width:100%;min-width:0;overflow-x:clip}
+main,.page,.sec,.wrap,.band,.hero,.facts,footer.site{min-width:0;max-width:100%}
+.wrap{width:100%;padding-inline:var(--sh-edge)}
+img,svg,video,iframe{max-width:100%}
+/* Grid tracks must be allowed to shrink below intrinsic content widths. */
+.grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,235px),1fr));align-items:start}
+.grid>* ,.card,.card .im,.card .info,.card .cname,.card .ccat,.card .art,.card .im .art{min-width:0;max-width:100%}
+.card .im{width:100%;aspect-ratio:4/5;overflow:hidden;isolation:isolate}
+.card .im .art,.card .im img,.card .im svg{width:100%;height:100%;object-fit:cover}
+.card .info{overflow-wrap:anywhere;word-break:normal}
+.card .cname{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;min-height:2.8em}
+.card .ccat{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .dots,.card .price,.card .info .price{max-width:100%;min-width:0;flex-wrap:wrap}
+.card .ptag{max-width:calc(100% - 12px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(10px,2.5vw,13px)}
+.card .nb{max-width:calc(100% - 64px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card button,.card a{touch-action:manipulation}
+/* Keep every flex/grid child from forcing horizontal scroll. */
+.hd,.brand,.icons,.toolbar,.chips,.sec-h,.tabs,.acts,.price,.sin,.coupon,.ci,.mini,.line-r{min-width:0}
+.hd>*{min-width:0}
+.brand{max-width:100%;flex-shrink:1}
+.brand .name{white-space:nowrap}
+.toolbar .sel{max-width:100%}
+.chips{min-width:0}
+.chip{white-space:nowrap}
+.mosaic,.how,.fg,.co,.pd,.band .wrap,.cgrid{min-width:0}
+.mosaic>* ,.how>* ,.fg>* ,.co>* ,.pd>* ,.cgrid>*{min-width:0}
+.mt{min-width:0}
+.mt .ml{right:12px;overflow-wrap:anywhere}
+/* Product gallery + modal: never wider than the viewport. */
+.modal{width:100%;max-width:100%;overscroll-behavior:contain}
+.box{width:min(980px,100%);max-width:100%}
+.box.sm{width:min(560px,100%)}
+.pd{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
+.pd .body,.gal,.gal .main{min-width:0;max-width:100%}
+.gal .main{overflow:hidden}
+.gal .main img,.gal .main svg{width:100%;height:100%;object-fit:contain;background:var(--stone)}
+.thumbs{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.thumbs button{scroll-snap-align:start;min-width:60px}
+.pd .body{overflow-wrap:anywhere}
+.swatches,.sizes{max-width:100%;min-width:0;gap:10px}
+.sw,.sz{flex:0 0 auto}
+.acts>*{min-width:0;flex:1 1 145px}
+/* Checkout, search, cart drawer. */
+.co{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+.fld,.fld input,.fld textarea,.fld select{min-width:0;max-width:100%}
+.ci{grid-template-columns:68px minmax(0,1fr)}
+.ci .art{width:68px;height:86px}
+.ci .n,.mini>div:nth-child(2){overflow-wrap:anywhere}
+.coupon input{min-width:0;width:0}
+.drawer{max-width:100vw}
+.sbox{width:100%;max-width:760px}
+.sin input{min-width:0;width:0;font-size:clamp(15px,3.8vw,19px)}
+.sres,.sr{min-width:0}
+.sr>*{min-width:0}
+/* Tablet: neither oversized single cards nor forced three-column cards. */
+@media(min-width:861px) and (max-width:1100px){
+  .hd{gap:14px;padding-inline:20px}
+  nav.main{gap:15px}
+  nav.main a{font-size:12.5px}
+  .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:860px){
+  .hd{gap:6px;padding:10px var(--sh-edge)}
+  .brand{gap:7px}
+  .brand img{width:40px;height:40px;flex:0 0 40px}
+  .brand .name{font-size:clamp(16px,3.5vw,21px);letter-spacing:.025em}
+  .icons{gap:0;margin-left:auto}
+  .ibtn{width:clamp(36px,9vw,43px);height:42px}
+  .ibtn svg{width:21px;height:21px}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:clamp(10px,2.5vw,18px);row-gap:25px}
+  .pd,.co,.cgrid{grid-template-columns:minmax(0,1fr)}
+  .pd .gal .main{aspect-ratio:4/4.5}
+  .co .s{order:-1}
+  .modal{padding:12px var(--sh-edge) max(76px,env(safe-area-inset-bottom))}
+  .box{margin-inline:auto}
+  .bnav{grid-template-columns:repeat(5,minmax(0,1fr));width:100%;padding-inline:0}
+  .bnav a,.bnav button{min-width:0;padding:9px 2px 8px;overflow:hidden;white-space:nowrap;font-size:clamp(9px,2.3vw,11px)}
+  .bnav svg{flex-shrink:0}
+  .tabs{flex-wrap:wrap;gap:12px}
+  .fg{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .drawer .dh,.dbody,.dfoot{padding-inline:clamp(14px,4vw,22px)}
+}
+@media(max-width:560px){
+  .wrap{padding-inline:var(--sh-edge)}
+  .sec-h h2{font-size:clamp(29px,8vw,39px)}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px clamp(9px,2.8vw,13px)}
+  .card .im{aspect-ratio:4/5}
+  .card .info{padding:10px 1px 0;gap:3px}
+  .card .cname{font-size:clamp(11.5px,3.1vw,13.5px);line-height:1.4;min-height:2.8em}
+  .card .ccat{font-size:11px}
+  .card .ptag{font-size:10.5px;bottom:8px;padding:4px 7px 4px 18px}
+  .card .wish{width:32px;height:32px;top:7px;right:7px}
+  .card .wish svg{width:16px;height:16px}
+  .card .qa{width:35px;height:35px;right:7px;bottom:8px;font-size:20px}
+  .card .nb{font-size:10px;left:7px;top:7px;padding:3px 6px;max-width:calc(100% - 46px)}
+  .mosaic{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .mt.big{grid-column:1 / -1;aspect-ratio:4/3}
+  .mt:not(.big){aspect-ratio:1/1.12}
+  .mt .ml{left:12px;bottom:11px}
+  .mt .ml b{font-size:clamp(15px,4vw,22px)}
+  .mt.big .ml b{font-size:clamp(25px,8vw,36px)}
+  .mt .ml small{font-size:11px}
+  .band h2{font-size:clamp(32px,9vw,42px)}
+  .pagehead h1{font-size:clamp(36px,11vw,54px)}
+  .hero h1{font-size:clamp(43px,12vw,68px)}
+  .hero .btns .btn{flex:1 1 135px;min-width:0;padding-inline:10px;text-align:center}
+  .modal{padding:8px 8px max(75px,env(safe-area-inset-bottom))}
+  .box{border-radius:13px}
+  .pd .body{padding:22px 17px}
+  .pd h2{font-size:clamp(25px,7vw,33px)}
+  .gal .main{aspect-ratio:4/4.5}
+  .thumbs{padding:8px;gap:7px}
+  .thumbs button{width:56px;height:68px;min-width:56px}
+  .rel{padding-inline:17px}
+  .rel .grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .rel .card .info{padding-top:6px}
+  .rel .card .cname{font-size:11px}
+  .swatches{gap:9px}
+  .sw{width:36px;height:36px}
+  .co .f,.co .s{padding:22px 17px}
+  .co h2{font-size:27px}
+  .fg{grid-template-columns:minmax(0,1fr)}
+  .toolbar{gap:11px}
+  .toolbar .sel{width:100%;max-width:100%}
+  .chip{padding:8px 12px;font-size:11px}
+  .fabs{right:10px;bottom:78px;gap:7px}
+  .fab{width:43px;height:43px}
+}
+/* Ultra-small devices (320px), split-screen and large device font settings. */
+@media(max-width:360px){
+  .brand img{width:34px;height:34px;flex-basis:34px}
+  .brand .name{font-size:15px}
+  .ibtn{width:33px;height:38px}
+  .ibtn svg{width:19px;height:19px}
+  .grid{gap:17px 8px}
+  .card .cname{font-size:11.5px}
+  .card .ptag{font-size:10px}
+  .hero .btns{display:grid;grid-template-columns:1fr 1fr}
+  .hero .btns .btn{font-size:11px}
+  .acts .btn{flex-basis:100%}
+  .bnav a,.bnav button{font-size:9px}
+}
+@media(min-width:861px){.box{max-height:none}}
+@media(prefers-reduced-motion:reduce){.card,.card .im .art,.mt .art img,.btn{animation:none!important;transition:none!important}}
+
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1104,6 +1259,8 @@ function buildHero(){
    PRODUCT DATA — from Google Sheet (or the sample list above)
    ===================================================================== */
 const SHEET=CONFIG.sheetUrl||"";
+const VARIANT_FEED_URL="PASTE_PUBLIC_VARIANT_FEED_EXEC_URL_HERE";
+let VARIANT_MAP={};
 const slug=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const catKey=s=>slug(s).replace(/-/g,"").replace(/s$/,"");
 const CNAME={peacock:"#0f7d83",mustard:"#d9a521",wine:"#6e1423",rose:"#c75c7c",sky:"#7fb5d6","royal blue":"#1f4e8c",mint:"#7fc8a9",lilac:"#b79ad6",peach:"#f2a98f",indigo:"#2e3f7f",rust:"#b4532a",cream:"#efe5d0",burgundy:"#6d1a2c",emerald:"#0e6b4d",coral:"#e76f51",magenta:"#b0286b",lavender:"#c4b2e3",sage:"#9fb59a","dusty rose":"#d49a9f","off-white":"#e9e1d0","off white":"#e9e1d0","pearl white":"#f4efe6",blush:"#f1c9c9",tan:"#b5733c","antique gold":"#c79a3b",silver:"#9aa0a6",gold:"#c79a3b","bottle green":"#0b5d3b","sea green":"#2e8b57",white:"#f3efe6",black:"#1d1d1d",maroon:"#7b1e3a",purple:"#5b2a86",green:"#1e7a4c",blue:"#1f4e8c",red:"#c0392b",pink:"#e58fb0",yellow:"#e6b422",orange:"#e8772e",teal:"#1b7f86",navy:"#26365a",olive:"#6b7a3a",grey:"#8a8a8a",gray:"#8a8a8a",brown:"#7a4a2a",beige:"#d9c7a3"};
@@ -1145,7 +1302,7 @@ function parseProduct(r,i){
   return{id:+r.id||i+1,name,cat:slug(catName),catName,price,old:old>price?old:0,
     isNew:/^(y|yes|true|1|new)/i.test(String(r.isNew==null?"":r.isNew)),
     soldOut:/sold/i.test(String(r.availability||"")),
-    colors:parseColors(r.colors),sizes:sizes.length?sizes:undefined,imgs:imgs.length?imgs:undefined,
+    variants:VARIANT_MAP[String(r.id)]||[],colors:parseColors(r.colors),sizes:sizes.length?sizes:undefined,imgs:imgs.length?imgs:undefined,
     type:types.includes(t)?t:guessType(catName+" "+name),
     desc:String(r.desc||"").trim(),details:list(r.details,/[\n|]+/)}
 }
@@ -1167,7 +1324,7 @@ function cardHTML(p){
   return `<article class="card" data-id="${p.id}">
     ${p.soldOut?`<span class="nb">Sold out</span>`:sale?`<span class="nb sale">Save ${Math.round((1-p.price/p.old)*100)}%</span>`:p.isNew?`<span class="nb">New</span>`:""}
     <div class="im" data-open="${p.id}">
-      <div class="art">${art(p)}</div>
+      <div class="art">${variantsFor(p).length?variantArt(p,variantsFor(p)[0].color):art(p)}</div>
       <button class="wish ${on?"on":""}" data-wish="${p.id}" aria-label="Save to wishlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button>
       <div class="ptag ${sale?"sale":""}">${money(p.price)}${sale?`<s>${money(p.old)}</s>`:""}</div>
       <button class="qa" data-open="${p.id}" aria-label="Quick view">+</button>
@@ -1230,6 +1387,12 @@ function renderSearch(q){
    PRODUCT MODAL
    ===================================================================== */
 let cur=null;
+function variantsFor(p){return Array.isArray(p.variants)?p.variants:[]}
+function chosenVariant(p,color){return variantsFor(p).find(v=>String(v.color).toLowerCase()===String(color).toLowerCase())||null}
+function variantPrice(p,color){const v=chosenVariant(p,color);return v&&Number(v.price)>0?Number(v.price):p.price}
+function variantStock(p,color){const v=chosenVariant(p,color);return v&&v.stock!==null&&v.stock!==''&&Number.isFinite(Number(v.stock))?Number(v.stock):null}
+function variantImage(p,color){const v=chosenVariant(p,color);return v&&v.images&&v.images.length?fixImg(v.images[0]):imgOf(p)}
+function variantArt(p,color){const src=variantImage(p,color);return src?`<img src="${esc(src)}" alt="${esc(p.name+' '+color)}" loading="lazy" style="width:100%;height:100%;object-fit:cover">`:art(p,p.colors.find(c=>c.n===color))}
 function openProduct(id){
   const p=byId(id); if(!p)return;
   cur={p,ci:0,gi:0,size:"",qty:1};
@@ -1238,22 +1401,23 @@ function openProduct(id){
 }
 function drawProduct(){
   const {p,ci,gi,size,qty}=cur, col=p.colors[ci], sale=isSale(p), on=wish.includes(p.id);
-  const imgs=p.imgs||(p.img?[p.img]:[]);
+  const variant=chosenVariant(p,col.n), imgs=variant&&variant.images&&variant.images.length?variant.images.map(fixImg):(p.imgs||(p.img?[p.img]:[]));
+  const selectedPrice=variantPrice(p,col.n),selectedStock=variantStock(p,col.n),variantSoldOut=p.soldOut||selectedStock===0;
   const rel=PRODUCTS.filter(x=>x.cat===p.cat&&x.id!==p.id).slice(0,3);
-  const main=imgs.length?`<div class="main z" id="pdMain"><img src="${esc(imgs[gi]||imgs[0])}" alt="${esc(p.name)}"></div>`:`<div class="main">${art(p,col)}</div>`;
+  const main=imgs.length?`<div class="main z" id="pdMain"><img src="${esc(imgs[gi]||imgs[0])}" alt="${esc(p.name+" "+col.n)}" loading="eager"></div>`:`<div class="main">${art(p,col)}</div>`;
   const thumbs=imgs.length>1?`<div class="thumbs">${imgs.map((u,i)=>`<button class="${i===gi?"on":""}" data-gi="${i}" aria-label="Photo ${i+1}"><img src="${esc(u)}" alt="" style="width:100%;height:100%;object-fit:cover"></button>`).join("")}</div>`:"";
   $("#prodBox").innerHTML=`<button class="x" data-close aria-label="Close">×</button>
   <div class="pd"><div class="gal">${main}${thumbs}</div>
   <div class="body">
     <div style="font-size:13.5px;color:var(--muted)"><a href="#shop/${p.cat}" data-close class="link" style="font-weight:500">${esc(catName(p.cat))}</a></div>
     <h2>${esc(p.name)}</h2>
-    <div class="price"><b>${money(p.price)}</b>${sale?`<s>${money(p.old)}</s><em>You save ${money(p.old-p.price)}</em>`:""}</div>
+    <div class="price"><b>${money(selectedPrice)}</b>${sale&&p.old>selectedPrice?`<s>${money(p.old)}</s><em>You save ${money(p.old-selectedPrice)}</em>`:""}</div>
     <p>${esc(p.desc)}</p>
-    <div><div class="lbl">Colour <span>${esc(col.n)}</span></div><div class="swatches">${p.colors.map((c,i)=>`<button class="sw ${i===ci?"on":""}" style="background:${c.h}" data-ci="${i}" title="${esc(c.n)}" aria-label="${esc(c.n)}"></button>`).join("")}</div></div>
+    <div><div class="lbl">Colour <span>${esc(col.n)}${selectedStock!==null?" · "+(selectedStock?selectedStock+" available":"Sold out"):""}</span></div><div class="swatches">${p.colors.map((c,i)=>`<button class="sw ${i===ci?"on":""}" style="background:${c.h}" data-ci="${i}" title="${esc(c.n)}" aria-label="${esc(c.n)}"></button>`).join("")}</div></div>
     ${p.sizes?`<div><div class="lbl">Size</div><div class="sizes">${p.sizes.map(z=>`<button class="sz ${z===size?"on":""}" data-sz="${z}">${z}</button>`).join("")}</div></div>`:""}
     <div><div class="lbl">Quantity</div><div class="qty"><button data-q="-1" aria-label="Decrease">−</button><span>${qty}</span><button data-q="1" aria-label="Increase">+</button></div></div>
     <div class="err" id="pdErr"></div>
-    ${p.soldOut?`<div class="note">This item is sold out right now. Message us to ask when it will be back.</div>`:`<div class="acts"><button class="btn" id="pdAdd">Add to cart</button><button class="btn ink" id="pdBuy">Buy now</button></div>`}
+    ${variantSoldOut?`<div class="note">This color is sold out right now. Message us to ask when it will be back.</div>`:`<div class="acts"><button class="btn" id="pdAdd">Add to cart</button><button class="btn ink" id="pdBuy">Buy now</button></div>`}
     <div class="acts" style="margin-top:-4px"><button class="btn line wish-in" data-wish="${p.id}">${on?"Saved to wishlist":"Save to wishlist"}</button><button class="btn line" id="pdShare">Share</button></div>
     <div class="acc">
       ${p.details&&p.details.length?`<details open><summary>Details</summary><ul>${p.details.map(d=>`<li>${esc(d)}</li>`).join("")}</ul></details>`:""}
@@ -1265,6 +1429,7 @@ function drawProduct(){
 }
 function addCurrent(){
   const {p,ci,size,qty}=cur;
+  const stock=variantStock(p,p.colors[ci].n);if(p.soldOut||stock===0){$("#pdErr").textContent="Selected color is sold out.";return false}if(stock!==null&&qty>stock){$("#pdErr").textContent="Only "+stock+" available in this color.";return false}
   if(p.sizes&&!size){$("#pdErr").textContent="Choose a size to continue.";return false}
   addToCart(p.id,p.colors[ci].n,size,qty);return true;
 }
@@ -1274,12 +1439,15 @@ function addCurrent(){
    ===================================================================== */
 const saveCart=()=>{LS.set("sh_cart",cart);updateBadges()};
 function addToCart(id,color,size,qty){
+  const product=byId(id),stock=product?variantStock(product,color):null;
+  if(product&&(product.soldOut||stock===0)){toast('Selected color is sold out');return}
   const k=[id,color,size||""].join("|"), it=cart.find(i=>i.k===k);
+  const already=it?it.qty:0;if(stock!==null&&already+qty>stock){toast('Not enough stock for this color');return}
   if(it)it.qty+=qty;else cart.push({k,id,color,size:size||"",qty});
   saveCart();renderCart();toast("Added to your cart");
 }
-function cartLines(){return cart.map(i=>({...i,p:byId(i.id)})).filter(i=>i.p)}
-function subtotal(){return cartLines().reduce((s,i)=>s+i.p.price*i.qty,0)}
+function cartLines(){return cart.map(i=>({...i,p:byId(i.id)})).filter(i=>i.p).map(i=>({...i,unitPrice:variantPrice(i.p,i.color)}))}
+function subtotal(){return cartLines().reduce((s,i)=>s+i.unitPrice*i.qty,0)}
 function couponInfo(sub){
   const c=CONFIG.coupons[(lastCoupon||"").toUpperCase()]; if(!c)return{ok:false,amt:0};
   if(sub<(c.min||0))return{ok:false,amt:0,msg:`This coupon needs an order of at least ${money(c.min)}.`};
@@ -1295,9 +1463,9 @@ function renderCart(){
   if(!L.length){body.innerHTML=`<div class="empty" style="margin-top:20px"><b style="color:var(--ink)">Your cart is empty.</b><br>Find something you love and add it here.<br><br><a class="btn" href="#shop" data-close>Start shopping</a></div>`;foot.classList.add("hidden");return}
   foot.classList.remove("hidden");
   const inCart=new Set(L.map(i=>i.id)), more=PRODUCTS.filter(p=>!inCart.has(p.id)).slice(0,2);
-  body.innerHTML=L.map(i=>`<div class="ci"><div class="art">${art(i.p,i.p.colors.find(c=>c.n===i.color))}</div><div>
-    <div class="n">${esc(i.p.name)}</div><div class="m">${esc(i.color)}${i.size?", size "+esc(i.size):""} · ${money(i.p.price)}</div>
-    <div class="row"><div class="qty"><button data-cq="${esc(i.k)}" data-d="-1" aria-label="Decrease">−</button><span>${i.qty}</span><button data-cq="${esc(i.k)}" data-d="1" aria-label="Increase">+</button></div><b>${money(i.p.price*i.qty)}</b></div>
+  body.innerHTML=L.map(i=>`<div class="ci"><div class="art">${variantArt(i.p,i.color)}</div><div>
+    <div class="n">${esc(i.p.name)}</div><div class="m">${esc(i.color)}${i.size?", size "+esc(i.size):""} · ${money(i.unitPrice)}</div>
+    <div class="row"><div class="qty"><button data-cq="${esc(i.k)}" data-d="-1" aria-label="Decrease">−</button><span>${i.qty}</span><button data-cq="${esc(i.k)}" data-d="1" aria-label="Increase">+</button></div><b>${money(i.unitPrice*i.qty)}</b></div>
     <button class="rm" data-rm="${esc(i.k)}">Remove</button></div></div>`).join("")+
     (more.length?`<div class="up"><div class="lbl">Add something else</div><div class="row2">${more.map(p=>`<div class="u" data-open="${p.id}"><div class="art">${art(p)}</div><b>${esc(p.name)}</b><small>${money(p.price)}</small></div>`).join("")}</div></div>`:"");
   const sub=subtotal(), cp=couponInfo(sub), fd=CONFIG.freeDeliveryOver;
@@ -1361,7 +1529,7 @@ function calcTotals(){
 }
 function renderSummary(){
   const t=calcTotals();
-  $("#coSum").innerHTML=cartLines().map(i=>`<div class="mini"><div class="art">${art(i.p,i.p.colors.find(c=>c.n===i.color))}</div><div>${esc(i.p.name)}<small>${esc(i.color)}${i.size?", "+esc(i.size):""} × ${i.qty}</small></div><b>${money(i.p.price*i.qty)}</b></div>`).join("")+
+  $("#coSum").innerHTML=cartLines().map(i=>`<div class="mini"><div class="art">${variantArt(i.p,i.color)}</div><div>${esc(i.p.name)}<small>${esc(i.color)}${i.size?", "+esc(i.size):""} × ${i.qty}</small></div><b>${money(i.unitPrice*i.qty)}</b></div>`).join("")+
   `<div style="margin-top:14px"><div class="line-r"><span>Subtotal</span><b>${money(t.sub)}</b></div>${t.disc?`<div class="line-r" style="color:var(--ok)"><span>Coupon</span><b>−${money(t.disc)}</b></div>`:""}<div class="line-r"><span>Delivery</span><b>${t.ship?money(t.ship):"Free"}</b></div><div class="line-r tot"><span>Total</span><span>${money(t.total)}</span></div></div>`;
   updatePayInfo();
 }
@@ -1392,7 +1560,7 @@ function submitOrder(e){
   err.textContent="";
   const t=calcTotals(), L=cartLines();
   const o={id:genId(),date:new Date().toISOString(),status:"Placed",name,phone,addr,zone:t.zone,note:$("#kNote").value.trim(),pay,trx,
-    items:L.map(i=>({pid:i.p.id,name:i.p.name,color:i.color,size:i.size,qty:i.qty,price:i.p.price})),
+    items:L.map(i=>({pid:i.p.id,name:i.p.name,color:i.color,size:i.size,qty:i.qty,price:i.unitPrice})),
     sub:t.sub,disc:t.disc,coupon:t.disc?lastCoupon.toUpperCase():"",ship:t.ship,total:t.total};
   const orders=LS.get("sh_orders",[]);orders.unshift(o);LS.set("sh_orders",orders);
   LS.set("sh_cust",{name,phone,addr});
@@ -1493,7 +1661,7 @@ document.addEventListener("click",e=>{
   if(t.closest("[data-close]")||t===$("#ov")||t.classList.contains("modal")){closeAll()}
   const ht=t.closest("[data-ht]"); if(ht){homeTab=ht.dataset.ht;renderHomeGrid();return}
   const cat=t.closest("[data-cat]"); if(cat){F.cat=cat.dataset.cat;history.replaceState(null,"","#shop"+(F.cat==="all"?"":"/"+F.cat));renderShop();return}
-  const ci=t.closest("[data-ci]"); if(ci&&cur){cur.ci=+ci.dataset.ci;drawProduct();return}
+  const ci=t.closest("[data-ci]"); if(ci&&cur){cur.ci=+ci.dataset.ci;cur.gi=0;cur.qty=1;drawProduct();return}
   const gi=t.closest("[data-gi]"); if(gi&&cur){cur.gi=+gi.dataset.gi;drawProduct();return}
   const sz=t.closest("[data-sz]"); if(sz&&cur){cur.size=sz.dataset.sz;drawProduct();return}
   const q=t.closest("[data-q]"); if(q&&cur){cur.qty=Math.max(1,Math.min(10,cur.qty+ +q.dataset.q));drawProduct();return}
@@ -1577,18 +1745,35 @@ else{$("#waCard").classList.add("hidden");$("#cWa").classList.add("hidden")}
 function renderAll(keep){buildHero();renderHome();renderCart();renderWish();updateBadges();route(keep)}
 function showLoading(){const m=`<div class="empty" style="grid-column:1/-1">Loading products…</div>`;["#homeGrid","#shopGrid"].forEach(i=>$(i).innerHTML=m);$("#mosaic").innerHTML=""}
 function openDeepLink(){const h=location.hash||"";if(h.startsWith("#p/")&&byId(h.slice(3))&&!$(".modal.show"))openProduct(h.slice(3))}
+function fetchVariantsJSONP(url){
+  return new Promise((resolve,reject)=>{
+    const callback='SHOPYHATVariantCallback'+Date.now(),s=document.createElement('script');
+    let finished=false;
+    const done=(error,data)=>{if(finished)return;finished=true;clearTimeout(timer);delete window[callback];s.remove();error?reject(error):resolve(data)};
+    window[callback]=data=>done(null,data&&data.ok&&data.variants?data.variants:{});
+    s.onerror=()=>done(Error('Variant feed unavailable'));
+    const timer=setTimeout(()=>done(Error('Variant feed timeout')),9000);
+    s.src=url+(url.includes('?')?'&':'?')+'callback='+encodeURIComponent(callback);
+    document.head.appendChild(s);
+  });
+}
 async function boot(){
   if(!SHEET){applyProducts(defaultList());renderAll();return}
   const cached=LS.get("sh_products",null);
   if(cached&&cached.length){applyProducts(cached.map(parseProduct).filter(Boolean));renderAll()}
   else{renderAll();showLoading()}
   try{
+    if(VARIANT_FEED_URL.startsWith('https://')){
+      try{VARIANT_MAP=await fetchVariantsJSONP(VARIANT_FEED_URL)}
+      catch(e){console.warn('Variant feed unavailable; base products still load',e)}
+    }
     const r=await fetch(SHEET+"?action=products"), j=await r.json();
     if(!j||!j.ok||!Array.isArray(j.products))throw new Error("bad response");
     const changed=JSON.stringify(j.products)!==JSON.stringify(cached);
     LS.set("sh_products",j.products);
-    if(changed||!cached){applyProducts(j.products.map(parseProduct).filter(Boolean));renderAll(!!cached);openDeepLink()}
+    if(changed||!cached||Object.keys(VARIANT_MAP).length){applyProducts(j.products.map(parseProduct).filter(Boolean));renderAll(!!cached);openDeepLink()}
   }catch(e){
+    if(cached&&cached.length&&Object.keys(VARIANT_MAP).length){applyProducts(cached.map(parseProduct).filter(Boolean));renderAll(true)}
     if(!cached||!cached.length){const m=`<div class="empty" style="grid-column:1/-1"><b style="color:var(--ink)">We couldn't load the products.</b><br>Check your connection and try again.<br><br><button class="btn ink" onclick="location.reload()">Reload</button></div>`;["#homeGrid","#shopGrid"].forEach(i=>$(i).innerHTML=m)}
   }
 }
