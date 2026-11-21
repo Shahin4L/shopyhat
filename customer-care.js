@@ -64,7 +64,19 @@ function renderReviewForm(){
  '<div class="care-grid"><div><label for="rvName">'+t('Your Name *','আপনার নাম *')+'</label><input id="rvName" name="reviewer_name" required minlength="2" maxlength="90" autocomplete="name"></div><div><label for="rvRating">'+t('Rating *','রেটিং *')+'</label><select id="rvRating" name="rating" required><option value="5">★★★★★ (5)</option><option value="4">★★★★☆ (4)</option><option value="3">★★★☆☆ (3)</option><option value="2">★★☆☆☆ (2)</option><option value="1">★☆☆☆☆ (1)</option></select></div></div>'+
  '<label for="rvTitle">'+t('Review Title (optional)','রিভিউ শিরোনাম (ঐচ্ছিক)')+'</label><input id="rvTitle" name="title" maxlength="120">'+
  '<label for="rvText">'+t('Your Experience *','আপনার অভিজ্ঞতা *')+'</label><textarea id="rvText" name="review_text" minlength="12" maxlength="1200" required></textarea>'+
- '<label for="rvPhoto">'+t('Photo (optional, maximum 4 MB)','ছবি (ঐচ্ছিক, সর্বোচ্চ ৪ MB)')+'</label><input id="rvPhoto" name="review_photo" type="file" accept="image/jpeg,image/png,image/webp"><p class="care-hint">'+t('Photo remains private until review approval.','রিভিউ অনুমোদনের আগে ছবিটি গোপন থাকবে।')+'</p><p class="care-hint">'+t('Moderation is required; submitting does not guarantee publication.','অনুমোদনের পর রিভিউ প্রকাশ হতে পারে; জমা দিলেই প্রকাশ নিশ্চিত নয়।')+'</p>'+submitButton(t('Submit Review','রিভিউ জমা দিন'))+' <button type="button" class="btn ghost" id="careReviewBack">'+t('← Back to Reviews','← রিভিউতে ফিরে যান')+'</button></form><div id="careMsg"></div>';
+ '<label for="rvPhoto">'+t('Photo (optional, maximum 4 MB)','ছবি (ঐচ্ছিক, সর্বোচ্চ ৪ MB)')+'</label><input id="rvPhoto" name="review_photo" type="file" accept="image/jpeg,image/png,image/webp"><div id="reviewPhotoPreview" class="care-media-preview"></div><p class="care-hint">'+t('Photo remains private until review approval.','রিভিউ অনুমোদনের আগে ছবিটি গোপন থাকবে।')+'</p><p class="care-hint">'+t('Moderation is required; submitting does not guarantee publication.','অনুমোদনের পর রিভিউ প্রকাশ হতে পারে; জমা দিলেই প্রকাশ নিশ্চিত নয়।')+'</p>'+submitButton(t('Submit Review','রিভিউ জমা দিন'))+' <button type="button" class="btn ghost" id="careReviewBack">'+t('← Back to Reviews','← রিভিউতে ফিরে যান')+'</button></form><div id="careMsg"></div>';
+ let photoUrl='';
+ document.getElementById('rvPhoto').onchange=e=>{
+  if(photoUrl){URL.revokeObjectURL(photoUrl);photoUrl=''}
+  const preview=document.getElementById('reviewPhotoPreview');preview.textContent='';
+  const file=e.target.files?.[0];
+  if(!file)return;
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>4194304){
+   e.target.value='';msg(t('Choose a JPG, PNG or WebP image up to 4MB.','সর্বোচ্চ ৪ MB-এর JPG, PNG বা WebP ছবি দিন।'),true);return;
+  }
+  photoUrl=URL.createObjectURL(file);
+  const image=document.createElement('img');image.src=photoUrl;image.alt=t('Selected review photo preview','নির্বাচিত রিভিউ ছবির প্রিভিউ');preview.append(image);
+ };
  document.getElementById('careReviewBack').onclick=renderReviews;bindRetry();
  document.getElementById('careReviewForm').onsubmit=async e=>{
   e.preventDefault();const f=e.currentTarget,button=f.querySelector('button[type=submit]');button.disabled=true;
@@ -72,7 +84,7 @@ function renderReviewForm(){
   if(photo instanceof File&&photo.size===0)p.delete('review_photo');
   if(photo instanceof File&&photo.size>4194304){msg(t('Photo must be 4 MB or smaller.','ছবি ৪ MB বা তার কম হতে হবে।'),true);button.disabled=false;return}
   try{const r=await fetch(endpoint,{method:'POST',headers:{apikey:key},body:p});const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Review not submitted');
-   f.reset();msg(t('Thank you! Your review is waiting for approval.','ধন্যবাদ! আপনার রিভিউ অনুমোদনের অপেক্ষায় আছে।'));
+   f.reset();if(photoUrl){URL.revokeObjectURL(photoUrl);photoUrl=''}document.getElementById('reviewPhotoPreview').textContent='';msg(t('Thank you! Your review is waiting for approval.','ধন্যবাদ! আপনার রিভিউ অনুমোদনের অপেক্ষায় আছে।'));
   }catch(err){msg(err.message,true)}finally{button.disabled=false}
  };
 }
