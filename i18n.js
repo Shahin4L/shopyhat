@@ -43,7 +43,27 @@ const EXTRAS = {
  'Manual verification':'ম্যানুয়াল যাচাই','Manual transfer':'ম্যানুয়াল ট্রান্সফার',
  'Verification required':'যাচাই আবশ্যক','Order placed':'অর্ডার দেওয়া হয়েছে',
  'Contact support':'সহায়তার জন্য যোগাযোগ করুন',
- 'Reviews & Support':'রিভিউ ও সহায়তা','Reviews & Issue Support':'রিভিউ ও সমস্যা সমাধান'
+ 'Reviews & Support':'রিভিউ ও সহায়তা','Reviews & Issue Support':'রিভিউ ও সমস্যা সমাধান',
+ 'About Us':'আমাদের সম্পর্কে','About SHOPYHAT':'SHOPYHAT সম্পর্কে','Our Story':'আমাদের গল্প',
+ 'SHOPYHAT · SINCE 2020':'SHOPYHAT · ২০২০ সাল থেকে',
+ 'Style that feels':'আপনার নিজস্ব স্টাইল','like you.':'আপনার মতো করে।',
+ 'Welcome to SHOPYHAT — an online fashion and lifestyle destination, bringing thoughtfully presented sarees, women\'s fashion, clothing and accessories together in one convenient shopping experience.':'SHOPYHAT-এ স্বাগতম—শাড়ি, নারীদের পোশাক ও ফ্যাশন সামগ্রীর একটি সহজ অনলাইন শপিং গন্তব্য।',
+ 'Explore our collection':'আমাদের কালেকশন দেখুন','Talk to our team':'আমাদের টিমের সঙ্গে কথা বলুন',
+ 'YOUR CHOICE, OUR GIFT.':'আপনার পছন্দ, আমাদের উপহার।','ESTABLISHED 2020 · BANGLADESH':'প্রতিষ্ঠিত ২০২০ · বাংলাদেশ',
+ 'A simple idea: making personal style easier to discover.':'সহজ একটি ভাবনা: নিজের পছন্দের স্টাইল খুঁজে পাওয়া আরও সহজ করা।',
+ 'SHOPYHAT was established in 2020 with a focus on offering fashion and lifestyle choices through an accessible online storefront. We showcase product details and available options so shoppers can choose the pieces that fit their taste and occasion.':'২০২০ সালে প্রতিষ্ঠিত SHOPYHAT অনলাইনে ফ্যাশন ও লাইফস্টাইল পণ্য সহজে খুঁজে পাওয়ার সুযোগ তৈরি করতে কাজ করে। পণ্যের তথ্য ও বিকল্পগুলো সাজিয়ে দিই, যাতে আপনি নিজের পছন্দ অনুযায়ী বেছে নিতে পারেন।',
+ 'Choice & Style':'পছন্দ ও স্টাইল','Shopping Made Easier':'সহজ কেনাকাটা','Support That Listens':'আপনার কথা শোনে যে সাপোর্ট',
+ 'Discover sarees, women\'s clothing and accessories in one place, with clear colors and product details.':'শাড়ি, নারীদের পোশাক ও অ্যাক্সেসরিজ দেখুন এক জায়গায়, স্পষ্ট রঙ ও পণ্যের বিস্তারিতসহ।',
+ 'Browse products, choose variants and place an order with an organized online checkout process.':'পণ্য দেখুন, রং ও ভ্যারিয়েন্ট নির্বাচন করুন এবং সহজ চেকআউটে অর্ডার দিন।',
+ 'Ask product questions, share reviews or submit a support case with updates from the SHOPYHAT team.':'পণ্য সম্পর্কে জানুন, রিভিউ দিন অথবা সাপোর্ট কেস তৈরি করে আপডেট দেখুন।',
+ 'FOLLOW OUR JOURNEY':'আমাদের সঙ্গে থাকুন','Connect with SHOPYHAT':'SHOPYHAT-এর সঙ্গে যুক্ত থাকুন',
+ 'Follow our official Facebook page for updates and message us with questions. For formal order issues, use our support case system so your request can be tracked.':'নতুন আপডেটের জন্য আমাদের Facebook পেজ অনুসরণ করুন। অর্ডার-সংক্রান্ত অভিযোগ ট্র্যাক করতে সাপোর্ট কেস ব্যবহার করুন।',
+ 'Visit our Facebook page ↗':'আমাদের Facebook পেজ দেখুন ↗','We are based in Dhaka':'আমাদের অবস্থান ঢাকা',
+ 'Contact & Location':'যোগাযোগ ও অবস্থান','VISIT & CONNECT':'ঠিকানা ও যোগাযোগ','Find our location':'আমাদের অবস্থান দেখুন',
+ 'Open Google Maps ↗':'Google Maps খুলুন ↗','Get directions ↗':'দিকনির্দেশনা দেখুন ↗','Our Address':'আমাদের ঠিকানা',
+ 'Map shows the searched address; please confirm the exact entrance with our team before visiting.':'ম্যাপে উল্লেখিত ঠিকানা অনুসন্ধান করা হয়েছে; আসার আগে সঠিক প্রবেশপথ আমাদের টিমের সঙ্গে নিশ্চিত করুন।',
+ 'Contact & Location':'যোগাযোগ ও ঠিকানা',
+ 'Our Story':'আমাদের গল্প'
 };
 for(const [en,bn] of Object.entries(EXTRAS))EN.set(en,bn);
 // Text fragments are intentionally separate: HTML templates wrap numbers and names
