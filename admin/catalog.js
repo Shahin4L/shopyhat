@@ -134,10 +134,10 @@ export function setupCatalogManager({db,roleCan,notify,fmtDate}){
   const legacy=document.querySelector('#productForm [name=category]');
   function fill(){
    const id=parent.value;child.innerHTML='<option value="">No subcategory</option>'+children(id).map(c=>opt(c.id,c.name+(c.is_active?'':' (Draft)'),'' )).join('');
-   if(legacy&&id)legacy.value=categories.find(c=>c.id===id)?.name||legacy.value;
+   if(legacy&&id){const chosen=categories.find(c=>c.id===id);if(chosen?.is_active)legacy.value=chosen.name;}
   }
   parent.onchange=fill;
-  child.onchange=()=>{if(legacy&&child.value)legacy.value=categories.find(c=>c.id===child.value)?.name||legacy.value};
+  child.onchange=()=>{if(legacy&&parent.value){const root=categories.find(c=>c.id===parent.value);if(root?.is_active)legacy.value=root.name;}};
  }
  function selectionPayload(f){
   const cat=f.category_id||null,sub=f.subcategory_id||null,partner=f.brand_partner_id||null;
