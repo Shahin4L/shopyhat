@@ -83,11 +83,58 @@ function cover(product){const base=images.find(i=>i.product_id===product.id&&!i.
 function render(){
  const search=$('productSearch').value.toLowerCase().trim(),oq=$('orderSearch').value.toLowerCase().trim(),filter=$('statusFilter').value;
  $('productRows').innerHTML=products.filter(p=>(p.name+' '+p.legacy_id+' '+p.category).toLowerCase().includes(search)).map(p=>
- '<tr><td><div class="row" style="justify-content:flex-start">'+imgTag(cover(p),p.name)+'<div><b>'+esc(p.name)+'</b><div class="muted">#'+esc(p.legacy_id||p.id.slice(0,7))+' · '+esc(p.category)+'</div></div></div></td><td>'+money(p.base_price)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+variants.filter(v=>v.product_id===p.id).length+'</td><td><button class="btn small" data-edit-product="'+p.id+'">Edit / Photos</button></td></tr>').join('')||'<tr><td colspan="5">No products found</td></tr>';
+ '<tr><td><div class="row" style="justify-content:flex-start">'+imgTag(cover(p),p.name)+'<div><b>'+esc(p.name)+'</b><div class="muted">#'+esc(p.legacy_id||p.id.slice(0,7))+' · '+esc(p.category)+'</div></div></div></td><td>'+money(p.base_price)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+variants.filter(v=>v.product_id===p.id).length+'</td><td><div class="tools"><button class="btn small" data-edit-product="'+p.id+'">Edit / Photos</button>'+(roleCan("owner","manager")?'<button type="button" class="btn small danger" data-delete-product="'+p.id+'">Delete</button>':'')+'</div></td></tr>').join('')||'<tr><td colspan="5">No products found</td></tr>';
  $('orderRows').innerHTML=orders.filter(o=>(!filter||o.status===filter)&&(!oq||[o.order_number,o.customer_name,o.customer_phone].some(v=>String(v||'').toLowerCase().includes(oq)))).map(o=>
  '<tr><td>'+orderThumb(o)+'</td><td><b>'+esc(o.order_number)+'</b><div class="muted">'+fmtDate(o.created_at)+'</div></td><td>'+esc(o.customer_name)+'<div class="muted">'+esc(o.customer_phone)+'</div></td><td>'+money(o.total)+'</td><td><span class="pill">'+esc(o.status)+'</span></td><td>'+esc(o.payment_status)+'</td><td><button class="btn small" data-edit-order="'+o.id+'">Process / Invoice</button></td></tr>').join('')||'<tr><td colspan="7">No matching orders</td></tr>';
  $('paymentRows').innerHTML=payments.map(p=>'<tr><td>'+esc(orders.find(o=>o.id===p.order_id)?.order_number||'—')+'</td><td>'+esc(p.method)+'</td><td>'+esc(p.transaction_id)+'</td><td>'+money(p.amount)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+ (roleCan('owner','manager')?'<button class="btn small" data-review="'+p.id+'">Review</button>':'Read only')+'</td></tr>').join('')||'<tr><td colspan="6">No payment reviews</td></tr>';
  $('staffRows').innerHTML=staff.map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(x.display_name)+'</td><td>'+esc(x.role)+'</td><td>'+ (x.active?'Active':'Disabled')+'</td><td>'+(x.role==='owner'?'Protected':'<button class="btn small" data-edit-staff="'+esc(x.email)+'">Edit</button>')+'</td></tr>').join('')||'<tr><td colspan="5">No staff</td></tr>';
+}
+function confirmProductDelete(id){
+ if(!roleCan('owner','manager'))return;
+ const p=products.find(x=>x.id===id);
+ if(!p)return notice('appMsg','Product not found. Refresh the catalog.',true);
+ const usedByOrders=orderItems.filter(item=>item.product_id===id).length;
+ drawer('Delete Product — Confirmation',`
+  <div class="badge" role="alert" style="background:#fff0ee;color:#9e281d;border:1px solid #f0b2ac;padding:13px">
+   <b>⚠️ WARNING — Permanent deletion</b>
+   <p style="margin:8px 0 0">You are about to permanently delete <strong>${esc(p.name)}</strong>.</p>
+   <p style="margin:6px 0 0">All color variants and product gallery links will also be deleted. This cannot be undone.</p>
+  </div>
+  <p>${usedByOrders?'This product appears in '+usedByOrders+' order item(s). Existing order snapshots (name, quantity and price) remain for reporting; direct product links will be cleared.':'No existing order items currently reference this product.'}</p>
+  <label for="confirmDeleteText">To confirm, type <strong>DELETE</strong></label>
+  <input id="confirmDeleteText" autocomplete="off" placeholder="Type DELETE exactly" aria-label="Type DELETE to permanently delete product">
+  <div class="tools" style="margin-top:17px">
+   <button class="btn" type="button" id="cancelProductDelete">Cancel — Keep Product</button>
+   <button class="btn danger" type="button" id="confirmProductDelete" disabled>Delete Permanently</button>
+  </div>
+ `);
+ const input=$('confirmDeleteText'),button=$('confirmProductDelete');
+ input.oninput=()=>{button.disabled=input.value.trim()!=='DELETE'};
+ $('cancelProductDelete').onclick=closeDrawer;
+ button.onclick=async()=>{
+  if(input.value.trim()!=='DELETE')return;
+  button.disabled=true;button.textContent='Deleting…';
+  const relatedImages=images.filter(i=>i.product_id===id).map(i=>i.image_url);
+  try{
+   const result=await db.from('sh_products').delete().eq('id',id).select('id').single();
+   if(result.error)throw result.error;
+   if(!result.data)throw Error('Delete not confirmed. Product may already have been removed.');
+   await refresh();
+   closeDrawer();
+   notice('appMsg','Product '+p.name+' was permanently deleted.');
+   // Storage cleanup is best-effort and only for files owned by SHOPYHAT.
+   const prefix=SUPABASE_URL+'/storage/v1/object/public/shopyhat-products/';
+   const activeUrls=new Set(images.map(i=>i.image_url));
+   const paths=[...new Set(relatedImages)].filter(url=>url.startsWith(prefix)&&!activeUrls.has(url)).map(url=>decodeURIComponent(url.slice(prefix.length).split('?')[0]));
+   if(paths.length){
+    const removed=await db.storage.from('shopyhat-products').remove(paths);
+    if(removed.error)console.warn('Orphan image cleanup failed',removed.error.message);
+   }
+  }catch(err){
+    notice('drawerMsg','Product not deleted: '+(err.message||'Please retry.'),true);
+    button.disabled=false;button.textContent='Delete Permanently';
+  }
+ };
 }
 async function uploadProductFiles(productId,variantId,files){
  let count=0;
@@ -282,9 +329,10 @@ document.addEventListener('keydown',e=>{
  }
 });
 document.addEventListener('click',e=>{
- const el=e.target.closest('[data-edit-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-view-photo],[data-edit-order],[data-review],[data-edit-staff]');
+ const el=e.target.closest('[data-edit-product],[data-delete-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-view-photo],[data-edit-order],[data-review],[data-edit-staff]');
  if(!el)return;
  if(el.dataset.editProduct)editProduct(el.dataset.editProduct);
+ else if(el.dataset.deleteProduct)confirmProductDelete(el.dataset.deleteProduct);
  else if(el.dataset.newVariant)editVariant(null,el.dataset.newVariant);
  else if(el.dataset.editVariant)editVariant(el.dataset.editVariant);
  else if(el.hasAttribute('data-photos'))editPhotos(el.dataset.photos,el.dataset.variant||'');
