@@ -7,7 +7,7 @@ const money=v=>'৳'+Number(v||0).toLocaleString('en-BD',{maximumFractionDigits:
 const fmtDate=v=>v?new Date(v).toLocaleString('en-BD',{timeZone:'Asia/Dhaka',dateStyle:'medium',timeStyle:'short'}):'—';
 const roleCan=(...r)=>r.includes(role);
 const imageUrl=v=>{const s=String(v||'');const m=s.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||s.match(/[?&]id=([\w-]+)/);return m&&s.includes('google.com')?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000':s};
-let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],reviews=[],cases=[],caseMedia=[],caseUpdates=[],activePage='products';
+let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],reviews=[],cases=[],caseMedia=[],caseUpdates=[],caseReplies=[],activePage='products';
 function notice(id,message,error=false){$(id).textContent=message;$(id).classList.toggle('error',!!error)}
 function show(id,on){$(id).classList.toggle('hidden',!on)}
 function drawer(title,html){$('drawerTitle').textContent=title;$('drawerBody').innerHTML=html;notice('drawerMsg','');show('overlay',true)}
@@ -131,8 +131,8 @@ async function boot(){const {data:{user},error}=await db.auth.getUser();
  await refresh()}
 async function refresh(){notice('appMsg','Loading live data…');
  try{
- const [p,v,i,o,oi,pa,st,rv,cs,cm,cu]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff'),query('sh_reviews'),query('sh_customer_cases'),query('sh_case_media'),query('sh_case_updates')]);
- products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;reviews=rv;cases=cs;caseMedia=cm;caseUpdates=cu;
+ const [p,v,i,o,oi,pa,st,rv,cs,cm,cu,cr]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff'),query('sh_reviews'),query('sh_customer_cases'),query('sh_case_media'),query('sh_case_updates'),query('sh_case_replies')]);
+ products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;reviews=rv;cases=cs;caseMedia=cm;caseUpdates=cu;caseReplies=cr;
  try{await loadAudit()}catch(e){audit=[];console.warn('Audit log not loaded:',e.message)}
  $('kProducts').textContent=p.length;$('kActive').textContent=p.filter(x=>x.status==='active').length;$('kOrders').textContent=o.length;$('kPending').textContent=o.filter(x=>x.status==='Pending').length;
  render();notice('appMsg','Last refreshed '+new Date().toLocaleTimeString('en-BD'))}
@@ -187,7 +187,7 @@ async function manageCase(id){
  const c=cases.find(c=>c.id===id);if(!c)return;
  const edit=roleCan('owner','manager','operator');
  const media=caseMedia.filter(m=>m.case_id===id);
- const steps=caseUpdates.filter(u=>u.case_id===id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ const steps=caseUpdates.filter(u=>u.case_id===id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));const replies=caseReplies.filter(r=>r.case_id===id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
  drawer('Case '+c.case_number,`
  <div class="badge"><b>${esc(c.status)}</b> · Priority: ${esc(c.priority)}</div>
  <div class="split"><section><h3>Customer & Order</h3><p>${esc(c.customer_name)}<br>${esc(c.phone)}<br>${esc(c.contact_email||'—')}<br>Order: ${esc(c.order_number||'—')}</p></section><section><h3>Issue</h3><b>${esc(c.category)}</b><p><b>${esc(c.subject)}</b></p><p style="white-space:pre-wrap">${esc(c.description)}</p></section></div>
@@ -198,6 +198,7 @@ async function manageCase(id){
  <label>Latest Customer-Facing Feedback</label><textarea name="last_staff_feedback" maxlength="2500" ${edit?'':'readonly'} placeholder="Clear updates, next action, requested evidence, or resolution…">${esc(c.last_staff_feedback||'')}</textarea>
  <label>Final Resolution / Outcome</label><textarea name="resolution" maxlength="2500" ${edit?'':'readonly'} placeholder="How the issue was resolved…">${esc(c.resolution||'')}</textarea>
  <div class="editor-actions"><button type="button" class="btn" id="backFromCase">← Back to Cases</button><button class="btn primary" ${edit?'':'disabled'} type="submit">Save & Update Case</button></div></form>
+ <div class="divider"></div><h3>Customer Follow-up Replies</h3><div class="case-timeline">${replies.map(r=>'<div class="case-entry"><b>Customer Reply</b> · '+fmtDate(r.created_at)+'<p style="white-space:pre-wrap">'+esc(r.message)+'</p></div>').join('')||'<p class="muted">No replies yet.</p>'}</div>
  <div class="divider"></div><h3>Resolution History</h3><div class="case-timeline">${steps.map(u=>'<div class="case-entry"><b>'+esc(u.status_to)+'</b> · '+fmtDate(u.created_at)+'<div class="muted">'+esc(u.actor_email)+'</div><div>'+esc(u.message)+'</div></div>').join('')||'<p class="muted">No history yet.</p>'}</div>`);
  $('backFromCase').onclick=()=>{closeDrawer();showPage('cases')};
  const attachments=$('caseEvidence');
