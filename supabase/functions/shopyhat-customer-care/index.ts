@@ -44,11 +44,11 @@ Deno.serve(async req=>{
   if(Number(req.headers.get('content-length')||0)>22*1024*1024)return send({error:'Upload too large'},413);
   const p=isForm?await req.formData():await req.json();
   const field=k=>String(isForm?(p.get(k)||''):(p[k]||'')).trim();
-  const action=field('action'),valid=['review','case','status','reply'];
+  const action=field('action'),valid=['review','case','status','reply','review_media'];
   if(!valid.includes(action)||field('website'))return send({error:'Invalid request'},400);
   const phone=field('phone').replace(/^(?:\+?88)/,'');
   const fp=await hash(action+'|'+(req.headers.get('cf-connecting-ip')||req.headers.get('x-forwarded-for')||'unknown').split(',')[0].slice(0,75)+'|'+(['case','reply'].includes(action)?phone:''));
-  if(!await allowed(fp,action,action==='status'?25:action==='review'?5:3))return send({error:'Too many requests. Please try later.'},429);
+  if(!await allowed(fp,action,['status','review_media'].includes(action)?25:action==='review'?5:3))return send({error:'Too many requests. Please try later.'},429);
   if(!await human(field('turnstile_token')))return send({error:'Complete human verification'},403);
   if(action==='status'){
    const id=field('case_number').toUpperCase();
@@ -71,13 +71,45 @@ Deno.serve(async req=>{
    await stamp(fp,action);
    return send({ok:true,message:'Your reply has been added to the support case.'});
   }
+  if(action==='review_media'){
+   const ids=Array.isArray(p.review_ids)?p.review_ids.filter(x=>/^[a-f\d-]{36}$/i.test(String(x))).slice(0,50):[];
+   if(!ids.length)return send({ok:true,photos:{}});
+   const a=await db.from('sh_reviews').select('id').in('id',ids).eq('status','Approved');
+   if(a.error)throw Error('Review lookup unavailable');
+   const allowedIds=new Set((a.data||[]).map(x=>x.id));
+   if(!allowedIds.size)return send({ok:true,photos:{}});
+   const r=await db.from('sh_review_media').select('review_id,storage_path').in('review_id',[...allowedIds]);
+   if(r.error)throw Error('Approved review images unavailable');
+   const photos={};
+   for(const m of r.data||[]){
+    const signed=await db.storage.from('shopyhat-review-photos').createSignedUrl(m.storage_path,300);
+    if(!signed.error)(photos[m.review_id]??=[]).push(signed.data.signedUrl);
+   }
+   return send({ok:true,photos});
+  }
   if(action==='review'){
    const product_id=field('product_id'),rating=Number(field('rating')),name=field('reviewer_name'),title=field('title'),text=field('review_text');
    if(!/^[a-f\d-]{36}$/i.test(product_id)||!Number.isInteger(rating)||rating<1||rating>5||name.length<2||name.length>90||title.length>120||text.length<12||text.length>1200)return send({error:'Check the review fields'},400);
    const pdt=await db.from('sh_products').select('id').eq('id',product_id).eq('status','active').maybeSingle();
    if(!pdt.data)return send({error:'Product not available'},400);
+   const photo=isForm?p.get('review_photo'):null;
+   let file=null;
+   if(photo instanceof File&&photo.size>0){
+     if(!['image/jpeg','image/png','image/webp'].includes(photo.type)||photo.size>4194304)return send({error:'Optional image must be JPG, PNG or WebP up to 4 MB'},413);
+     const bytes=await photo.arrayBuffer();
+     if(!magic(bytes,photo.type))return send({error:'Photo contents do not match the file format'},400);
+     file={bytes,type:photo.type,size:photo.size};
+   }
    const ins=await db.from('sh_reviews').insert({product_id,reviewer_name:name,rating,title,review_text:text,status:'Pending'}).select('id').single();
    if(ins.error)throw Error('Review submission failed');
+   if(file){
+     const ext=file.type==='image/jpeg'?'jpg':file.type==='image/png'?'png':'webp';
+     const path=ins.data.id+'/'+crypto.randomUUID()+'.'+ext;
+     const upload=await db.storage.from('shopyhat-review-photos').upload(path,file.bytes,{contentType:file.type,upsert:false});
+     if(upload.error){await db.from('sh_reviews').delete().eq('id',ins.data.id);throw Error('Review photo upload failed')}
+     const row=await db.from('sh_review_media').insert({review_id:ins.data.id,storage_path:path,media_type:file.type,size_bytes:file.size});
+     if(row.error){await db.storage.from('shopyhat-review-photos').remove([path]);await db.from('sh_reviews').delete().eq('id',ins.data.id);throw Error('Review media record failed')}
+   }
    await stamp(fp,action);
    return send({ok:true,message:'Review received; approval pending',review_id:ins.data.id});
   }
