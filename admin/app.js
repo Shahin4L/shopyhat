@@ -83,6 +83,22 @@ function render(){
  $('paymentRows').innerHTML=payments.map(p=>'<tr><td>'+esc(orders.find(o=>o.id===p.order_id)?.order_number||'—')+'</td><td>'+esc(p.method)+'</td><td>'+esc(p.transaction_id)+'</td><td>'+money(p.amount)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+ (roleCan('owner','manager')?'<button class="btn small" data-review="'+p.id+'">Review</button>':'Read only')+'</td></tr>').join('')||'<tr><td colspan="6">No payment reviews</td></tr>';
  $('staffRows').innerHTML=staff.map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(x.display_name)+'</td><td>'+esc(x.role)+'</td><td>'+ (x.active?'Active':'Disabled')+'</td><td>'+(x.role==='owner'?'Protected':'<button class="btn small" data-edit-staff="'+esc(x.email)+'">Edit</button>')+'</td></tr>').join('')||'<tr><td colspan="5">No staff</td></tr>';
 }
+async function uploadProductFiles(productId,variantId,files){
+ let count=0;
+ const current=images.filter(i=>i.product_id===productId&&(i.variant_id||'')===(variantId||''));
+ for(const file of files){
+  if(file.size>4194304||!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Photos must be JPG, PNG or WebP under 4 MB.');
+  const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg';
+  const path=productId+'/'+(variantId||'general')+'/'+crypto.randomUUID()+'.'+ext;
+  const up=await db.storage.from('shopyhat-products').upload(path,file,{contentType:file.type,cacheControl:'3600',upsert:false});
+  if(up.error)throw up.error;
+  const image_url=db.storage.from('shopyhat-products').getPublicUrl(path).data.publicUrl;
+  const ins=await db.from('sh_product_images').insert({product_id:productId,variant_id:variantId||null,image_url,sort_order:current.length+count});
+  if(ins.error){await db.storage.from('shopyhat-products').remove([path]);throw ins.error}
+  count++;
+ }
+ return count;
+}
 function editProduct(id){
  const p=products.find(x=>x.id===id)||{name:'',category:'Saree',base_price:0,old_price:null,description:'',details:'',sizes:[],status:'draft',is_new:false};
  const editable=roleCan('owner','manager');
@@ -95,12 +111,31 @@ function editProduct(id){
  <label>Sizes (comma separated)</label><input name="sizes" value="${esc((p.sizes||[]).join(', '))}"><label>Description</label><textarea name="description">${esc(p.description)}</textarea>
  <label>Product details</label><textarea name="details">${esc(p.details)}</textarea>
  <label><input type="checkbox" name="is_new" ${p.is_new?'checked':''} style="width:auto"> New Arrival</label>
- <button class="btn primary" ${editable?'':'disabled'} type="submit">Save Product</button></form>
- ${id?`<div class="divider"></div><div class="topline"><h3>Color variants</h3><button class="btn" data-new-variant="${p.id}">＋ Add Color</button></div>
- ${variantList.map(v=>'<div class="panel"><div class="topline"><div><b>'+esc(v.color)+'</b> · '+esc(v.sku||'No SKU')+'<div class="muted">Stock: '+esc(v.stock??'Unlimited')+' · '+money(v.price??p.base_price)+'</div></div><button class="btn small" data-edit-variant="'+v.id+'">Edit Photos</button></div><div class="photos">'+images.filter(i=>i.variant_id===v.id).map(i=>imgTag(i.image_url,v.color)).join('')+'</div></div>').join('')||'<p class="muted">No colors yet</p>'}
- <div class="divider"></div><h3>General product photos</h3><div class="photos">${group.map(i=>imgTag(i.image_url,p.name)).join('')}</div><button class="btn" data-photos="${id}" data-variant="">Manage General Photos</button>`:''}`);
+ <div class="media-section">
+ <div class="section-heading"><h3>Step 1 · Product Photos</h3><span class="step-number">PHOTO FIRST</span></div>
+ <p class="muted">Choose JPG, PNG or WebP images (maximum 4 MB each). They upload when the product is saved.</p>
+ <input id="productInitialFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+ <div id="productInitialPreview" class="photo-upload-preview photo-preview-list"></div></div>
+ <button class="btn primary" ${editable?'':'disabled'} type="submit">Save Product & Photos</button></form>
+ ${id?`<div class="media-section">
+ <div class="section-heading"><h3>Saved Product Photos</h3><button type="button" class="btn small" data-photos="${id}" data-variant="">Manage Photos</button></div>
+ <div class="photos">${productPhotoTiles(group,p.name)}</div>
+ <p class="muted">Use × to remove an image.</p></div>
+ <div class="media-section"><div class="section-heading"><h3>Step 2 · Color Variants</h3><button type="button" class="btn primary small" data-new-variant="${p.id}">＋ Choose / Add Color</button></div>
+ ${variantList.map(v=>'<div class="variant-card"><div class="topline"><div><b>'+esc(v.color)+'</b> · '+esc(v.sku||'No SKU')+'<div class="muted">Stock: '+esc(v.stock??'Unlimited')+' · '+money(v.price??p.base_price)+'</div></div><button type="button" class="btn small" data-edit-variant="'+v.id+'">Edit Color / Photos</button></div><div class="photos">'+productPhotoTiles(images.filter(i=>i.variant_id===v.id),v.color)+'</div></div>').join('')||'<p class="muted">No colors yet. Choose a color to create a separate gallery.</p>'}
+ </div>`:''}`);
+ setupLocalPhotoPreview('productInitialFiles','productInitialPreview');
  $('productForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('productForm');const payload={name:String(f.name).trim(),category:String(f.category).trim(),base_price:Number(f.base_price),old_price:f.old_price?Number(f.old_price):null,description:String(f.description||''),details:String(f.details||''),sizes:String(f.sizes||'').split(',').map(s=>s.trim()).filter(Boolean),status:f.status,is_new:!!f.is_new};
- try{const q=id?db.from('sh_products').update(payload).eq('id',id).select('id').single():db.from('sh_products').insert(payload).select('id').single();const r=await q;if(r.error)throw r.error;await refresh();editProduct(r.data.id);notice('drawerMsg','Product saved.')}catch(err){notice('drawerMsg',err.message,true)}};
+ try{
+ const files=[...($('productInitialFiles')?.files||[])];
+ const q=id?db.from('sh_products').update(payload).eq('id',id).select('id').single():db.from('sh_products').insert(payload).select('id').single();
+ const r=await q;if(r.error)throw r.error;
+ let uploaded=0;
+ try{uploaded=await uploadProductFiles(r.data.id,null,files)}
+ catch(uploadError){await refresh();editProduct(r.data.id);return notice('drawerMsg','Product saved, photo failed: '+uploadError.message,true)}
+ await refresh();editProduct(r.data.id);
+ notice('drawerMsg','Product saved'+(uploaded?' · '+uploaded+' photos uploaded':'')+'. Choose / Add Color below.');
+ }catch(err){notice('drawerMsg',err.message,true)}};
 }
 function editVariant(id,productId){
  const v=variants.find(v=>v.id===id)||{product_id:productId,color:'',hex:'#888888',sku:'',price:null,stock:null,active:true};
