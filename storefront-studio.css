@@ -1,0 +1,26 @@
+/* SHOPYHAT cinematic editorial layer — progressive, responsive and motion-safe */
+.sh-announcement{background:#0e0b09;color:#fff;text-align:center;padding:9px 18px;font:12px/1.5 var(--sans);letter-spacing:.03em}
+.sh-announcement b{color:#ff8a31}.sh-mega-wrap{position:relative;display:inline-flex;align-items:center}
+.sh-mega-toggle{border:1px solid transparent;border-radius:8px;padding:9px 16px;background:#f47721;color:#fff;font:600 14px var(--sans);cursor:pointer}
+.sh-mega{display:none;position:absolute;top:calc(100% + 12px);left:0;z-index:120;width:min(660px,90vw);padding:18px;background:#18110e;border:1px solid #a35a2a;border-radius:16px;box-shadow:0 25px 70px #0008;color:#fff}
+.sh-mega.open,.sh-mega-wrap:focus-within .sh-mega{display:block}
+.sh-mega-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.sh-mega-item{display:block;color:#fff;font-size:12px;text-align:left}.sh-mega-item img{display:block;width:100%;height:132px;object-fit:cover;border-radius:9px;background:#342219;margin-bottom:8px}.sh-mega-item span{display:block;color:#d7b9a2;font-size:11px}
+.sh-mega-footer{border-top:1px solid #5f3a26;margin-top:15px;padding-top:12px;color:#e6c3ac;font-size:12px}
+.sh-quicksearch{position:relative;width:clamp(160px,19vw,295px);margin-left:5px}
+.sh-quicksearch input{width:100%;border:1px solid #ded5cb;border-radius:30px;padding:11px 14px;background:#fff;color:#211;outline-color:#f47721}
+.sh-suggest{display:none;position:absolute;top:calc(100% + 7px);right:0;width:min(380px,88vw);max-height:420px;overflow-y:auto;background:white;border:1px solid #e5d3c2;border-radius:13px;box-shadow:0 20px 40px #0003;z-index:140;padding:8px}.sh-suggest.open{display:block}
+.sh-suggest a{display:flex;align-items:center;gap:10px;padding:8px;color:#251a16;border-radius:7px}.sh-suggest a:hover{background:#fff0e7}.sh-suggest img{width:46px;height:55px;object-fit:cover;border-radius:6px;background:#eee}.sh-suggest small{display:block;color:#7c6b61}
+.sh-cinematic{position:relative;background:radial-gradient(circle at 72% 45%,#643116,#1a0c08 53%,#100c0b 100%)!important;isolation:isolate}
+.sh-cinematic .wrap{min-height:610px!important;max-height:none!important}
+.sh-cinematic:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#100b0aef 0%,#100b0ab6 43%,transparent 100%);z-index:0;pointer-events:none}
+.sh-cinematic .wrap{z-index:2}.sh-cinematic h1 span:nth-child(2){color:#ff7b19!important}
+.sh-hero-media{position:absolute;inset:0 0 0 47%;overflow:hidden;z-index:-1}.sh-hero-media img,.sh-hero-media video{height:100%;width:100%;object-fit:cover;object-position:center 28%;filter:saturate(1.1)}
+.sh-hero-media:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#150b0bc9,transparent 48%),linear-gradient(0deg,#150b0b9a,transparent 35%)}
+.sh-cinematic #heroArt{opacity:.18;pointer-events:none}
+.sh-hero-eyebrow{color:#ff952d;letter-spacing:.22em;font-size:11px;font-weight:700;margin-bottom:20px}
+.sh-floating{position:absolute;z-index:4;right:4%;bottom:34px;display:flex;gap:12px}.sh-floating a{width:92px;background:#fff;border:4px solid #fff;box-shadow:0 14px 24px #0006;transform:rotate(-5deg)}.sh-floating a:nth-child(2){transform:rotate(7deg)}.sh-floating img{width:100%;height:112px;object-fit:cover}.sh-floating small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:11px var(--sans);color:#30221b}
+.sh-hero-ribbon{position:absolute;width:36%;height:13px;right:-4%;top:34%;background:linear-gradient(#ff9b33,#e65b00);transform:rotate(-24deg);border-radius:100%;opacity:.8;filter:drop-shadow(0 5px 9px #0006);z-index:1;pointer-events:none;animation:shFloat 7s ease-in-out infinite alternate}@keyframes shFloat{to{transform:rotate(-21deg) translateY(18px)}}
+@media(max-width:1100px){.sh-quicksearch{display:none}.sh-mega{left:auto;right:0}.sh-cinematic .wrap{min-height:550px!important}}
+@media(max-width:860px){.sh-mega-wrap{width:100%}.sh-mega{position:static;width:100%;box-shadow:none}.sh-mega-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sh-mega-item img{height:110px}.sh-hero-media{inset:25% 0 0 10%;opacity:.7}.sh-cinematic:before{background:linear-gradient(180deg,#120b0bdd,#120b0b55 45%,#130909e0)}.sh-cinematic .wrap{min-height:670px!important;align-content:start}.sh-floating{right:10px;bottom:18px}.sh-floating a{width:74px}.sh-floating img{height:88px}.sh-hero-ribbon{width:50%;top:55%}}
+@media(prefers-reduced-motion:reduce){.sh-hero-ribbon{animation:none!important}}
