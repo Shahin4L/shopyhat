@@ -160,14 +160,15 @@ function cover(product){const base=images.find(i=>i.product_id===product.id&&!i.
 function render(){
  if(!rangeValid()){notice('appMsg','From date must be on or before To date.',true);return;}
  const search=$('productSearch').value.toLowerCase().trim(),oq=$('orderSearch').value.toLowerCase().trim(),filter=$('statusFilter').value;
+ const productCategoryFilter=$('productCategoryFilter').value,productSubcategoryFilter=$('productSubcategoryFilter').value;
  const filteredProducts=dateFiltered(products),filteredOrders=dateFiltered(orders);
  $('kProducts').textContent=filteredProducts.length;
  $('kActive').textContent=filteredProducts.filter(p=>p.status==='active').length;
  $('kOrders').textContent=filteredOrders.length;
  $('kPending').textContent=filteredOrders.filter(o=>o.status==='Pending').length;
  $('rangeSummary').textContent=($('dateFrom').value||'All dates')+' → '+($('dateTo').value||'Today / future')+' · '+($('dateBasis').value==='updated'?'Updated Date':'Created Date');
- $('productRows').innerHTML=dateFiltered(products).filter(p=>(p.name+' '+p.legacy_id+' '+p.category).toLowerCase().includes(search)).map(p=>
- '<tr><td><div class="row" style="justify-content:flex-start">'+imgTag(cover(p),p.name)+'<div><b>'+esc(p.name)+'</b><div class="muted">#'+esc(p.legacy_id||p.id.slice(0,7))+' · '+esc(p.category)+(p.subcategory_id?' · Subcategory assigned':'')+'</div></div></div></td><td>'+money(p.base_price)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+variants.filter(v=>v.product_id===p.id).length+'</td><td>'+metaLabel('sh_products',p)+'</td><td><div class="tools"><button class="btn small" data-edit-product="'+p.id+'">Edit / Photos</button>'+(roleCan("owner","manager")?'<button type="button" class="btn small danger" data-delete-product="'+p.id+'">Delete</button>':'')+'</div></td></tr>').join('')||'<tr><td colspan="6">No products found</td></tr>';
+ $('productRows').innerHTML=dateFiltered(products).filter(p=>(!productCategoryFilter||p.category_id===productCategoryFilter)&&(!productSubcategoryFilter||p.subcategory_id===productSubcategoryFilter)&&(p.name+' '+p.legacy_id+' '+p.category).toLowerCase().includes(search)).map(p=>
+ '<tr><td><div class="row" style="justify-content:flex-start">'+imgTag(cover(p),p.name)+'<div><b>'+esc(p.name)+'</b><div class="muted">#'+esc(p.legacy_id||p.id.slice(0,7))+' · '+esc(p.category)+(p.subcategory_id?' · '+esc(catalog.getCategories().find(c=>c.id===p.subcategory_id)?.name||'Subcategory'):'')+'</div></div></div></td><td>'+money(p.base_price)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+variants.filter(v=>v.product_id===p.id).length+'</td><td>'+metaLabel('sh_products',p)+'</td><td><div class="tools"><button class="btn small" data-edit-product="'+p.id+'">Edit / Photos</button>'+(roleCan("owner","manager")?'<button type="button" class="btn small danger" data-delete-product="'+p.id+'">Delete</button>':'')+'</div></td></tr>').join('')||'<tr><td colspan="6">No products found</td></tr>';
  $('orderRows').innerHTML=dateFiltered(orders).filter(o=>(!filter||o.status===filter)&&(!oq||[o.order_number,o.customer_name,o.customer_phone].some(v=>String(v||'').toLowerCase().includes(oq)))).map(o=>
  '<tr><td>'+orderThumb(o)+'</td><td><b>'+esc(o.order_number)+'</b><div class="muted">'+fmtDate(o.created_at)+'</div></td><td>'+esc(o.customer_name)+'<div class="muted">'+esc(o.customer_phone)+'</div></td><td>'+money(o.total)+'</td><td><span class="pill">'+esc(o.status)+'</span></td><td>'+esc(o.payment_status)+'</td><td>'+metaLabel('sh_orders',o)+'</td><td><button class="btn small" data-edit-order="'+o.id+'">Process / Invoice</button></td></tr>').join('')||'<tr><td colspan="8">No matching orders</td></tr>';
  $('paymentRows').innerHTML=dateFiltered(payments).map(p=>'<tr><td>'+esc(orders.find(o=>o.id===p.order_id)?.order_number||'—')+'</td><td>'+esc(p.method)+'</td><td>'+esc(p.transaction_id)+'</td><td>'+money(p.amount)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+metaLabel('sh_payments',p)+'</td><td>'+ (roleCan('owner','manager')?'<button class="btn small" data-review="'+p.id+'">Review</button>':'Read only')+'</td></tr>').join('')||'<tr><td colspan="7">No payment reviews</td></tr>';
@@ -676,7 +677,9 @@ $('sendOtp').onclick=loginSend;$('verifyOtp').onclick=loginVerify;
 $('email').onkeydown=e=>{if(e.key==='Enter')loginSend()};$('otp').onkeydown=e=>{if(e.key==='Enter')loginVerify()};
 $('logout').onclick=async()=>{await db.auth.signOut();location.reload()};
 $('refresh').onclick=refresh;$('closeDrawer').onclick=closeDrawer;
-$('productSearch').oninput=render;$('orderSearch').oninput=render;$('statusFilter').onchange=render;
+$('productSearch').oninput=render;
+$('productCategoryFilter').onchange=()=>{catalog.refreshProductFilterOptions();render()};
+$('productSubcategoryFilter').onchange=render;$('orderSearch').oninput=render;$('statusFilter').onchange=render;
 $('bulkProducts').onclick=bulkProductEditor;$('newProduct').onclick=()=>editProduct(null);$('addStaff').onclick=()=>editStaff(null);$('newOrder').onclick=addOrder;
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 document.addEventListener('keydown',e=>{
