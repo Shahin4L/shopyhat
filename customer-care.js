@@ -1,0 +1,142 @@
+/* SHOPYHAT Customer Care: reviews, issue reporting and private case-status lookup.
+   No third-party translation service; customer personal data is submitted only to SHOPYHAT. */
+(function(){
+'use strict';
+const host=document.getElementById('shCareContent');if(!host)return;
+const api='https://xwfqgmgiunlxzvzoermn.supabase.co';
+const key='sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP';
+const endpoint=api+'/functions/v1/shopyhat-customer-care';
+let tab='reviews',products=[],reviews=[],loading=true,loadError='',selectedProduct='';
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+const bn=()=>{try{return localStorage.getItem('sh_language')==='bn'}catch{return false}};
+const t=(en,bd)=>bn()?bd:en;
+const productName=p=>bn()&&p.name_bn?p.name_bn:p.name;
+const categoriesBN={'Damaged Item':'ক্ষতিগ্রস্ত পণ্য','Wrong Item':'ভুল পণ্য','Missing Item':'পণ্য অনুপস্থিত','Delivery Delay':'ডেলিভারিতে দেরি','Payment Issue':'পেমেন্ট সমস্যা','Return / Exchange':'রিটার্ন / এক্সচেঞ্জ','Product Quality':'পণ্যের মান','Other':'অন্যান্য'};
+const statusesBN={'Submitted':'জমা হয়েছে','Under Review':'পর্যালোচনাধীন','Investigating':'তদন্ত চলছে','Awaiting Customer':'গ্রাহকের উত্তরের অপেক্ষায়','Resolution Proposed':'সমাধানের প্রস্তাব দেওয়া হয়েছে','Resolved':'সমাধান হয়েছে','Closed':'বন্ধ','Reopened':'পুনরায় খোলা'};
+const msg=(text,error=false)=>{const el=document.getElementById('careMsg');if(el){el.innerHTML='<div class="'+(error?'care-error':'care-success')+'" role="status">'+esc(text)+'</div>';el.scrollIntoView({block:'nearest',behavior:'smooth'})}};
+const formatDate=value=>new Date(value).toLocaleDateString(bn()?'bn-BD':'en-BD',{year:'numeric',month:'short',day:'numeric',timeZone:'Asia/Dhaka'});
+const opts=()=>'<option value="">'+t('Choose a product','পণ্য নির্বাচন করুন')+'</option>'+products.map(p=>'<option value="'+esc(p.id)+'" '+(p.id===selectedProduct?'selected':'')+'>'+esc(productName(p))+'</option>').join('');
+const nav=()=>{document.querySelectorAll('[data-care-tab]').forEach(b=>{b.classList.toggle('on',b.dataset.careTab===tab);b.setAttribute('aria-pressed',String(b.dataset.careTab===tab))})};
+const honeypot='<div class="care-honeypot" aria-hidden="true"><label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>';
+const submitButton=label=>'<button class="btn" type="submit">'+esc(label)+'</button>';
+async function getCatalog(){
+ const url=api+'/rest/v1/sh_products?select=id,legacy_id,name,name_bn&status=eq.active&order=created_at.desc&limit=200';
+ const r=await fetch(url,{headers:{apikey:key},cache:'no-store'});if(!r.ok)throw Error('Product list unavailable');return r.json();
+}
+async function getReviews(){
+ const url=api+'/rest/v1/sh_reviews?select=id,product_id,reviewer_name,rating,title,review_text,staff_response,created_at&status=eq.Approved&order=created_at.desc&limit=50';
+ const r=await fetch(url,{headers:{apikey:key},cache:'no-store'});if(!r.ok)throw Error('Reviews unavailable');return r.json();
+}
+async function reloadReviews(){
+ try{reviews=await getReviews();render()}catch(e){loadError=e.message;render()}
+}
+function render(){
+ nav();
+ document.getElementById('carePageTitle').textContent=t('Reviews & Customer Support','রিভিউ ও গ্রাহক সহায়তা');
+ document.getElementById('carePageIntro').textContent=t('Share feedback, report an issue with evidence, or track the latest case status.','মতামত দিন, ছবি বা ভিডিওসহ অভিযোগ জানান অথবা কেসের সর্বশেষ অবস্থা দেখুন।');
+ document.querySelector('[data-care-tab=reviews]').textContent=t('★ Product Reviews','★ পণ্যের রিভিউ');
+ document.querySelector('[data-care-tab=issue]').textContent=t('⚑ Report an Issue','⚑ সমস্যা জানান');
+ document.querySelector('[data-care-tab=track]').textContent=t('◷ Track My Case','◷ কেস ট্র্যাক করুন');
+ if(tab==='reviews')return renderReviews();
+ if(tab==='issue')return renderIssue();
+ renderTrack();
+}
+function renderReviews(){
+ const filtered=selectedProduct?reviews.filter(r=>r.product_id===selectedProduct):reviews;
+ host.innerHTML='<h2>'+t('What customers are saying','ক্রেতারা যা বলছেন')+'</h2><p class="care-intro">'+t('Only approved reviews are displayed. Reviews are submitted by visitors and are not independently purchase-verified.','শুধুমাত্র অনুমোদিত রিভিউ দেখানো হয়। রিভিউগুলো দর্শকদের জমা দেওয়া; আলাদাভাবে ক্রয় যাচাই করা হয়নি।')+'</p>'+
+ '<div class="care-grid"><div><label for="careReviewFilter">'+t('Filter by product','পণ্য অনুযায়ী দেখুন')+'</label><select id="careReviewFilter">'+opts()+'</select></div><div style="display:flex;align-items:end"><button class="btn" id="careWriteReview" type="button">'+t('＋ Write a Review','＋ রিভিউ লিখুন')+'</button></div></div>'+
+ '<div class="care-rule"></div><div id="careReviewCards" class="care-cards">'+(loading?'<p>'+t('Loading reviews…','রিভিউ লোড হচ্ছে…')+'</p>':loadError?'<p>'+esc(loadError)+'</p>':filtered.map(r=>'<article class="care-card"><div class="care-titlebar"><b>'+esc(productName(products.find(p=>p.id===r.product_id)||{name:'Product'}))+'</b><span class="care-stars">'+('★'.repeat(r.rating))+'</span></div><h3>'+esc(r.title||t('Customer review','ক্রেতার রিভিউ'))+'</h3><p>'+esc(r.review_text)+'</p><div class="care-hint">'+esc(r.reviewer_name)+' · '+formatDate(r.created_at)+'</div>'+(r.staff_response?'<div class="care-rule"></div><b>'+t('SHOPYHAT response','SHOPYHAT-এর উত্তর')+'</b><p>'+esc(r.staff_response)+'</p>':'')+'</article>').join('')||'<p>'+t('No approved reviews yet. Be the first to share your experience.','এখনো কোনো অনুমোদিত রিভিউ নেই। প্রথম রিভিউটি দিতে পারেন।')+'</p>')+'</div><div id="careMsg"></div>';
+ document.getElementById('careReviewFilter').onchange=e=>{selectedProduct=e.target.value;renderReviews()};
+ document.getElementById('careWriteReview').onclick=renderReviewForm;
+}
+function renderReviewForm(){
+ host.innerHTML='<h2>'+t('Write a Product Review','পণ্যের রিভিউ দিন')+'</h2><p class="care-intro">'+t('Be specific and respectful. Your review will appear after moderation. Do not include phone numbers, addresses or other personal information.','সুনির্দিষ্ট ও শালীনভাবে লিখুন। যাচাইয়ের পর রিভিউ প্রকাশিত হবে। ফোন নম্বর, ঠিকানা বা ব্যক্তিগত তথ্য লিখবেন না।')+'</p>'+
+ '<form id="careReviewForm">'+honeypot+'<label for="rvProduct">'+t('Product *','পণ্য *')+'</label><select id="rvProduct" name="product_id" required>'+opts()+'</select>'+
+ '<div class="care-grid"><div><label for="rvName">'+t('Your Name *','আপনার নাম *')+'</label><input id="rvName" name="reviewer_name" required minlength="2" maxlength="90" autocomplete="name"></div><div><label for="rvRating">'+t('Rating *','রেটিং *')+'</label><select id="rvRating" name="rating" required><option value="5">★★★★★ (5)</option><option value="4">★★★★☆ (4)</option><option value="3">★★★☆☆ (3)</option><option value="2">★★☆☆☆ (2)</option><option value="1">★☆☆☆☆ (1)</option></select></div></div>'+
+ '<label for="rvTitle">'+t('Review Title (optional)','রিভিউ শিরোনাম (ঐচ্ছিক)')+'</label><input id="rvTitle" name="title" maxlength="120">'+
+ '<label for="rvText">'+t('Your Experience *','আপনার অভিজ্ঞতা *')+'</label><textarea id="rvText" name="review_text" minlength="12" maxlength="1200" required></textarea>'+
+ '<p class="care-hint">'+t('Moderation is required; submitting does not guarantee publication.','অনুমোদনের পর রিভিউ প্রকাশ হতে পারে; জমা দিলেই প্রকাশ নিশ্চিত নয়।')+'</p>'+submitButton(t('Submit Review','রিভিউ জমা দিন'))+' <button type="button" class="btn ghost" id="careReviewBack">'+t('← Back to Reviews','← রিভিউতে ফিরে যান')+'</button></form><div id="careMsg"></div>';
+ document.getElementById('careReviewBack').onclick=renderReviews;
+ document.getElementById('careReviewForm').onsubmit=async e=>{
+  e.preventDefault();const f=e.currentTarget,button=f.querySelector('button[type=submit]');button.disabled=true;
+  const p=Object.fromEntries(new FormData(f).entries());p.action='review';
+  try{const r=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json','apikey':key},body:JSON.stringify(p)});const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Review not submitted');
+   f.reset();msg(t('Thank you! Your review is waiting for approval.','ধন্যবাদ! আপনার রিভিউ অনুমোদনের অপেক্ষায় আছে।'));
+  }catch(err){msg(err.message,true)}finally{button.disabled=false}
+ };
+}
+function renderIssue(){
+ host.innerHTML='<h2>'+t('Report a Problem','সমস্যা জানান')+'</h2><p class="care-intro">'+t('Explain the issue clearly and attach up to three photos/videos. Our team will review it and update your case.','সমস্যাটি স্পষ্ট করে লিখুন এবং সর্বোচ্চ তিনটি ছবি/ভিডিও দিন। আমাদের টিম যাচাই করে কেস আপডেট করবে।')+'</p><form id="careIssueForm" enctype="multipart/form-data">'+honeypot+
+ '<div class="care-grid"><div><label for="csName">'+t('Your Name *','আপনার নাম *')+'</label><input id="csName" name="customer_name" required minlength="2" maxlength="100" autocomplete="name"></div><div><label for="csPhone">'+t('Mobile Number *','মোবাইল নম্বর *')+'</label><input id="csPhone" name="phone" required inputmode="tel" placeholder="01XXXXXXXXX" maxlength="14" autocomplete="tel"></div>'+
+ '<div><label for="csEmail">'+t('Email (optional)','ইমেইল (ঐচ্ছিক)')+'</label><input id="csEmail" name="contact_email" type="email" maxlength="160"></div><div><label for="csOrder">'+t('Order Number (if available)','অর্ডার নম্বর (থাকলে)')+'</label><input id="csOrder" name="order_number" maxlength="120"></div>'+
+ '<div><label for="csProduct">'+t('Product (optional)','পণ্য (ঐচ্ছিক)')+'</label><select id="csProduct" name="product_id">'+opts()+'</select></div><div><label for="csCategory">'+t('Issue Category *','সমস্যার ধরন *')+'</label><select id="csCategory" name="category" required>'+['Damaged Item','Wrong Item','Missing Item','Delivery Delay','Payment Issue','Return / Exchange','Product Quality','Other'].map(x=>'<option value="'+esc(x)+'">'+esc(bn()?categoriesBN[x]:x)+'</option>').join('')+'</select></div></div>'+
+ '<label for="csSubject">'+t('Issue Subject *','সমস্যার শিরোনাম *')+'</label><input id="csSubject" name="subject" required minlength="5" maxlength="160">'+
+ '<label for="csDescription">'+t('Describe the Problem *','সমস্যার বিস্তারিত *')+'</label><textarea id="csDescription" name="description" minlength="20" maxlength="2500" required placeholder="'+t('What happened, when, and what resolution do you expect?','কী হয়েছে, কবে হয়েছে এবং কী সমাধান চান?')+'"></textarea>'+
+ '<label for="csMedia">'+t('Photos or Videos (optional)','ছবি বা ভিডিও (ঐচ্ছিক)')+'</label><input id="csMedia" name="media" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" multiple><div id="careMediaPreview" class="care-media-preview"></div>'+
+ '<p class="care-hint">'+t('Max 3 files. JPG, PNG, WebP, MP4 or WebM. Max 15 MB per file and 20 MB total. Attachments are private and used only to investigate your case.','সর্বোচ্চ ৩টি ফাইল। JPG, PNG, WebP, MP4 বা WebM। প্রতি ফাইল সর্বোচ্চ ১৫ MB এবং মোট ২০ MB। সংযুক্তি ব্যক্তিগত থাকবে ও অভিযোগ তদন্তেই ব্যবহার হবে।')+'</p>'+
+ '<p class="care-hint">'+t('For damaged, defective or wrong items, contact SHOPYHAT within 3 calendar days of delivery under the published policy.','ক্ষতিগ্রস্ত, ত্রুটিপূর্ণ বা ভুল পণ্যের ক্ষেত্রে প্রকাশিত নীতিমালা অনুযায়ী ডেলিভারির ৩ দিনের মধ্যে যোগাযোগ করুন।')+'</p>'+
+ '<label><input id="csConsent" type="checkbox" required style="width:auto"> '+t('I agree to provide this information for issue investigation and customer support.','অভিযোগ তদন্ত ও গ্রাহক সহায়তার জন্য তথ্য ব্যবহারে আমি সম্মত।')+'</label><div class="care-spaced">'+submitButton(t('Submit Issue','অভিযোগ জমা দিন'))+'</div></form><div id="careMsg"></div>';
+ let previews=[];document.getElementById('csMedia').onchange=e=>{
+  previews.forEach(URL.revokeObjectURL);previews=[];
+  const files=[...e.target.files],out=document.getElementById('careMediaPreview');out.innerHTML='';
+  if(files.length>3||files.reduce((n,f)=>n+f.size,0)>20*1024*1024){msg(t('Select at most three files, 20MB total.','সর্বোচ্চ ৩টি ফাইল, মোট ২০ MB নির্বাচন করুন।'),true);e.target.value='';return}
+  files.forEach(f=>{const u=URL.createObjectURL(f);previews.push(u);const elem=f.type.startsWith('video/')?document.createElement('video'):document.createElement('img');elem.src=u;elem.alt='Selected evidence';out.append(elem)});
+ };
+ document.getElementById('careIssueForm').onsubmit=async e=>{
+  e.preventDefault();const f=e.currentTarget,button=f.querySelector('button[type=submit]');button.disabled=true;
+  const body=new FormData(f);body.set('action','case');
+  try{const r=await fetch(endpoint,{method:'POST',headers:{apikey:key},body});const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Could not submit issue');
+   f.reset();document.getElementById('careMediaPreview').innerHTML='';previews.forEach(URL.revokeObjectURL);previews=[];
+   msg(t('Issue submitted. Save this Case ID: ','অভিযোগ জমা হয়েছে। এই কেস আইডি সংরক্ষণ করুন: ')+j.case_number+'. '+t('Use Track My Case with your mobile number to check staff feedback.','মোবাইল নম্বর দিয়ে Track My Case-এ আপডেট দেখুন।'));
+   try{localStorage.setItem('sh_last_case_number',j.case_number)}catch{}
+  }catch(err){msg(err.message,true)}finally{button.disabled=false}
+ };
+}
+function renderTrack(){
+ let last='';try{last=localStorage.getItem('sh_last_case_number')||''}catch{}
+ host.innerHTML='<h2>'+t('Track Your Support Case','আপনার অভিযোগের অবস্থা দেখুন')+'</h2><p class="care-intro">'+t('Enter the Case ID from your confirmation and the mobile number you submitted. Only the latest customer-facing feedback is shown.','অভিযোগ জমার সময় পাওয়া Case ID ও আপনার মোবাইল নম্বর দিন। শুধু সর্বশেষ গ্রাহক-উপযোগী আপডেট দেখানো হবে।')+'</p><form id="careTrackForm"><div class="care-grid"><div><label for="careCaseId">'+t('Case ID','কেস আইডি')+'</label><input id="careCaseId" name="case_number" required placeholder="CS-XXXXXXXXXX" value="'+esc(last)+'"></div><div><label for="careCasePhone">'+t('Mobile Number','মোবাইল নম্বর')+'</label><input id="careCasePhone" name="phone" required inputmode="tel" placeholder="01XXXXXXXXX"></div></div><div class="care-spaced">'+submitButton(t('Check Status','অবস্থা দেখুন'))+'</div></form><div id="careMsg"></div>';
+ document.getElementById('careTrackForm').onsubmit=async e=>{
+  e.preventDefault();const f=e.currentTarget,button=f.querySelector('button[type=submit]');button.disabled=true;
+  try{const p=Object.fromEntries(new FormData(f).entries());p.action='status';
+   const r=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json','apikey':key},body:JSON.stringify(p)});
+   const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Case not found');
+   const box=document.getElementById('careMsg');
+   const isOpen=!['Closed','Resolved'].includes(j.status);
+   box.innerHTML='<div class="care-card" style="margin-top:18px"><div class="care-titlebar"><b>'+esc(j.case_number)+'</b><span class="care-status">'+esc(bn()?(statusesBN[j.status]||j.status):j.status)+'</span></div><p>'+t('Last updated: ','সর্বশেষ আপডেট: ')+formatDate(j.updated_at)+'</p><h3>'+t('Feedback from SHOPYHAT','SHOPYHAT-এর উত্তর')+'</h3><p>'+esc(j.feedback||t('Your case is being reviewed.','আপনার অভিযোগ পর্যালোচনা করা হচ্ছে।'))+'</p>'+
+   (isOpen?'<div class="care-rule"></div><h3>'+t('Add Information / Reply','অতিরিক্ত তথ্য / উত্তর দিন')+'</h3><form id="careReplyForm"><label for="careReplyText">'+t('Your Response','আপনার উত্তর')+'</label><textarea id="careReplyText" minlength="10" maxlength="2000" required placeholder="'+t('Share requested information or a useful update…','প্রয়োজনীয় তথ্য বা নতুন আপডেট লিখুন…')+'"></textarea><div class="care-spaced"><button class="btn" type="submit">'+t('Send Reply','উত্তর পাঠান')+'</button></div></form><div id="careReplyMsg"></div>':'<p class="care-hint">'+t('This case is closed. Submit a new issue if you need further assistance.','কেসটি বন্ধ। আরও সহায়তা লাগলে নতুন অভিযোগ জমা দিন।')+'</p>')+'</div>';
+   const form=box.querySelector('#careReplyForm');
+   if(form)form.onsubmit=async ev=>{
+     ev.preventDefault();const b=form.querySelector('button[type=submit]');b.disabled=true;
+     try{
+       const payload={action:'reply',case_number:j.case_number,phone:p.phone,message:form.querySelector('textarea').value};
+       const response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json',apikey:key},body:JSON.stringify(payload)});
+       const out=await response.json();if(!response.ok||!out.ok)throw Error(out.error||'Reply not saved');
+       form.reset();box.querySelector('#careReplyMsg').innerHTML='<div class="care-success">'+t('Reply added. Our team can now review your information.','আপনার উত্তর জমা হয়েছে। আমাদের টিম এখন তথ্যটি পর্যালোচনা করতে পারবে।')+'</div>';
+     }catch(err){box.querySelector('#careReplyMsg').innerHTML='<div class="care-error">'+esc(err.message)+'</div>'}
+     finally{b.disabled=false}
+   };
+  }catch(err){msg(err.message,true)}finally{button.disabled=false}
+ };
+}
+function switchTab(next){tab=next;render()}
+document.querySelectorAll('[data-care-tab]').forEach(el=>el.onclick=()=>switchTab(el.dataset.careTab));
+function injectProductReview(){
+ const body=document.querySelector('#prodBox .pd .body');
+ if(!body)return;
+ const existing=body.querySelector('#productReviewAction');if(existing){existing.textContent=t('★ Reviews & Write a Review','★ রিভিউ দেখুন ও লিখুন');return;}
+ const button=document.createElement('button');button.id='productReviewAction';button.type='button';button.className='btn line';
+ button.textContent=t('★ Reviews & Write a Review','★ রিভিউ দেখুন ও লিখুন');
+ button.style.marginTop='12px';
+ const productId=typeof cur!=='undefined'&&cur?.p?.id;
+ button.onclick=()=>{
+  selectedProduct=products.find(p=>String(p.legacy_id)===String(productId))?.id||'';
+  if(typeof closeAll==='function')closeAll();
+  location.hash='#care';tab='reviews';render();
+ };
+ body.append(button);
+}
+const prodBox=document.getElementById('prodBox');if(prodBox){new MutationObserver(injectProductReview).observe(prodBox,{childList:true,subtree:false});injectProductReview()}
+window.addEventListener('shopyhat:languagechange',()=>{render();injectProductReview()});
+Promise.all([getCatalog(),getReviews()]).then(([p,r])=>{products=p;reviews=r;loading=false;render()}).catch(e=>{loading=false;loadError=e.message;render()});
+render();
+})();

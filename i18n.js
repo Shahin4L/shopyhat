@@ -42,7 +42,8 @@ const EXTRAS = {
  'Sender mobile':'প্রেরকের মোবাইল','Payment verification':'পেমেন্ট যাচাই',
  'Manual verification':'ম্যানুয়াল যাচাই','Manual transfer':'ম্যানুয়াল ট্রান্সফার',
  'Verification required':'যাচাই আবশ্যক','Order placed':'অর্ডার দেওয়া হয়েছে',
- 'Contact support':'সহায়তার জন্য যোগাযোগ করুন'
+ 'Contact support':'সহায়তার জন্য যোগাযোগ করুন',
+ 'Reviews & Support':'রিভিউ ও সহায়তা','Reviews & Issue Support':'রিভিউ ও সমস্যা সমাধান'
 };
 for(const [en,bn] of Object.entries(EXTRAS))EN.set(en,bn);
 // Text fragments are intentionally separate: HTML templates wrap numbers and names

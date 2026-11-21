@@ -7,7 +7,7 @@ const money=v=>'৳'+Number(v||0).toLocaleString('en-BD',{maximumFractionDigits:
 const fmtDate=v=>v?new Date(v).toLocaleString('en-BD',{timeZone:'Asia/Dhaka',dateStyle:'medium',timeStyle:'short'}):'—';
 const roleCan=(...r)=>r.includes(role);
 const imageUrl=v=>{const s=String(v||'');const m=s.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||s.match(/[?&]id=([\w-]+)/);return m&&s.includes('google.com')?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000':s};
-let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],activePage='products';
+let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],reviews=[],cases=[],caseMedia=[],caseUpdates=[],caseReplies=[],activePage='products';
 function notice(id,message,error=false){$(id).textContent=message;$(id).classList.toggle('error',!!error)}
 function show(id,on){$(id).classList.toggle('hidden',!on)}
 function drawer(title,html){$('drawerTitle').textContent=title;$('drawerBody').innerHTML=html;notice('drawerMsg','');show('overlay',true)}
@@ -127,17 +127,17 @@ async function boot(){const {data:{user},error}=await db.auth.getUser();
  if(r.error||!r.data?.active){await db.auth.signOut();show('login',true);show('dashboard',false);show('logout',false);return notice('loginMsg','This account is not an active SHOPYHAT staff member. Ask the owner to grant access.',true)}
  actor=user;role=r.data.role;$('profile').textContent=(r.data.display_name||user.email)+' · '+role;
  show('login',false);show('dashboard',true);show('logout',true);show('usersTab',role==='owner');show('addStaff',role==='owner');show('activityTab',roleCan('owner','manager'));
- show('newProduct',roleCan('owner','manager'));show('newOrder',roleCan('owner','manager','operator'));
+ show('newProduct',roleCan('owner','manager'));show('bulkProducts',roleCan('owner','manager'));show('newOrder',roleCan('owner','manager','operator'));
  await refresh()}
 async function refresh(){notice('appMsg','Loading live data…');
  try{
- const [p,v,i,o,oi,pa,st]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff')]);
- products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;
+ const [p,v,i,o,oi,pa,st,rv,cs,cm,cu,cr]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff'),query('sh_reviews'),query('sh_customer_cases'),query('sh_case_media'),query('sh_case_updates'),query('sh_case_replies')]);
+ products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;reviews=rv;cases=cs;caseMedia=cm;caseUpdates=cu;caseReplies=cr;
  try{await loadAudit()}catch(e){audit=[];console.warn('Audit log not loaded:',e.message)}
  $('kProducts').textContent=p.length;$('kActive').textContent=p.filter(x=>x.status==='active').length;$('kOrders').textContent=o.length;$('kPending').textContent=o.filter(x=>x.status==='Pending').length;
  render();notice('appMsg','Last refreshed '+new Date().toLocaleTimeString('en-BD'))}
  catch(e){notice('appMsg',e.message,true)}}
-function showPage(page){if(page==='activity'&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
+function showPage(page){if(page==='activity'&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity','reviews','cases'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
 function cover(product){const base=images.find(i=>i.product_id===product.id&&!i.variant_id);if(base)return base.image_url;
  const v=variants.find(x=>x.product_id===product.id);return images.find(i=>i.variant_id===v?.id)?.image_url||''}
 function render(){
@@ -155,7 +155,79 @@ function render(){
  '<tr><td>'+orderThumb(o)+'</td><td><b>'+esc(o.order_number)+'</b><div class="muted">'+fmtDate(o.created_at)+'</div></td><td>'+esc(o.customer_name)+'<div class="muted">'+esc(o.customer_phone)+'</div></td><td>'+money(o.total)+'</td><td><span class="pill">'+esc(o.status)+'</span></td><td>'+esc(o.payment_status)+'</td><td>'+metaLabel('sh_orders',o)+'</td><td><button class="btn small" data-edit-order="'+o.id+'">Process / Invoice</button></td></tr>').join('')||'<tr><td colspan="8">No matching orders</td></tr>';
  $('paymentRows').innerHTML=dateFiltered(payments).map(p=>'<tr><td>'+esc(orders.find(o=>o.id===p.order_id)?.order_number||'—')+'</td><td>'+esc(p.method)+'</td><td>'+esc(p.transaction_id)+'</td><td>'+money(p.amount)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+metaLabel('sh_payments',p)+'</td><td>'+ (roleCan('owner','manager')?'<button class="btn small" data-review="'+p.id+'">Review</button>':'Read only')+'</td></tr>').join('')||'<tr><td colspan="7">No payment reviews</td></tr>';
  $('staffRows').innerHTML=dateFiltered(staff).map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(x.display_name)+'</td><td>'+esc(x.role)+'</td><td>'+ (x.active?'Active':'Disabled')+'</td><td>'+metaLabel('sh_staff',x,x.email)+'</td><td>'+(x.role==='owner'?'Protected':'<button class="btn small" data-edit-staff="'+esc(x.email)+'">Edit</button>')+'</td></tr>').join('')||'<tr><td colspan="6">No staff</td></tr>';
- renderAudit();
+ renderAudit();renderReviews();renderCases();
+}
+
+function renderReviews(){
+ const filter=$('reviewStatusFilter').value,rows=dateFiltered(reviews).filter(r=>!filter||r.status===filter).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ $('reviewsRows').innerHTML=rows.map(r=>'<tr><td>'+fmtDate(r.created_at)+'</td><td>'+esc(products.find(p=>p.id===r.product_id)?.name||'Deleted product')+'</td><td>'+esc(r.reviewer_name)+'<div class="muted">'+('★'.repeat(r.rating))+'</div></td><td><b>'+esc(r.title)+'</b><div class="muted">'+esc(r.review_text.slice(0,110))+'</div></td><td><span class="pill">'+esc(r.status)+'</span></td><td>'+esc(r.moderated_by||'—')+'<div class="muted">'+fmtDate(r.moderated_at)+'</div></td><td><button class="btn small" data-review-customer="'+r.id+'">Review</button></td></tr>').join('')||'<tr><td colspan="7">No customer reviews match your filters.</td></tr>';
+}
+function moderateReview(id){
+ const r=reviews.find(r=>r.id===id);if(!r)return;
+ const edit=roleCan('owner','manager');
+ drawer('Moderate Customer Review',`<p class="muted">${esc(products.find(p=>p.id===r.product_id)?.name||'Product')} · ${fmtDate(r.created_at)}</p><h3>${esc(r.reviewer_name)} · ${'★'.repeat(r.rating)}</h3><h4>${esc(r.title)}</h4><p style="white-space:pre-wrap">${esc(r.review_text)}</p><div class="badge">Customer reviews remain hidden until approved. Reject reviews containing personal contact information, offensive content, or unrelated claims.</div>
+ <form id="reviewModeration"><label>Moderation Status</label><select name="status" ${edit?'':'disabled'}>${['Pending','Approved','Rejected'].map(x=>'<option '+(x===r.status?'selected':'')+'>'+x+'</option>').join('')}</select>
+ <label>Public Staff Response (optional)</label><textarea name="staff_response" maxlength="1000" ${edit?'':'readonly'}>${esc(r.staff_response||'')}</textarea>
+ <div class="editor-actions"><button type="button" class="btn" id="backFromReview">← Back to Reviews</button><button class="btn primary" ${edit?'':'disabled'} type="submit">Save Review Decision</button></div></form>`);
+ $('backFromReview').onclick=closeDrawer;
+ $('reviewModeration').onsubmit=async e=>{e.preventDefault();if(!edit)return;const f=formData('reviewModeration');
+ const res=await db.from('sh_reviews').update({status:f.status,staff_response:String(f.staff_response||'').trim()}).eq('id',id);
+ if(res.error)return notice('drawerMsg',res.error.message,true);
+ await refresh();closeDrawer();notice('appMsg','Review moderation saved.')};
+}
+function renderCases(){
+ const status=$('caseStatusFilter').value,priority=$('casePriorityFilter').value,search=$('caseSearch').value.trim().toLowerCase();
+ const scoped=dateFiltered(cases),rows=scoped.filter(c=>(!status||c.status===status)&&(!priority||c.priority===priority)&&(!search||[c.case_number,c.customer_name,c.order_number,c.subject,c.category].some(v=>String(v||'').toLowerCase().includes(search)))).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ $('cTotal').textContent=scoped.length;$('cOpen').textContent=scoped.filter(c=>!['Closed','Resolved'].includes(c.status)).length;
+ $('cUrgent').textContent=scoped.filter(c=>['Urgent','High'].includes(c.priority)&&!['Closed','Resolved'].includes(c.status)).length;
+ $('cWaiting').textContent=scoped.filter(c=>c.status==='Awaiting Customer').length;
+ $('casesRows').innerHTML=rows.map(c=>'<tr><td><b>'+esc(c.case_number)+'</b><div class="muted">'+fmtDate(c.created_at)+'</div></td><td>'+esc(c.customer_name)+'<div class="muted">'+esc(c.order_number||'—')+'</div></td><td>'+esc(c.category)+'</td><td><span class="pill">'+esc(c.priority)+'</span></td><td><span class="pill">'+esc(c.status)+'</span></td><td>'+esc(c.assigned_to||'Unassigned')+'<div class="muted">'+fmtDate(c.updated_at)+'</div></td><td><button class="btn small" data-edit-case="'+c.id+'">Manage Case</button></td></tr>').join('')||'<tr><td colspan="7">No cases match your filters.</td></tr>';
+}
+async function manageCase(id){
+ const c=cases.find(c=>c.id===id);if(!c)return;
+ const edit=roleCan('owner','manager','operator');
+ const media=caseMedia.filter(m=>m.case_id===id);
+ const steps=caseUpdates.filter(u=>u.case_id===id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));const replies=caseReplies.filter(r=>r.case_id===id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ drawer('Case '+c.case_number,`
+ <div class="badge"><b>${esc(c.status)}</b> · Priority: ${esc(c.priority)}</div>
+ <div class="split"><section><h3>Customer & Order</h3><p>${esc(c.customer_name)}<br>${esc(c.phone)}<br>${esc(c.contact_email||'—')}<br>Order: ${esc(c.order_number||'—')}</p></section><section><h3>Issue</h3><b>${esc(c.category)}</b><p><b>${esc(c.subject)}</b></p><p style="white-space:pre-wrap">${esc(c.description)}</p></section></div>
+ <h3>Private Evidence</h3><div id="caseEvidence" class="case-evidence"><p class="muted">Loading secure attachments…</p></div>
+ <p class="muted">Media remains private. Links are short-lived, accessible through authenticated staff permissions.</p>
+ <h3>Resolve & Update</h3><form id="caseForm"><div class="fieldrow"><div><label>Case Status</label><select name="status" ${edit?'':'disabled'}>${['Submitted','Under Review','Investigating','Awaiting Customer','Resolution Proposed','Resolved','Closed','Reopened'].map(v=>'<option '+(c.status===v?'selected':'')+'>'+v+'</option>').join('')}</select></div><div><label>Priority</label><select name="priority" ${edit?'':'disabled'}>${['Low','Normal','High','Urgent'].map(v=>'<option '+(c.priority===v?'selected':'')+'>'+v+'</option>').join('')}</select></div></div>
+ <label>Assigned To</label><select name="assigned_to" ${edit?'':'disabled'}><option value="">Unassigned</option>${staff.filter(v=>v.active&&v.role!=='viewer').map(v=>'<option value="'+esc(v.email)+'" '+(v.email===c.assigned_to?'selected':'')+'>'+esc(v.display_name||v.email)+'</option>').join('')}</select>
+ <label>Latest Customer-Facing Feedback</label><textarea name="last_staff_feedback" maxlength="2500" ${edit?'':'readonly'} placeholder="Clear updates, next action, requested evidence, or resolution…">${esc(c.last_staff_feedback||'')}</textarea>
+ <label>Final Resolution / Outcome</label><textarea name="resolution" maxlength="2500" ${edit?'':'readonly'} placeholder="How the issue was resolved…">${esc(c.resolution||'')}</textarea>
+ <div class="editor-actions"><button type="button" class="btn" id="backFromCase">← Back to Cases</button><button class="btn primary" ${edit?'':'disabled'} type="submit">Save & Update Case</button></div></form>
+ <div class="divider"></div><h3>Customer Follow-up Replies</h3><div class="case-timeline">${replies.map(r=>'<div class="case-entry"><b>Customer Reply</b> · '+fmtDate(r.created_at)+'<p style="white-space:pre-wrap">'+esc(r.message)+'</p></div>').join('')||'<p class="muted">No replies yet.</p>'}</div>
+ <div class="divider"></div><h3>Resolution History</h3><div class="case-timeline">${steps.map(u=>'<div class="case-entry"><b>'+esc(u.status_to)+'</b> · '+fmtDate(u.created_at)+'<div class="muted">'+esc(u.actor_email)+'</div><div>'+esc(u.message)+'</div></div>').join('')||'<p class="muted">No history yet.</p>'}</div>`);
+ $('backFromCase').onclick=()=>{closeDrawer();showPage('cases')};
+ const attachments=$('caseEvidence');
+ if(media.length===0)attachments.innerHTML='<span class="muted">No attachments provided.</span>';
+ else{
+  attachments.innerHTML='';
+  for(const m of media){
+   const result=await db.storage.from('shopyhat-case-evidence').createSignedUrl(m.storage_path,300);
+   if(result.error){attachments.insertAdjacentHTML('beforeend','<span class="muted">Secure media unavailable.</span>');continue}
+   const a=document.createElement('a');a.href=result.data.signedUrl;a.target='_blank';a.rel='noopener noreferrer';
+   if(m.media_type.startsWith('image/')){const img=document.createElement('img');img.src=result.data.signedUrl;img.alt='Customer evidence';a.append(img)}else a.textContent='▶ View customer video';
+   attachments.append(a);
+  }
+ }
+ $('caseForm').onsubmit=async e=>{
+  e.preventDefault();if(!edit)return;
+  const f=formData('caseForm'),changes={status:f.status,priority:f.priority,assigned_to:f.assigned_to,resolution:String(f.resolution||'').trim(),last_staff_feedback:String(f.last_staff_feedback||'').trim()};
+  if(['Resolved','Closed'].includes(changes.status)&&changes.resolution.length<10)return notice('drawerMsg','Provide at least 10 characters of final resolution before resolving or closing.',true);
+  if(changes.status==='Closed'&&!['Resolved','Closed'].includes(c.status))return notice('drawerMsg','Set the case to Resolved and save before closing it.',true);
+  if(changes.status==='Reopened'&&!['Resolved','Closed','Reopened'].includes(c.status))return notice('drawerMsg','Only a resolved or closed case can be reopened.',true);
+  if(['Under Review','Investigating','Resolution Proposed','Resolved','Closed'].includes(changes.status)&&!changes.assigned_to)return notice('drawerMsg','Assign a staff member before processing this case.',true);
+  if(changes.status==='Awaiting Customer'&&changes.last_staff_feedback.length<12)return notice('drawerMsg','Tell the customer what additional information is required.',true);
+  const button=e.currentTarget.querySelector('button[type=submit]');button.disabled=true;
+  try{
+   const res=await db.from('sh_customer_cases').update(changes).eq('id',id).select('id').single();
+   if(res.error)throw res.error;
+   await refresh();await manageCase(id);notice('drawerMsg','Case update saved. Customer can track the latest feedback using their Case ID and phone.');
+  }catch(err){button.disabled=false;notice('drawerMsg',err.message,true)}
+ };
 }
 function confirmProductDelete(id){
  if(!roleCan('owner','manager'))return;
@@ -244,16 +316,21 @@ function editProduct(id){
  <p class="muted">Choose JPG, PNG or WebP images (maximum 4 MB each). They upload when the product is saved.</p>
  <input id="productInitialFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple>
  <div id="productInitialPreview" class="photo-upload-preview photo-preview-list"></div></div>
- <button class="btn primary" ${editable?'':'disabled'} type="submit">Save Product & Photos</button></form>
+ <div class="editor-actions">
+ <button type="button" class="btn" id="backFromProduct">← Back to Products</button>
+ <button class="btn primary" ${editable?'':'disabled'} type="submit" data-save-mode="edit">Save Product & Photos</button>
+ <button class="btn" ${editable?'':'disabled'} type="submit" data-save-mode="another">Save & Add Another</button>
+ </div></form>
  ${id?`<div class="media-section">
  <div class="section-heading"><h3>Saved Product Photos</h3><button type="button" class="btn small" data-photos="${id}" data-variant="">Manage Photos</button></div>
  <div class="photos">${productPhotoTiles(group,p.name)}</div>
  <p class="muted">Use × to remove an image.</p></div>
- <div class="media-section"><div class="section-heading"><h3>Step 2 · Color Variants</h3><button type="button" class="btn primary small" data-new-variant="${p.id}">＋ Choose / Add Color</button></div>
+ <div class="media-section"><div class="section-heading"><h3>Step 2 · Color Variants</h3><div class="tools"><button type="button" class="btn primary small" data-new-variant="${p.id}">＋ Add One Color</button><button type="button" class="btn small" data-bulk-variants="${p.id}">＋ Add Multiple Colors</button></div></div>
  ${variantList.map(v=>'<div class="variant-card"><div class="topline"><div><b>'+esc(v.color)+'</b> · '+esc(v.sku||'No SKU')+'<div class="muted">Stock: '+esc(v.stock??'Unlimited')+' · '+money(v.price??p.base_price)+'</div></div><button type="button" class="btn small" data-edit-variant="'+v.id+'">Edit Color / Photos</button></div><div class="photos">'+productPhotoTiles(images.filter(i=>i.variant_id===v.id),v.color)+'</div></div>').join('')||'<p class="muted">No colors yet. Choose a color to create a separate gallery.</p>'}
  </div>`:''}`);
  setupLocalPhotoPreview('productInitialFiles','productInitialPreview');
- $('productForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('productForm');const payload={name:String(f.name).trim(),category:String(f.category).trim(),base_price:Number(f.base_price),old_price:f.old_price?Number(f.old_price):null,description:String(f.description||''),details:String(f.details||''),name_bn:String(f.name_bn||'').trim(),description_bn:String(f.description_bn||'').trim(),details_bn:String(f.details_bn||'').trim(),sizes:String(f.sizes||'').split(',').map(s=>s.trim()).filter(Boolean),status:f.status,is_new:!!f.is_new};
+ $('backFromProduct').onclick=()=>{closeDrawer();showPage('products')};
+ $('productForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('productForm'),saveMode=e.submitter?.dataset?.saveMode||'edit';const payload={name:String(f.name).trim(),category:String(f.category).trim(),base_price:Number(f.base_price),old_price:f.old_price?Number(f.old_price):null,description:String(f.description||''),details:String(f.details||''),name_bn:String(f.name_bn||'').trim(),description_bn:String(f.description_bn||'').trim(),details_bn:String(f.details_bn||'').trim(),sizes:String(f.sizes||'').split(',').map(s=>s.trim()).filter(Boolean),status:f.status,is_new:!!f.is_new};
  try{
  const files=[...($('productInitialFiles')?.files||[])];
  const q=id?db.from('sh_products').update(payload).eq('id',id).select('id').single():db.from('sh_products').insert(payload).select('id').single();
@@ -261,8 +338,9 @@ function editProduct(id){
  let uploaded=0;
  try{uploaded=await uploadProductFiles(r.data.id,null,files)}
  catch(uploadError){await refresh();editProduct(r.data.id);return notice('drawerMsg','Product saved, photo failed: '+uploadError.message,true)}
- await refresh();editProduct(r.data.id);
- notice('drawerMsg','Product saved'+(uploaded?' · '+uploaded+' photos uploaded':'')+'. Choose / Add Color below.');
+ await refresh();
+ if(saveMode==='another'){editProduct(null);notice('drawerMsg','Saved successfully. Add the next product.')}
+ else{editProduct(r.data.id);notice('drawerMsg','Product saved'+(uploaded?' · '+uploaded+' photos uploaded':'')+'. Choose / Add Color below.');}
  }catch(err){notice('drawerMsg',err.message,true)}};
 }
 function editVariant(id,productId){
@@ -271,12 +349,102 @@ function editVariant(id,productId){
  drawer('Color / Variant',`<p class="audit-meta">${id?metaLabel('sh_variants',v):'New variant'}</p><form id="variantForm"><div class="fieldrow"><div><label>Color name</label><input required name="color" value="${esc(v.color)}"></div><div><label>Color hex</label><input name="hex" type="color" value="${esc(/^#[a-f0-9]{6}$/i.test(v.hex||'')?v.hex:'#888888')}"></div>
  <div><label>Variant price (leave blank for product price)</label><input name="price" type="number" min="0" step=".01" value="${esc(v.price??'')}"></div><div><label>Stock (blank = unlimited)</label><input name="stock" type="number" min="0" step="1" value="${esc(v.stock??'')}"></div></div>
  <label>SKU</label><input name="sku" value="${esc(v.sku||'')}"><label><input name="active" type="checkbox" style="width:auto" ${v.active?'checked':''}> Variant enabled</label>
- <button class="btn primary" type="submit">Save Color</button></form>
+ <div class="editor-actions">
+ <button type="button" class="btn" id="backFromVariant">← Back to Product</button>
+ <button class="btn primary" type="submit" data-save-mode="edit">Save Color</button>
+ <button class="btn" type="submit" data-save-mode="another">Save & Add Another Color</button>
+ <button type="button" class="btn" id="openBulkVariants">＋ Add Multiple</button></div></form>
  ${id?'<div class="media-section"><div class="section-heading"><h3>Photos for '+esc(v.color)+'</h3><button type="button" class="btn small" data-photos="'+v.product_id+'" data-variant="'+id+'">＋ Manage Photos</button></div><div class="photos">'+productPhotoTiles(images.filter(i=>i.variant_id===id),v.color)+'</div></div>':''}
  <p class="muted">One color can have multiple photos. Black and Purple maintain separate galleries.</p>`);
- $('variantForm').onsubmit=async e=>{e.preventDefault();if(!roleCan('owner','manager'))return;const f=formData('variantForm');
+ $('backFromVariant').onclick=()=>editProduct(v.product_id);
+ $('openBulkVariants').onclick=()=>bulkVariantEditor(v.product_id);
+ $('variantForm').onsubmit=async e=>{e.preventDefault();if(!roleCan('owner','manager'))return;const f=formData('variantForm'),saveMode=e.submitter?.dataset?.saveMode||'edit';
  const row={product_id:v.product_id,color:String(f.color).trim(),hex:String(f.hex),sku:String(f.sku||'').trim()||null,price:f.price?Number(f.price):null,stock:f.stock===''?null:Number(f.stock),active:!!f.active};
- try{const r=id?await db.from('sh_variants').update(row).eq('id',id).select('id').single():await db.from('sh_variants').insert(row).select('id').single();if(r.error)throw r.error;await refresh();editVariant(r.data.id,v.product_id);notice('drawerMsg','Color saved.')}catch(err){notice('drawerMsg',err.message,true)}};
+ try{const r=id?await db.from('sh_variants').update(row).eq('id',id).select('id').single():await db.from('sh_variants').insert(row).select('id').single();if(r.error)throw r.error;await refresh();if(saveMode==='another'){editVariant(null,v.product_id);notice('drawerMsg','Color saved. Add the next color.')}else{editVariant(r.data.id,v.product_id);notice('drawerMsg','Color saved.')} }catch(err){notice('drawerMsg',err.message,true)}};
+}
+
+
+function bulkProductEditor(){
+ if(!roleCan('owner','manager'))return;
+ drawer('Bulk Add Products',`<div class="badge">Add multiple draft products in one batch (up to 20). After saving, open each product to add photos, Bengali descriptions and color variants, then activate when ready.</div>
+ <form id="bulkProductForm"><div id="bulkProductRows"></div><div class="editor-actions"><button class="btn" id="addBulkProductRow" type="button">＋ Add Product Row</button><button class="btn" id="backFromBulkProducts" type="button">← Back to Products</button><button class="btn primary" id="bulkSaveProducts" type="submit">Save All Draft Products</button></div></form>`);
+ const rows=$('bulkProductRows');
+ const append=()=>{
+  if(rows.children.length>=20)return notice('drawerMsg','Maximum 20 products in one batch.',true);
+  const row=document.createElement('div');row.className='bulk-variant-row';
+  row.innerHTML=`<div class="bulk-color-name"><label>Product Name *</label><input required name="name" minlength="3" maxlength="160" placeholder="Product name"></div>
+   <div><label>Category *</label><input required name="category" maxlength="70" value="Saree"></div>
+   <div><label>Price (BDT) *</label><input required name="price" type="number" min="1" step=".01"></div>
+   <div><label>Old Price</label><input name="old_price" type="number" min="0" step=".01"></div>
+   <div><label>Sizes</label><input name="sizes" placeholder="S, M, L"></div>
+   <button class="btn small danger" type="button" data-bulk-product-remove>Remove</button>`;
+  row.querySelector('[data-bulk-product-remove]').onclick=()=>{if(rows.children.length>1)row.remove()};
+  rows.append(row);
+ };
+ $('addBulkProductRow').onclick=append;
+ $('backFromBulkProducts').onclick=()=>{closeDrawer();showPage('products')};
+ append();append();append();
+ $('bulkProductForm').onsubmit=async e=>{
+  e.preventDefault();const btn=$('bulkSaveProducts');btn.disabled=true;
+  try{
+   const items=[...rows.children].map(el=>({
+     name:el.querySelector('[name=name]').value.trim(),
+     category:el.querySelector('[name=category]').value.trim(),
+     base_price:Number(el.querySelector('[name=price]').value),
+     old_price:el.querySelector('[name=old_price]').value===''?null:Number(el.querySelector('[name=old_price]').value),
+     sizes:el.querySelector('[name=sizes]').value.split(',').map(x=>x.trim()).filter(Boolean),
+     description:'',details:'',status:'draft',is_new:false
+   }));
+   if(items.some(x=>x.name.length<3||x.category.length<2||!Number.isFinite(x.base_price)||x.base_price<=0||x.old_price!==null&&x.old_price<0))throw Error('Every product requires a name, category and valid price.');
+   if(new Set(items.map(x=>x.name.toLowerCase())).size!==items.length)throw Error('Duplicate product names in the batch. Please use unique names.');
+   const result=await db.from('sh_products').insert(items).select('id');
+   if(result.error)throw result.error;
+   await refresh();closeDrawer();showPage('products');notice('appMsg',result.data.length+' draft products added. Edit them to upload photos and colors.');
+  }catch(err){btn.disabled=false;notice('drawerMsg',err.message,true)}
+ };
+}
+function bulkVariantEditor(productId){
+ if(!roleCan('owner','manager'))return;
+ const p=products.find(p=>p.id===productId);if(!p)return;
+ drawer('Add Multiple Colors — '+p.name,`<p class="muted">Add several color variants in one save. Each color can have its own price, stock, SKU and photos afterward. Names must be unique within this product.</p>
+ <div class="badge">Step 1: Add colors → Step 2: Save all → Step 3: Manage photos per color.</div>
+ <form id="bulkVariantForm"><div id="bulkVariantRows"></div>
+ <div class="editor-actions"><button class="btn" type="button" id="bulkAddRow">＋ Add Color Row</button><button class="btn" type="button" id="bulkBack">← Back to Product</button><button type="submit" class="btn primary" id="bulkSave">Save All Colors</button></div></form>`);
+ const rows=$('bulkVariantRows');
+ const addRow=()=>{
+  if(rows.children.length>=20)return notice('drawerMsg','Maximum 20 colors per batch.',true);
+  const row=document.createElement('div');row.className='bulk-variant-row';row.innerHTML=`<div class="bulk-color-name"><label>Color Name</label><input name="bulkColor" maxlength="70" required placeholder="e.g. Purple"></div>
+  <div><label>Color Code</label><input name="bulkHex" type="color" value="#888888"></div>
+  <div><label>Price BDT</label><input name="bulkPrice" type="number" min="0" step=".01" placeholder="Base price"></div>
+  <div><label>Stock</label><input name="bulkStock" type="number" min="0" step="1" placeholder="Unlimited"></div>
+  <div><label>SKU</label><input name="bulkSku" maxlength="90" placeholder="Optional"></div>
+  <button type="button" class="btn small danger" data-bulk-remove>Remove</button>`;
+  row.querySelector('[data-bulk-remove]').onclick=()=>{if(rows.children.length>1)row.remove()};
+  rows.append(row);
+ };
+ $('bulkAddRow').onclick=addRow;
+ $('bulkBack').onclick=()=>editProduct(productId);
+ addRow();addRow();addRow();
+ $('bulkVariantForm').onsubmit=async e=>{
+  e.preventDefault();const button=$('bulkSave');button.disabled=true;
+  try{
+   const data=[...rows.children].map(el=>({
+     product_id:productId,color:el.querySelector('[name=bulkColor]').value.trim(),
+     hex:el.querySelector('[name=bulkHex]').value,
+     price:el.querySelector('[name=bulkPrice]').value===''?null:Number(el.querySelector('[name=bulkPrice]').value),
+     stock:el.querySelector('[name=bulkStock]').value===''?null:Number(el.querySelector('[name=bulkStock]').value),
+     sku:el.querySelector('[name=bulkSku]').value.trim()||null,active:true
+   }));
+   const names=data.map(x=>x.color.toLowerCase());
+   if(data.some(x=>!x.color||x.color.length>70)||new Set(names).size!==names.length)throw Error('Each color must have a unique name.');
+   const existing=new Set(variants.filter(v=>v.product_id===productId).map(v=>v.color.toLowerCase()));
+   if(names.some(x=>existing.has(x)))throw Error('This product already has one of the color names. Edit it instead.');
+   if(data.some(x=>x.stock!==null&&(!Number.isInteger(x.stock)||x.stock<0)))throw Error('Stock must be a non-negative whole number.');
+   const result=await db.from('sh_variants').insert(data).select('id,color');
+   if(result.error)throw result.error;
+   await refresh();editProduct(productId);notice('drawerMsg',result.data.length+' colors added successfully. Open each color to add its photos.');
+  }catch(err){button.disabled=false;notice('drawerMsg',err.message,true)}
+ };
 }
 function editPhotos(productId,variantId){
  const product=products.find(x=>x.id===productId),variant=variants.find(x=>x.id===variantId);
@@ -390,7 +558,7 @@ function exportOrders(){
 }
 $('exportOrders').onclick=exportOrders;
 $('exportAudit').onclick=()=>{if(!roleCan('owner','manager'))return;const rows=filteredAudit().map(a=>({...a,changes:JSON.stringify(a.changes||{})}));exportCSV('SHOPYHAT_Audit_'+todayBD()+'.csv',['created_at','actor_email','actor_role','entity','action','record_id','record_label','changes'],rows)};
-for(const field of ['dateFrom','dateTo','dateBasis','auditEntity','auditAction','auditSearch']){const el=$(field);if(el)el.addEventListener(field==='auditSearch'?'input':'change',()=>{document.querySelectorAll('[data-range]').forEach(b=>b.classList.remove('on'));render()})}
+for(const field of ['dateFrom','dateTo','dateBasis','auditEntity','auditAction','auditSearch','reviewStatusFilter','caseStatusFilter','casePriorityFilter','caseSearch']){const el=$(field);if(el)el.addEventListener(['auditSearch','caseSearch'].includes(field)?'input':'change',()=>{document.querySelectorAll('[data-range]').forEach(b=>b.classList.remove('on'));render()})}
 document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>setDatePreset(b.dataset.range));
 
 $('sendOtp').onclick=loginSend;$('verifyOtp').onclick=loginVerify;
@@ -398,7 +566,7 @@ $('email').onkeydown=e=>{if(e.key==='Enter')loginSend()};$('otp').onkeydown=e=>{
 $('logout').onclick=async()=>{await db.auth.signOut();location.reload()};
 $('refresh').onclick=refresh;$('closeDrawer').onclick=closeDrawer;
 $('productSearch').oninput=render;$('orderSearch').oninput=render;$('statusFilter').onchange=render;
-$('newProduct').onclick=()=>editProduct(null);$('addStaff').onclick=()=>editStaff(null);$('newOrder').onclick=addOrder;
+$('bulkProducts').onclick=bulkProductEditor;$('newProduct').onclick=()=>editProduct(null);$('addStaff').onclick=()=>editStaff(null);$('newOrder').onclick=addOrder;
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape')closeDrawer();
@@ -408,9 +576,12 @@ document.addEventListener('keydown',e=>{
  }
 });
 document.addEventListener('click',e=>{
- const el=e.target.closest('[data-audit-details],[data-edit-product],[data-delete-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-view-photo],[data-edit-order],[data-review],[data-edit-staff]');
+ const el=e.target.closest('[data-bulk-variants],[data-review-customer],[data-edit-case],[data-audit-details],[data-edit-product],[data-delete-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-view-photo],[data-edit-order],[data-review],[data-edit-staff]');
  if(!el)return;
- if(el.dataset.auditDetails)openAuditDetails(el.dataset.auditDetails);
+ if(el.dataset.bulkVariants)bulkVariantEditor(el.dataset.bulkVariants);
+ else if(el.dataset.reviewCustomer)moderateReview(el.dataset.reviewCustomer);
+ else if(el.dataset.editCase)manageCase(el.dataset.editCase);
+ else if(el.dataset.auditDetails)openAuditDetails(el.dataset.auditDetails);
  else if(el.dataset.editProduct)editProduct(el.dataset.editProduct);
  else if(el.dataset.deleteProduct)confirmProductDelete(el.dataset.deleteProduct);
  else if(el.dataset.newVariant)editVariant(null,el.dataset.newVariant);
