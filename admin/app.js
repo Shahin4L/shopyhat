@@ -7,7 +7,7 @@ const money=v=>'৳'+Number(v||0).toLocaleString('en-BD',{maximumFractionDigits:
 const fmtDate=v=>v?new Date(v).toLocaleString('en-BD',{timeZone:'Asia/Dhaka',dateStyle:'medium',timeStyle:'short'}):'—';
 const roleCan=(...r)=>r.includes(role);
 const imageUrl=v=>{const s=String(v||'');const m=s.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||s.match(/[?&]id=([\w-]+)/);return m&&s.includes('google.com')?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000':s};
-let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],activePage='products';
+let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],reviews=[],cases=[],caseMedia=[],caseUpdates=[],activePage='products';
 function notice(id,message,error=false){$(id).textContent=message;$(id).classList.toggle('error',!!error)}
 function show(id,on){$(id).classList.toggle('hidden',!on)}
 function drawer(title,html){$('drawerTitle').textContent=title;$('drawerBody').innerHTML=html;notice('drawerMsg','');show('overlay',true)}
@@ -131,13 +131,13 @@ async function boot(){const {data:{user},error}=await db.auth.getUser();
  await refresh()}
 async function refresh(){notice('appMsg','Loading live data…');
  try{
- const [p,v,i,o,oi,pa,st]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff')]);
- products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;
+ const [p,v,i,o,oi,pa,st,rv,cs,cm,cu]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff'),query('sh_reviews'),query('sh_customer_cases'),query('sh_case_media'),query('sh_case_updates')]);
+ products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;reviews=rv;cases=cs;caseMedia=cm;caseUpdates=cu;
  try{await loadAudit()}catch(e){audit=[];console.warn('Audit log not loaded:',e.message)}
  $('kProducts').textContent=p.length;$('kActive').textContent=p.filter(x=>x.status==='active').length;$('kOrders').textContent=o.length;$('kPending').textContent=o.filter(x=>x.status==='Pending').length;
  render();notice('appMsg','Last refreshed '+new Date().toLocaleTimeString('en-BD'))}
  catch(e){notice('appMsg',e.message,true)}}
-function showPage(page){if(page==='activity'&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
+function showPage(page){if(page==='activity'&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity','reviews','cases'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
 function cover(product){const base=images.find(i=>i.product_id===product.id&&!i.variant_id);if(base)return base.image_url;
  const v=variants.find(x=>x.product_id===product.id);return images.find(i=>i.variant_id===v?.id)?.image_url||''}
 function render(){
@@ -155,7 +155,76 @@ function render(){
  '<tr><td>'+orderThumb(o)+'</td><td><b>'+esc(o.order_number)+'</b><div class="muted">'+fmtDate(o.created_at)+'</div></td><td>'+esc(o.customer_name)+'<div class="muted">'+esc(o.customer_phone)+'</div></td><td>'+money(o.total)+'</td><td><span class="pill">'+esc(o.status)+'</span></td><td>'+esc(o.payment_status)+'</td><td>'+metaLabel('sh_orders',o)+'</td><td><button class="btn small" data-edit-order="'+o.id+'">Process / Invoice</button></td></tr>').join('')||'<tr><td colspan="8">No matching orders</td></tr>';
  $('paymentRows').innerHTML=dateFiltered(payments).map(p=>'<tr><td>'+esc(orders.find(o=>o.id===p.order_id)?.order_number||'—')+'</td><td>'+esc(p.method)+'</td><td>'+esc(p.transaction_id)+'</td><td>'+money(p.amount)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+metaLabel('sh_payments',p)+'</td><td>'+ (roleCan('owner','manager')?'<button class="btn small" data-review="'+p.id+'">Review</button>':'Read only')+'</td></tr>').join('')||'<tr><td colspan="7">No payment reviews</td></tr>';
  $('staffRows').innerHTML=dateFiltered(staff).map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(x.display_name)+'</td><td>'+esc(x.role)+'</td><td>'+ (x.active?'Active':'Disabled')+'</td><td>'+metaLabel('sh_staff',x,x.email)+'</td><td>'+(x.role==='owner'?'Protected':'<button class="btn small" data-edit-staff="'+esc(x.email)+'">Edit</button>')+'</td></tr>').join('')||'<tr><td colspan="6">No staff</td></tr>';
- renderAudit();
+ renderAudit();renderReviews();renderCases();
+}
+
+function renderReviews(){
+ const filter=$('reviewStatusFilter').value,rows=dateFiltered(reviews).filter(r=>!filter||r.status===filter).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ $('reviewsRows').innerHTML=rows.map(r=>'<tr><td>'+fmtDate(r.created_at)+'</td><td>'+esc(products.find(p=>p.id===r.product_id)?.name||'Deleted product')+'</td><td>'+esc(r.reviewer_name)+'<div class="muted">'+('★'.repeat(r.rating))+'</div></td><td><b>'+esc(r.title)+'</b><div class="muted">'+esc(r.review_text.slice(0,110))+'</div></td><td><span class="pill">'+esc(r.status)+'</span></td><td>'+esc(r.moderated_by||'—')+'<div class="muted">'+fmtDate(r.moderated_at)+'</div></td><td><button class="btn small" data-review-customer="'+r.id+'">Review</button></td></tr>').join('')||'<tr><td colspan="7">No customer reviews match your filters.</td></tr>';
+}
+function moderateReview(id){
+ const r=reviews.find(r=>r.id===id);if(!r)return;
+ const edit=roleCan('owner','manager');
+ drawer('Moderate Customer Review',`<p class="muted">${esc(products.find(p=>p.id===r.product_id)?.name||'Product')} · ${fmtDate(r.created_at)}</p><h3>${esc(r.reviewer_name)} · ${'★'.repeat(r.rating)}</h3><h4>${esc(r.title)}</h4><p style="white-space:pre-wrap">${esc(r.review_text)}</p><div class="badge">Customer reviews remain hidden until approved. Reject reviews containing personal contact information, offensive content, or unrelated claims.</div>
+ <form id="reviewModeration"><label>Moderation Status</label><select name="status" ${edit?'':'disabled'}>${['Pending','Approved','Rejected'].map(x=>'<option '+(x===r.status?'selected':'')+'>'+x+'</option>').join('')}</select>
+ <label>Public Staff Response (optional)</label><textarea name="staff_response" maxlength="1000" ${edit?'':'readonly'}>${esc(r.staff_response||'')}</textarea>
+ <div class="editor-actions"><button type="button" class="btn" id="backFromReview">← Back to Reviews</button><button class="btn primary" ${edit?'':'disabled'} type="submit">Save Review Decision</button></div></form>`);
+ $('backFromReview').onclick=closeDrawer;
+ $('reviewModeration').onsubmit=async e=>{e.preventDefault();if(!edit)return;const f=formData('reviewModeration');
+ const res=await db.from('sh_reviews').update({status:f.status,staff_response:String(f.staff_response||'').trim()}).eq('id',id);
+ if(res.error)return notice('drawerMsg',res.error.message,true);
+ await refresh();closeDrawer();notice('appMsg','Review moderation saved.')};
+}
+function renderCases(){
+ const status=$('caseStatusFilter').value,priority=$('casePriorityFilter').value,search=$('caseSearch').value.trim().toLowerCase();
+ const scoped=dateFiltered(cases),rows=scoped.filter(c=>(!status||c.status===status)&&(!priority||c.priority===priority)&&(!search||[c.case_number,c.customer_name,c.order_number,c.subject,c.category].some(v=>String(v||'').toLowerCase().includes(search)))).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ $('cTotal').textContent=scoped.length;$('cOpen').textContent=scoped.filter(c=>!['Closed','Resolved'].includes(c.status)).length;
+ $('cUrgent').textContent=scoped.filter(c=>['Urgent','High'].includes(c.priority)&&!['Closed','Resolved'].includes(c.status)).length;
+ $('cWaiting').textContent=scoped.filter(c=>c.status==='Awaiting Customer').length;
+ $('casesRows').innerHTML=rows.map(c=>'<tr><td><b>'+esc(c.case_number)+'</b><div class="muted">'+fmtDate(c.created_at)+'</div></td><td>'+esc(c.customer_name)+'<div class="muted">'+esc(c.order_number||'—')+'</div></td><td>'+esc(c.category)+'</td><td><span class="pill">'+esc(c.priority)+'</span></td><td><span class="pill">'+esc(c.status)+'</span></td><td>'+esc(c.assigned_to||'Unassigned')+'<div class="muted">'+fmtDate(c.updated_at)+'</div></td><td><button class="btn small" data-edit-case="'+c.id+'">Manage Case</button></td></tr>').join('')||'<tr><td colspan="7">No cases match your filters.</td></tr>';
+}
+async function manageCase(id){
+ const c=cases.find(c=>c.id===id);if(!c)return;
+ const edit=roleCan('owner','manager','operator');
+ const media=caseMedia.filter(m=>m.case_id===id);
+ const steps=caseUpdates.filter(u=>u.case_id===id).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ drawer('Case '+c.case_number,`
+ <div class="badge"><b>${esc(c.status)}</b> · Priority: ${esc(c.priority)}</div>
+ <div class="split"><section><h3>Customer & Order</h3><p>${esc(c.customer_name)}<br>${esc(c.phone)}<br>${esc(c.contact_email||'—')}<br>Order: ${esc(c.order_number||'—')}</p></section><section><h3>Issue</h3><b>${esc(c.category)}</b><p><b>${esc(c.subject)}</b></p><p style="white-space:pre-wrap">${esc(c.description)}</p></section></div>
+ <h3>Private Evidence</h3><div id="caseEvidence" class="case-evidence"><p class="muted">Loading secure attachments…</p></div>
+ <p class="muted">Media remains private. Links are short-lived, accessible through authenticated staff permissions.</p>
+ <h3>Resolve & Update</h3><form id="caseForm"><div class="fieldrow"><div><label>Case Status</label><select name="status" ${edit?'':'disabled'}>${['Submitted','Under Review','Investigating','Awaiting Customer','Resolution Proposed','Resolved','Closed','Reopened'].map(v=>'<option '+(c.status===v?'selected':'')+'>'+v+'</option>').join('')}</select></div><div><label>Priority</label><select name="priority" ${edit?'':'disabled'}>${['Low','Normal','High','Urgent'].map(v=>'<option '+(c.priority===v?'selected':'')+'>'+v+'</option>').join('')}</select></div></div>
+ <label>Assigned To</label><select name="assigned_to" ${edit?'':'disabled'}><option value="">Unassigned</option>${staff.filter(v=>v.active&&v.role!=='viewer').map(v=>'<option value="'+esc(v.email)+'" '+(v.email===c.assigned_to?'selected':'')+'>'+esc(v.display_name||v.email)+'</option>').join('')}</select>
+ <label>Latest Customer-Facing Feedback</label><textarea name="last_staff_feedback" maxlength="2500" ${edit?'':'readonly'} placeholder="Clear updates, next action, requested evidence, or resolution…">${esc(c.last_staff_feedback||'')}</textarea>
+ <label>Final Resolution / Outcome</label><textarea name="resolution" maxlength="2500" ${edit?'':'readonly'} placeholder="How the issue was resolved…">${esc(c.resolution||'')}</textarea>
+ <div class="editor-actions"><button type="button" class="btn" id="backFromCase">← Back to Cases</button><button class="btn primary" ${edit?'':'disabled'} type="submit">Save & Update Case</button></div></form>
+ <div class="divider"></div><h3>Resolution History</h3><div class="case-timeline">${steps.map(u=>'<div class="case-entry"><b>'+esc(u.status_to)+'</b> · '+fmtDate(u.created_at)+'<div class="muted">'+esc(u.actor_email)+'</div><div>'+esc(u.message)+'</div></div>').join('')||'<p class="muted">No history yet.</p>'}</div>`);
+ $('backFromCase').onclick=()=>{closeDrawer();showPage('cases')};
+ const attachments=$('caseEvidence');
+ if(media.length===0)attachments.innerHTML='<span class="muted">No attachments provided.</span>';
+ else{
+  attachments.innerHTML='';
+  for(const m of media){
+   const result=await db.storage.from('shopyhat-case-evidence').createSignedUrl(m.storage_path,300);
+   if(result.error){attachments.insertAdjacentHTML('beforeend','<span class="muted">Secure media unavailable.</span>');continue}
+   const a=document.createElement('a');a.href=result.data.signedUrl;a.target='_blank';a.rel='noopener noreferrer';
+   if(m.media_type.startsWith('image/')){const img=document.createElement('img');img.src=result.data.signedUrl;img.alt='Customer evidence';a.append(img)}else a.textContent='▶ View customer video';
+   attachments.append(a);
+  }
+ }
+ $('caseForm').onsubmit=async e=>{
+  e.preventDefault();if(!edit)return;
+  const f=formData('caseForm'),changes={status:f.status,priority:f.priority,assigned_to:f.assigned_to,resolution:String(f.resolution||'').trim(),last_staff_feedback:String(f.last_staff_feedback||'').trim()};
+  if(['Resolved','Closed'].includes(changes.status)&&changes.resolution.length<10)return notice('drawerMsg','Provide at least 10 characters of final resolution before closing.',true);
+  if(['Under Review','Investigating','Resolution Proposed','Resolved','Closed'].includes(changes.status)&&!changes.assigned_to)return notice('drawerMsg','Assign a staff member before processing this case.',true);
+  if(changes.status==='Awaiting Customer'&&changes.last_staff_feedback.length<12)return notice('drawerMsg','Tell the customer what additional information is required.',true);
+  const button=e.currentTarget.querySelector('button[type=submit]');button.disabled=true;
+  try{
+   const res=await db.from('sh_customer_cases').update(changes).eq('id',id).select('id').single();
+   if(res.error)throw res.error;
+   await refresh();await manageCase(id);notice('drawerMsg','Case update saved. Customer can track the latest feedback using their Case ID and phone.');
+  }catch(err){button.disabled=false;notice('drawerMsg',err.message,true)}
+ };
 }
 function confirmProductDelete(id){
  if(!roleCan('owner','manager'))return;
@@ -390,7 +459,7 @@ function exportOrders(){
 }
 $('exportOrders').onclick=exportOrders;
 $('exportAudit').onclick=()=>{if(!roleCan('owner','manager'))return;const rows=filteredAudit().map(a=>({...a,changes:JSON.stringify(a.changes||{})}));exportCSV('SHOPYHAT_Audit_'+todayBD()+'.csv',['created_at','actor_email','actor_role','entity','action','record_id','record_label','changes'],rows)};
-for(const field of ['dateFrom','dateTo','dateBasis','auditEntity','auditAction','auditSearch']){const el=$(field);if(el)el.addEventListener(field==='auditSearch'?'input':'change',()=>{document.querySelectorAll('[data-range]').forEach(b=>b.classList.remove('on'));render()})}
+for(const field of ['dateFrom','dateTo','dateBasis','auditEntity','auditAction','auditSearch','reviewStatusFilter','caseStatusFilter','casePriorityFilter','caseSearch']){const el=$(field);if(el)el.addEventListener(['auditSearch','caseSearch'].includes(field)?'input':'change',()=>{document.querySelectorAll('[data-range]').forEach(b=>b.classList.remove('on'));render()})}
 document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>setDatePreset(b.dataset.range));
 
 $('sendOtp').onclick=loginSend;$('verifyOtp').onclick=loginVerify;
@@ -408,9 +477,11 @@ document.addEventListener('keydown',e=>{
  }
 });
 document.addEventListener('click',e=>{
- const el=e.target.closest('[data-audit-details],[data-edit-product],[data-delete-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-view-photo],[data-edit-order],[data-review],[data-edit-staff]');
+ const el=e.target.closest('[data-review-customer],[data-edit-case],[data-audit-details],[data-edit-product],[data-delete-product],[data-new-variant],[data-edit-variant],[data-photos],[data-delete-photo],[data-view-photo],[data-edit-order],[data-review],[data-edit-staff]');
  if(!el)return;
- if(el.dataset.auditDetails)openAuditDetails(el.dataset.auditDetails);
+ if(el.dataset.reviewCustomer)moderateReview(el.dataset.reviewCustomer);
+ else if(el.dataset.editCase)manageCase(el.dataset.editCase);
+ else if(el.dataset.auditDetails)openAuditDetails(el.dataset.auditDetails);
  else if(el.dataset.editProduct)editProduct(el.dataset.editProduct);
  else if(el.dataset.deleteProduct)confirmProductDelete(el.dataset.deleteProduct);
  else if(el.dataset.newVariant)editVariant(null,el.dataset.newVariant);
