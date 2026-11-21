@@ -1,14 +1,23 @@
 // SHOPYHAT checkout — server authoritative totals, atomic database transaction.
 import { createClient } from 'npm:@supabase/supabase-js@2.49.10';
 const allowHeaders = 'content-type,apikey,authorization';
-const headers = { 'content-type':'application/json','access-control-allow-origin':'*','access-control-allow-methods':'POST,OPTIONS','access-control-allow-headers':allowHeaders,'cache-control':'no-store' };
-const reply=(x,status=200)=>new Response(JSON.stringify(x),{status,headers});
+const allowedOrigins = /^https:\/\/(?:(?:[a-z0-9-]+\.)?shopyhat\.pages\.dev|shopyhat-stage\.pages\.dev)$/i;
+const headersFor = (origin) => ({
+ 'content-type':'application/json',
+ 'access-control-allow-origin':allowedOrigins.test(origin)?origin:'https://shopyhat.pages.dev',
+ 'access-control-allow-methods':'POST,OPTIONS',
+ 'access-control-allow-headers':allowHeaders,'vary':'Origin','cache-control':'no-store'
+});
 const url=Deno.env.get('SUPABASE_URL'),secret=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 if(!url||!secret)throw Error('Backend secrets unavailable');
 const db=createClient(url,secret,{auth:{persistSession:false}});
 Deno.serve(async req=>{
+ const origin=req.headers.get('origin')||'';
+ const headers=headersFor(origin);
+ const reply=(x,status=200)=>new Response(JSON.stringify(x),{status,headers});
  if(req.method==='OPTIONS')return new Response(null,{headers});
  if(req.method!=='POST')return reply({error:'Only POST allowed'},405);
+ if(!allowedOrigins.test(origin))return reply({error:'Checkout domain is not authorized'},403);
  try {
   const text=await req.text();
   if(text.length>12000)return reply({error:'Order request too large'},413);
@@ -16,8 +25,9 @@ Deno.serve(async req=>{
   if(!p||typeof p!=='object'||Array.isArray(p))return reply({error:'Invalid order'},400);
   // Honeypot field: filled only by bots.
   if(p.website || p.company_url)return reply({error:'Invalid order'},400);
-  // Cloudflare Turnstile is enforced when SHOPYHAT_TURNSTILE_SECRET is configured.
-  // Configure it before accepting public traffic; token is never trusted client-side.
+  // If enabled in Supabase secrets, Turnstile is required for public orders.
+  // Without a secret, DB-enforced phone + global order limits remain active.
+  // Payment proofs are never automatically considered paid.
   // Owner/Manager/Operator with a valid Supabase JWT may create manual orders.
   const jwt=(req.headers.get('authorization')||'').match(/^Bearer\s+([^\s]+)$/i)?.[1];
   let authorizedStaff=false;
@@ -30,15 +40,15 @@ Deno.serve(async req=>{
     }
   }
   if(!authorizedStaff){
-    // Fail closed until the owner configures a free Turnstile secret.
     const turnstileSecret=Deno.env.get('SHOPYHAT_TURNSTILE_SECRET');
-    if(!turnstileSecret)return reply({error:'Checkout activation pending — human verification setup required.'},503);
-    const token=String(p.turnstile_token||'').slice(0,2048);
-    if(!token)return reply({error:'Human verification required'},403);
-    const check=await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify',{
-      method:'POST',body:new URLSearchParams({secret:turnstileSecret,response:token})
-    });
-    if(!check.ok || !(await check.json()).success)return reply({error:'Human verification failed. Try again.'},403);
+    if(turnstileSecret){
+      const token=String(p.turnstile_token||'').slice(0,2048);
+      if(!token)return reply({error:'Human verification required'},403);
+      const check=await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify',{
+        method:'POST',body:new URLSearchParams({secret:turnstileSecret,response:token})
+      });
+      if(!check.ok || !(await check.json()).success)return reply({error:'Human verification failed. Try again.'},403);
+    }
   }
   if(!Array.isArray(p.items)||p.items.length<1||p.items.length>15)return reply({error:'Invalid items'},400);
   const shaped={
