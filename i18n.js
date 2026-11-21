@@ -195,6 +195,8 @@ css.textContent=`.sh-lang-switch{display:inline-flex;align-items:center;gap:3px;
 .sh-lang-switch button:hover:not(.selected){color:#d9640f;background:#fff}
 .sh-lang-switch.sh-modal-lang{position:absolute;left:13px;top:13px;z-index:9;box-shadow:0 3px 15px #0001}
 .sh-lang-switch.sh-header-lang{margin-right:8px}
+.sh-payment-lang-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.sh-payment-lang-row .sh-lang-switch{background:#fff}
 html.sh-bangla body{font-family:"Hind Siliguri",var(--sans),sans-serif}
 html.sh-bangla .hero h1,html.sh-bangla h1,html.sh-bangla h2,html.sh-bangla h3{font-family:"Hind Siliguri",var(--serif),serif;letter-spacing:0;line-height:1.3}
 html.sh-bangla button,html.sh-bangla input,html.sh-bangla select,html.sh-bangla textarea{font-family:"Hind Siliguri",var(--sans),sans-serif}
@@ -209,7 +211,20 @@ function ensureSwitches(){
  if(header&&!header.querySelector('.sh-header-lang'))header.prepend(makeSwitch('sh-header-lang'));
  for(const id of ['prodModal','coModal','okModal']){
   const box=document.querySelector('#'+id+' > .box');
-  if(box&&!box.querySelector('.sh-lang-switch'))box.prepend(makeSwitch('sh-modal-lang'));
+  if(box&&!box.querySelector('.sh-modal-lang'))box.prepend(makeSwitch('sh-modal-lang'));
+ }
+ // Keep a dedicated language control next to Manual Transfer verification,
+ // so the customer can change language where payment instructions are read.
+ const payment=document.querySelector('#payX');
+ if(payment&&!payment.querySelector('.sh-payment-lang-row')){
+   const badge=payment.querySelector('.manual-badge');
+   if(badge){
+     const row=document.createElement('div');
+     row.className='sh-payment-lang-row';
+     payment.insertBefore(row,badge);
+     row.appendChild(badge);
+     row.appendChild(makeSwitch('sh-payment-lang'));
+   }
  }
  syncButtons();
 }
