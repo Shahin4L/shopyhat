@@ -1599,6 +1599,7 @@ function cardHTML(p){
       <div class="card-kicker">${esc(catName(p.cat))}${p.isNew?'<span class="card-kicker-dot">•</span><span>Just added</span>':''}</div>
       <button class="cname" type="button" data-open="${p.id}">${esc(p.name)}</button>
       <div class="card-price"><b>${money(displayPrice)}</b>${oldPrice}</div>
+      <div class="sh-review-mini" data-review-card="${p.id}"><span class="review-count">Customer reviews</span></div>
       ${colCount?`<div class="card-colors"><div class="dots" aria-hidden="true">${p.colors.slice(0,5).map(c=>`<i style="background:${c.h}" title="${esc(c.n)}"></i>`).join("")}</div><span>${colCount} colour${colCount===1?"":"s"}</span></div>`:''}
       <button class="product-cta" type="button" data-open="${p.id}" ${p.soldOut?'disabled':''}><span>${p.soldOut?"Currently unavailable":"Choose options"}</span><span aria-hidden="true">↗</span></button>
     </div>
@@ -1699,6 +1700,7 @@ function drawProduct(){
     <div class="err" id="pdErr"></div>
     ${variantSoldOut?`<div class="note">This color is sold out right now. Message us to ask when it will be back.</div>`:`<div class="acts buy-acts"><button class="btn" id="pdAdd">Add to bag</button><button class="btn ink" id="pdBuy">Buy now →</button></div>`}
     <div class="acts" style="margin-top:-4px"><button class="btn line wish-in" data-wish="${p.id}">${on?"Saved to wishlist":"Save to wishlist"}</button><button class="btn line" id="pdShare">Share</button></div>
+    <div class="sh-product-review" data-review-detail="${p.id}"><h3>Customer Reviews</h3><p>Loading customer feedback…</p></div>
     <div class="acc">
       ${p.details&&p.details.length?`<details open><summary>Details</summary><ul>${p.details.map(d=>`<li>${esc(d)}</li>`).join("")}</ul></details>`:""}
       <details><summary>Delivery and returns</summary><p>Delivery: ${money(CONFIG.delivery.dhaka)} inside Dhaka, ${money(CONFIG.delivery.outside)} outside Dhaka. Pay on delivery. If the item is damaged, defective or wrong, contact us within 3 calendar days. <a href="#policies" data-close class="link">Read the policy</a></p></details>
