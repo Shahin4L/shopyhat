@@ -906,6 +906,34 @@ main{overflow:clip}
   .pro-card .im .art,.mt .art img,.mt .art svg,.pro-card .product-cta,.pro-card .hover-caption{transition:none!important}
 }
 
+
+/* SHOPYHAT — Payment & colour UX upgrade / 2026 */
+.pay-choice{display:flex;align-items:center;gap:12px;width:100%;padding:16px!important;border:1px solid #e6dfd7!important;border-radius:13px!important;transition:.2s ease;background:#fff!important}
+.pay-choice:hover{border-color:#d7b49d!important;box-shadow:0 5px 18px rgba(57,32,12,.07)}
+.pay-choice:has(input:checked){border-color:var(--ribbon)!important;box-shadow:0 0 0 2px #e8742c22!important;background:#fff9f5!important}
+.pay-choice input{width:17px;height:17px;accent-color:var(--ribbon)}
+.pay-choice .pay-symbol{width:49px;height:45px;border-radius:11px;display:grid;place-items:center;background:#f1ede9;color:#352e29;font-size:11px;font-weight:900;letter-spacing:-.02em;flex:0 0 auto}
+.pay-choice .pay-symbol.bkash{background:#fff0f5;color:#d61d68}.pay-choice .pay-symbol.nagad{background:#fff2e4;color:#e35e23}
+.pay-choice .pay-title{display:block;font-weight:800;color:var(--ink);font-size:14px}.pay-choice .pay-desc{display:block;color:var(--muted);font-size:12px;line-height:1.5;margin-top:2px}
+.pay-choice.unavailable{opacity:.55;cursor:not-allowed}.pay-choice.unavailable:hover{box-shadow:none}
+.pay-manual{border:1px solid #f2d9bd;background:linear-gradient(145deg,#fff8f1,#fffaf6);border-radius:14px;padding:17px;margin:12px 0 17px}
+.pay-manual strong{color:#312924}.pay-manual .pay-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 8px}
+.pay-manual .pay-number{font:800 clamp(18px,3vw,23px)/1.3 var(--sans);letter-spacing:.07em;color:#171616}
+.pay-manual .pay-copy{padding:8px 12px;background:#191816;color:#fff;border-radius:8px;font-weight:700;font-size:12px}
+.pay-manual .pay-hint{font-size:12px;color:#6d6259;line-height:1.75}
+.pay-manual .pay-warning{padding:10px 12px;margin-top:11px;background:#fff;border:1px solid #f2e8df;border-radius:8px;font-size:12px;color:#584d44}
+.pay-manual .pay-ack{display:flex;gap:10px;align-items:start;font-size:12px;margin:12px 0 0;color:#4a4139}
+.pay-manual .pay-ack input{width:16px;height:16px;accent-color:var(--ribbon);margin-top:2px;flex:0 0 auto}
+.pay-manual .payment-proof-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:13px}
+.pay-manual .fld{margin:0}.pay-manual input[type=text]{background:white}
+.manual-badge{display:inline-flex;font-weight:800;font-size:11px;color:#8c4d21;letter-spacing:.015em;background:#fae8d6;padding:5px 9px;border-radius:30px}
+.swatches{gap:8px!important}.pd .sw,.swatches .sw{width:auto!important;height:auto!important;min-height:42px;max-width:100%;border-radius:999px!important;border:1px solid #e5ddd5!important;box-shadow:none!important;display:inline-flex!important;align-items:center;justify-content:center;gap:8px;padding:5px 12px 5px 6px!important;background:#fff!important;color:#2a2622!important;transition:border-color .16s,background .16s,transform .16s}
+.swatches .sw:hover{transform:translateY(-1px);border-color:#d1a689!important}.swatches .sw.on{border:2px solid var(--ribbon)!important;background:#fff6ee!important;box-shadow:none!important}
+.swatches .sw-dot{width:27px;height:27px;flex:0 0 27px;border:1px solid #0002;border-radius:50%;box-shadow:inset 0 0 0 2px #fff}
+.swatches .sw-name{font-family:var(--sans);font-size:12px;line-height:1.25;font-weight:800;overflow-wrap:anywhere;white-space:normal;max-width:122px;text-align:left}
+.pay-status-info{background:#fff6ed;border-left:3px solid var(--ribbon);padding:12px 14px;border-radius:6px;margin-top:12px;color:#665348;font-size:13px;line-height:1.65}
+@media(max-width:560px){.pay-manual .payment-proof-fields{grid-template-columns:1fr}.pay-choice{padding:13px!important}.swatches .sw-name{font-size:11px}.swatches .sw-dot{width:22px;height:22px;flex-basis:22px}.swatches .sw{min-height:39px;padding:5px 10px 5px 5px!important}}
+
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1241,8 +1269,10 @@ main{overflow:clip}
 const CONFIG = {
   whatsapp: "88017722222668",          // e.g. "88017XXXXXXXX" (country code, no + or spaces). Leave "" to hide WhatsApp.
   messenger: "shopyhat", // Facebook page username for the m.me chat link
-  bkash: "",             // bKash number, e.g. "017XXXXXXXX". Leave "" to hide bKash payment.
-  nagad: "",             // Nagad number. Leave "" to hide Nagad payment.
+  bkash: "",             // VERIFIED receiving bKash Merchant/PRA account number (11 digits). Not your WhatsApp number.
+  nagad: "",             // VERIFIED receiving Nagad business account number (11 digits). Empty = payment choice disabled.
+  paymentMode: {bkash:"Merchant Payment",nagad:"Merchant Payment"}, // Set actual approved collection type; NEVER ask for PIN/OTP.
+  paymentSupport: "",   // Optional support contact for manual payment queries. Do not paste private account keys.
   sheetUrl: "https://script.google.com/macros/s/AKfycbysUef65k8syzZ-S4RYIpQHnrQfzkEatBeKon8jUP-FieUpt5s28wQDfc5EQl9gYunj/exec",          // Paste your Google Sheet Web app URL here. Products load from the sheet and orders are saved to it.
                          // Leave "" to show the sample products below instead.
   delivery: { dhaka: 70, outside: 130 },   // delivery charge (BDT)
@@ -1464,7 +1494,7 @@ const VARIANT_FEED_URL="https://script.google.com/macros/s/AKfycbxYZdwDnsjYMgNxY
 let VARIANT_MAP={};
 const slug=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const catKey=s=>slug(s).replace(/-/g,"").replace(/s$/,"");
-const CNAME={peacock:"#0f7d83",mustard:"#d9a521",wine:"#6e1423",rose:"#c75c7c",sky:"#7fb5d6","royal blue":"#1f4e8c",mint:"#7fc8a9",lilac:"#b79ad6",peach:"#f2a98f",indigo:"#2e3f7f",rust:"#b4532a",cream:"#efe5d0",burgundy:"#6d1a2c",emerald:"#0e6b4d",coral:"#e76f51",magenta:"#b0286b",lavender:"#c4b2e3",sage:"#9fb59a","dusty rose":"#d49a9f","off-white":"#e9e1d0","off white":"#e9e1d0","pearl white":"#f4efe6",blush:"#f1c9c9",tan:"#b5733c","antique gold":"#c79a3b",silver:"#9aa0a6",gold:"#c79a3b","bottle green":"#0b5d3b","sea green":"#2e8b57",white:"#f3efe6",black:"#1d1d1d",maroon:"#7b1e3a",purple:"#5b2a86",green:"#1e7a4c",blue:"#1f4e8c",red:"#c0392b",pink:"#e58fb0",yellow:"#e6b422",orange:"#e8772e",teal:"#1b7f86",navy:"#26365a",olive:"#6b7a3a",grey:"#8a8a8a",gray:"#8a8a8a",brown:"#7a4a2a",beige:"#d9c7a3"};
+const CNAME={"dark green":"#14532d","darkgreen":"#14532d","deep green":"#135c35","forest green":"#228b22","olive green":"#657b2c","light green":"#90c98b","apple green":"#78b944","bottle green":"#0b5d3b","royal blue":"#1f4e8c","sky blue":"#79b7e0","light blue":"#add8e6","dark blue":"#163f75","deep blue":"#173f71","baby blue":"#b8d9ef","ash":"#a6a6a6","ash grey":"#a6a6a6","ash gray":"#a6a6a6","charcoal":"#34383d","coffee":"#6c4e37","chocolate":"#6d4033","dark purple":"#4a2a72","light purple":"#b39bd8","deep maroon":"#651c34","lemon":"#e5dc54","lemon yellow":"#e5dc54","golden":"#d1a13b","golden yellow":"#d3a329","dark brown":"#533d2d","light pink":"#f6bdd1","hot pink":"#e2488a","navy blue":"#243758","offwhite":"#e9e1d0","sea blue":"#2b8ba5","teal green":"#14857c","dusty pink":"#c890a1","deep red":"#a5222c","light yellow":"#f4e394","cream white":"#f0e6d8","কালো":"#1d1d1d","সাদা":"#f3efe6","নীল":"#215493","লাল":"#c0392b","সবুজ":"#21814d","হলুদ":"#e7bd32","বেগুনি":"#673590","গোলাপি":"#e58fb0",peacock:"#0f7d83",mustard:"#d9a521",wine:"#6e1423",rose:"#c75c7c",sky:"#7fb5d6","royal blue":"#1f4e8c",mint:"#7fc8a9",lilac:"#b79ad6",peach:"#f2a98f",indigo:"#2e3f7f",rust:"#b4532a",cream:"#efe5d0",burgundy:"#6d1a2c",emerald:"#0e6b4d",coral:"#e76f51",magenta:"#b0286b",lavender:"#c4b2e3",sage:"#9fb59a","dusty rose":"#d49a9f","off-white":"#e9e1d0","off white":"#e9e1d0","pearl white":"#f4efe6",blush:"#f1c9c9",tan:"#b5733c","antique gold":"#c79a3b",silver:"#9aa0a6",gold:"#c79a3b","bottle green":"#0b5d3b","sea green":"#2e8b57",white:"#f3efe6",black:"#1d1d1d",maroon:"#7b1e3a",purple:"#5b2a86",green:"#1e7a4c",blue:"#1f4e8c",red:"#c0392b",pink:"#e58fb0",yellow:"#e6b422",orange:"#e8772e",teal:"#1b7f86",navy:"#26365a",olive:"#6b7a3a",grey:"#8a8a8a",gray:"#8a8a8a",brown:"#7a4a2a",beige:"#d9c7a3"};
 function cssHex(name){
   try{const el=document.createElement("i");el.style.color="";el.style.color=name;if(!el.style.color)return null;
     document.body.appendChild(el);const rgb=getComputedStyle(el).color;el.remove();const m=rgb.match(/\d+/g);
@@ -1475,7 +1505,7 @@ function parseColors(v){
   const out=String(v==null?"":v).split(",").map(t=>t.trim()).filter(Boolean).map(t=>{
     let n=t,h="";const i=t.indexOf(":");if(i>0){n=t.slice(0,i).trim();h=t.slice(i+1).trim()}
     if(/^#[0-9a-f]{3}$/i.test(h))h="#"+h.slice(1).split("").map(c=>c+c).join("");
-    if(!/^#[0-9a-f]{6}$/i.test(h))h=CNAME[n.toLowerCase()]||cssHex(n)||"#999999";
+    if(!/^#[0-9a-f]{6}$/i.test(h))h=CNAME[n.toLowerCase()]||cssHex(n)||"#b8aca1";
     return{n,h,h2:accentFor(h)}});
   return out.length?out:[{n:"Standard",h:"#8a8a8a",h2:"#f4d35e"}];
 }
@@ -1503,7 +1533,16 @@ function parseProduct(r,i){
   return{id:+r.id||i+1,name,cat:slug(catName),catName,price,old:old>price?old:0,
     isNew:/^(y|yes|true|1|new)/i.test(String(r.isNew==null?"":r.isNew)),
     soldOut:/sold/i.test(String(r.availability||"")),
-    variants:VARIANT_MAP[String(r.id)]||[],colors:parseColors(r.colors),sizes:sizes.length?sizes:undefined,imgs:imgs.length?imgs:undefined,
+    variants:VARIANT_MAP[String(r.id)]||[],colors:(()=>{
+      const variants=VARIANT_MAP[String(r.id)]||[],base=parseColors(r.colors);
+      // Variants are canonical when a colour has been uploaded and assigned in Admin.
+      if((!String(r.colors||'').trim()||base.length===1&&base[0].n==='Standard')&&variants.length){
+        return variants.filter(v=>v.color).map(v=>({n:v.color,h:/^#[0-9a-f]{6}$/i.test(v.hex||'')?v.hex:(CNAME[String(v.color).toLowerCase()]||cssHex(v.color)||'#9c9188'),h2:'#f4d35e'}));
+      }
+      base.forEach(c=>{const match=variants.find(v=>String(v.color||'').trim().toLowerCase()===c.n.trim().toLowerCase());
+        if(match&&/^#[0-9a-f]{6}$/i.test(match.hex||'')){c.h=match.hex;c.h2=accentFor(c.h)} });
+      return base;
+    })(),sizes:sizes.length?sizes:undefined,imgs:imgs.length?imgs:undefined,
     type:types.includes(t)?t:guessType(catName+" "+name),
     desc:String(r.desc||"").trim(),details:list(r.details,/[\n|]+/)}
 }
@@ -1635,7 +1674,7 @@ function drawProduct(){
     <h2>${esc(p.name)}</h2>
     <div class="price"><b>${money(selectedPrice)}</b>${sale&&p.old>selectedPrice?`<s>${money(p.old)}</s><em>You save ${money(p.old-selectedPrice)}</em>`:""}</div>
     <p>${esc(p.desc)}</p>
-    <div><div class="lbl">Select colour <span>${esc(col.n)}${selectedStock!==null?" · "+(selectedStock?selectedStock+" available":"Sold out"):""}</span></div><div class="swatches" role="group" aria-label="Available colours">${p.colors.map((c,i)=>`<button class="sw ${i===ci?"on":""}" style="background:${c.h}" data-ci="${i}" title="${esc(c.n)}" aria-label="${esc(c.n)}" aria-pressed="${i===ci}"></button>`).join("")}</div></div>
+    <div><div class="lbl">Select colour <span>${esc(col.n)}${selectedStock!==null?" · "+(selectedStock?selectedStock+" available":"Sold out"):""}</span></div><div class="swatches" role="group" aria-label="Available colours">${p.colors.map((c,i)=>`<button class="sw ${i===ci?"on":""}" data-ci="${i}" title="${esc(c.n)}" aria-label="${esc(c.n)}" aria-pressed="${i===ci}"><span class="sw-dot" style="background:${/^#[0-9a-f]{6}$/i.test(c.h)?c.h:'#b8aca1'}" aria-hidden="true"></span><span class="sw-name">${esc(c.n)}</span></button>`).join("")}</div></div>
     ${p.sizes?`<div><div class="lbl">Size</div><div class="sizes">${p.sizes.map(z=>`<button class="sz ${z===size?"on":""}" data-sz="${z}">${z}</button>`).join("")}</div></div>`:""}
     <div><div class="lbl">Quantity</div><div class="qty"><button data-q="-1" aria-label="Decrease">−</button><span>${qty}</span><button data-q="1" aria-label="Increase">+</button></div></div>
     <p class="product-reassurance">✓ Cash on delivery &nbsp;·&nbsp; Delivery across Bangladesh</p>
@@ -1721,13 +1760,15 @@ function renderWish(){
    ===================================================================== */
 const PHONE_RE=/^(?:\+?88)?01[3-9]\d{8}$/;
 const normPhone=v=>v.replace(/[\s-]/g,"").replace(/^\+?88/,"");
+ let checkoutRef="";
 function openCheckout(){
   if(!cartLines().length){toast("Your cart is empty");return}
-  closeAll();
-  const pay=[{id:"cod",t:"Cash on delivery",s:"Pay in cash when you receive your order"}];
-  if(CONFIG.bkash)pay.push({id:"bkash",t:"bKash",s:"Send payment to "+CONFIG.bkash});
-  if(CONFIG.nagad)pay.push({id:"nagad",t:"Nagad",s:"Send payment to "+CONFIG.nagad});
-  const saved=LS.get("sh_cust",{});
+   closeAll();
+   checkoutRef=genId();
+   const pay=[{id:"cod",t:"Cash on delivery",s:"Pay after your parcel arrives",enabled:true,symbol:"COD"},
+     {id:"bkash",t:"bKash",s:CONFIG.bkash?"Manual payment · verify after transfer":"Payment account not configured yet",enabled:isConfiguredMFS(CONFIG.bkash),symbol:"bKash"},
+     {id:"nagad",t:"Nagad",s:CONFIG.nagad?"Manual payment · verify after transfer":"Payment account not configured yet",enabled:isConfiguredMFS(CONFIG.nagad),symbol:"Nagad"}];
+   const saved=LS.get("sh_cust",{});
   $("#coBox").innerHTML=`<form class="f" id="coForm" novalidate>
     <div class="checkout-topline"><span>SHOPYHAT CHECKOUT</span><span>One simple step</span></div>
     <h2>Almost yours<span class="title-accent">.</span></h2>
@@ -1739,8 +1780,13 @@ function openCheckout(){
     <div class="fld"><label for="kAddr">Full address</label><textarea id="kAddr" rows="3" placeholder="House, road, area, thana, district">${esc(saved.addr||"")}</textarea></div>
     <div class="fld"><label for="kNote">Order note (optional)</label><input id="kNote" placeholder="Anything we should know?"></div>
     <h4>02 &nbsp; Payment method</h4>
-    ${pay.map((m,i)=>`<label class="opt"><input type="radio" name="pay" value="${m.id}" ${i?"":"checked"}><span><b>${m.t}</b><small>${m.s}</small></span></label>`).join("")}
-    <div class="pay-extra hidden" id="payX"><div id="payT"></div><div class="fld" style="margin:10px 0 0"><label for="kTrx">Transaction ID</label><input id="kTrx" placeholder="e.g. 9A7B6C5D"></div></div>
+     ${pay.map((m,i)=>`<label class="pay-choice opt ${!m.enabled?'unavailable':''}"><input type="radio" name="pay" value="${m.id}" ${i?'':'checked'} ${m.enabled?'':'disabled'}><span class="pay-symbol ${m.id}">${m.symbol}</span><span><span class="pay-title">${m.t}</span><span class="pay-desc">${m.s}</span></span></label>`).join("")}
+     <div class="pay-manual hidden" id="payX"><span class="manual-badge">MANUAL TRANSFER · VERIFICATION REQUIRED</span><div id="payT"></div>
+       <div class="payment-proof-fields"><div class="fld"><label for="kTrx">Transaction ID *</label><input id="kTrx" type="text" autocomplete="off" maxlength="40" placeholder="e.g. TXA8B42C9D"></div>
+       <div class="fld"><label for="kSender">Sender mobile (last 4 digits) *</label><input id="kSender" type="text" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="1234" pattern="[0-9]{4}"></div></div>
+       <label class="pay-ack"><input type="checkbox" id="kPaidAck"> <span>I have made the payment to the displayed receiving account. I understand SHOPYHAT must verify it before confirming payment.</span></label>
+       <div class="pay-warning">Never share your bKash/Nagad PIN, OTP, login or security code. A Transaction ID is a claim, <strong>not automatic payment confirmation</strong>.</div>
+     </div>
     <label class="agree"><input type="checkbox" id="kAgree"><span>I have read the <a href="#policies" target="_blank" rel="noopener">return, exchange and privacy policies</a> and my order details are correct.</span></label>
     <div class="err" id="kErr"></div>
     <button class="btn block" type="submit" id="placeBtn">Place order <span aria-hidden="true">→</span></button>
@@ -1760,38 +1806,58 @@ function renderSummary(){
   `<div style="margin-top:14px"><div class="line-r"><span>Subtotal</span><b>${money(t.sub)}</b></div>${t.disc?`<div class="line-r" style="color:var(--ok)"><span>Coupon</span><b>−${money(t.disc)}</b></div>`:""}<div class="line-r"><span>Delivery</span><b>${t.ship?money(t.ship):"Free"}</b></div><div class="line-r tot"><span>Total</span><span>${money(t.total)}</span></div></div>`;
   updatePayInfo();
 }
-function updatePayInfo(){
-  const m=(document.querySelector('input[name="pay"]:checked')||{}).value, x=$("#payX"); if(!x)return;
-  if(m&&m!=="cod"){const num=m==="bkash"?CONFIG.bkash:CONFIG.nagad;x.classList.remove("hidden");
-    $("#payT").innerHTML=`Send <b>${money(calcTotals().total)}</b> to <b>${esc(num)}</b> with ${m==="bkash"?"bKash":"Nagad"} (Send Money), then enter the transaction ID below.`}
-  else x.classList.add("hidden");
-}
+ function isConfiguredMFS(number){return /^01[3-9]\d{8}$/.test(String(number||'').replace(/[\s-]/g,''))}
+ function copyPaymentNumber(){const m=(document.querySelector('input[name="pay"]:checked')||{}).value;
+   const num=m==='bkash'?CONFIG.bkash:CONFIG.nagad;if(!num)return;
+   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(num).then(()=>toast('Payment number copied')).catch(()=>toast('Please copy the displayed payment number'))}
+   else toast('Select and copy the payment number above');
+ }
+ function updatePayInfo(){
+   const m=(document.querySelector('input[name="pay"]:checked')||{}).value,x=$("#payX");if(!x)return;
+   if(m==='bkash'||m==='nagad'){
+     const num=m==='bkash'?CONFIG.bkash:CONFIG.nagad, provider=m==='bkash'?'bKash':'Nagad';
+     const mode=(CONFIG.paymentMode||{})[m]||'approved payment method';
+     x.classList.remove('hidden');
+     $('#payT').innerHTML=`<p style="margin:9px 0 5px;font-weight:750">Open your ${provider} app and pay <strong>${money(calcTotals().total)}</strong> using your approved <strong>${esc(mode)}</strong> method.</p>
+       <div class="pay-row"><span class="pay-number" id="selectedPayNumber">${esc(num)}</span><button type="button" class="pay-copy" id="payCopyBtn">Copy number</button></div>
+       <div class="pay-hint">Order reference: <b>${esc(checkoutRef)}</b> · Save your payment receipt and enter the real Transaction ID below. ${provider} will not be charged automatically by this website.</div>`;
+   }else x.classList.add('hidden');
+ }
+
 function genId(){const d=new Date(),p=n=>String(n).padStart(2,"0"),r=Math.random().toString(36).slice(2,6).toUpperCase();
   return`SH-${String(d.getFullYear()).slice(2)}${p(d.getMonth()+1)}${p(d.getDate())}-${r}`}
 function orderText(o){
   return `🛍️ NEW ORDER — SHOPYHAT\nOrder: ${o.id}\nName: ${o.name}\nPhone: ${o.phone}\nAddress: ${o.addr}\nArea: ${o.zone==="dhaka"?"Inside Dhaka":"Outside Dhaka"}\n\nItems:\n`+
   o.items.map(i=>`• ${i.name} (${i.color}${i.size?", "+i.size:""}) × ${i.qty} = ${money(i.price*i.qty)}`).join("\n")+
-  `\n\nSubtotal: ${money(o.sub)}${o.disc?`\nCoupon ${o.coupon}: −${money(o.disc)}`:""}\nDelivery: ${o.ship?money(o.ship):"Free"}\nTOTAL: ${money(o.total)}\nPayment: ${o.pay.toUpperCase()}${o.trx?` (TrxID: ${o.trx})`:""}${o.note?`\nNote: ${o.note}`:""}`;
+  `\n\nSubtotal: ${money(o.sub)}${o.disc?`\nCoupon ${o.coupon}: −${money(o.disc)}`:""}\nDelivery: ${o.ship?money(o.ship):"Free"}\nTOTAL: ${money(o.total)}\nPayment: ${o.pay.toUpperCase()}${o.trx?` (TrxID: ${o.trx})`:""}${o.senderLast4?` | Sender last 4: ${o.senderLast4}`:""}\nPayment status: ${o.paymentStatus||'Not verified'}${o.note?`\nNote: ${o.note}`:""}`;
 }
 function submitOrder(e){
   e.preventDefault();
   const name=$("#kName").value.trim(), phone=normPhone($("#kPhone").value.trim()), addr=$("#kAddr").value.trim(), err=$("#kErr");
-  const pay=document.querySelector('input[name="pay"]:checked').value, trx=($("#kTrx")||{value:""}).value.trim();
+   const pay=document.querySelector('input[name="pay"]:checked').value, trx=($("#kTrx")||{value:""}).value.trim().toUpperCase(),senderLast4=($("#kSender")||{value:""}).value.trim();
   $$("#coForm .fld").forEach(f=>f.classList.remove("bad"));
   const bad=(sel,msg)=>{$(sel).closest(".fld").classList.add("bad");$(sel).focus();err.textContent=msg};
   if(name.length<2)return bad("#kName","Enter your full name.");
   if(!PHONE_RE.test(phone))return bad("#kPhone","Enter a valid Bangladeshi mobile number, like 01712345678.");
   if(addr.length<10)return bad("#kAddr","Enter your full delivery address.");
-  if(pay!=="cod"&&trx.length<5)return bad("#kTrx","Enter the transaction ID from your payment.");
+   if(pay!=="cod"){
+     const payNo=pay==='bkash'?CONFIG.bkash:CONFIG.nagad;
+     if(!isConfiguredMFS(payNo)){err.textContent='This payment method is not configured. Choose Cash on Delivery.';return}
+     if(!/^[A-Z0-9-]{6,40}$/.test(trx))return bad('#kTrx','Enter your actual transaction ID (6–40 letters/numbers).');
+     if(!/^\d{4}$/.test(senderLast4))return bad('#kSender','Enter the last 4 digits of the sender mobile number.');
+     if(!$('#kPaidAck').checked){err.textContent='Confirm that you have completed the payment transfer.';return}
+   }
   if(!$("#kAgree").checked){err.textContent="Accept the policies to place your order.";return}
   err.textContent="";
   const t=calcTotals(), L=cartLines();
-  const o={id:genId(),date:new Date().toISOString(),status:"Placed",name,phone,addr,zone:t.zone,note:$("#kNote").value.trim(),pay,trx,
+   const o={id:checkoutRef||genId(),date:new Date().toISOString(),status:"Placed",name,phone,addr,zone:t.zone,note:$("#kNote").value.trim(),pay,trx,senderLast4:pay==='cod'?'':senderLast4,paymentStatus:pay==='cod'?'Cash on delivery':'Pending verification',
     items:L.map(i=>({pid:i.p.id,name:i.p.name,color:i.color,size:i.size,qty:i.qty,price:i.unitPrice})),
     sub:t.sub,disc:t.disc,coupon:t.disc?lastCoupon.toUpperCase():"",ship:t.ship,total:t.total};
   const orders=LS.get("sh_orders",[]);orders.unshift(o);LS.set("sh_orders",orders);
   LS.set("sh_cust",{name,phone,addr});
-  postEndpoint({type:"order",...o});
+   // Existing public order endpoint remains unchanged. Preserve transfer details in text fields
+   // as well as new metadata; older endpoints may ignore new fields.
+   postEndpoint({type:"order",...o});
   cart=[];saveCart();renderCart();
   closeAll();showSuccess(o);
 }
@@ -1814,9 +1880,10 @@ function confetti(host){
 function showSuccess(o){
   window._lastOrder=o;
   $("#okBox").innerHTML=`<div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></div>
-  <h2>Your order is placed</h2><div class="oid">${esc(o.id)}</div>
-  <p>Thank you, <b>${esc(o.name)}</b>. Your total is <b>${money(o.total)}</b> (${o.pay==="cod"?"cash on delivery":o.pay.toUpperCase()}).</p>
-  <p style="margin-top:8px;color:var(--muted);font-size:14px">Send your order details to us now so we can confirm it quickly. Keep your order number for tracking, returns or exchanges.</p>
+   <h2>${o.pay==='cod'?'Order request placed':'Payment verification requested'}</h2><div class="oid">${esc(o.id)}</div>
+   <p>Thank you, <b>${esc(o.name)}</b>. Order total: <b>${money(o.total)}</b> (${o.pay==='cod'?'Cash on delivery':o.pay.toUpperCase()}).</p>
+   ${o.pay!=='cod'?`<div class="pay-status-info"><b>Payment pending verification</b><br>Your provided Transaction ID <b>${esc(o.trx)}</b> must be matched with our official ${esc(o.pay.toUpperCase())} transaction history before the order is marked paid. Do not pay twice if you have already transferred.</div>`:`<p class="pay-status-info">No advance payment required. Pay when the parcel is delivered.</p>`}
+   <p style="margin-top:8px;color:var(--muted);font-size:14px">Send your order details to us for manual review. Keep your Order ID for support and tracking.</p>
   <div class="btns">
     ${CONFIG.whatsapp?`<button class="btn" id="okWa">Send on WhatsApp</button>`:""}
     <button class="btn ${CONFIG.whatsapp?"ink":""}" id="okMs">Send on Messenger</button>
@@ -1835,7 +1902,8 @@ function renderTrack(o,stale){
   const i=STEPS.findIndex(x=>x.toLowerCase()===st.toLowerCase()), idx=Math.max(0,i), label=cancelled?"Cancelled":STEPS[idx];
   return `<div style="border-top:1px solid var(--line);padding-top:20px"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><b style="color:var(--ink)">${esc(o.id)}</b><span style="font-size:13.5px;color:var(--muted)">${new Date(o.date).toLocaleString("en-GB",{dateStyle:"medium",timeStyle:"short"})}</span></div>
   ${cancelled?`<div class="note" style="margin:18px 0;border-color:var(--bad)"><b>Cancelled</b></div>`:`<div class="steps">${STEPS.map((s,k)=>`<div class="stp ${k<=idx?"done":""}"><i>${k<=idx?"✓":k+1}</i>${s}</div>`).join("")}</div>`}
-  <p style="font-size:14px;color:var(--muted);text-align:center;margin-bottom:14px">${STEP_TXT[label]}</p>
+   <p style="font-size:14px;color:var(--muted);text-align:center;margin-bottom:14px">${STEP_TXT[label]}</p>
+   ${o.pay&&o.pay!=='cod'?`<div class="pay-status-info">Payment method: <b>${esc(o.pay.toUpperCase())}</b> · Payment claim status: <b>${esc(o.paymentStatus||'Pending verification')}</b>. Final confirmation comes from SHOPYHAT support after transfer verification.</div>`:''}
   ${o.message?`<div class="note" style="margin-bottom:14px"><b>Message from SHOPYHAT:</b> ${esc(o.message)}</div>`:""}
   ${stale?`<div class="note" style="margin-bottom:14px">We could not load the latest status right now. Try again in a minute, or message us on Facebook.</div>`:""}
   ${o.items.map(it=>`<div class="line-r"><span>${esc(it.name)} <small style="color:var(--muted)">(${esc(it.color)}${it.size?", "+esc(it.size):""}) × ${it.qty}</small></span><b>${money(it.price*it.qty)}</b></div>`).join("")}
@@ -1909,6 +1977,7 @@ document.addEventListener("click",e=>{
   if(t.closest("#clearF")){F.cat="all";F.q="";F.max=0;F.sale=false;F.sort="new";renderShop();return}
   if(t.closest("#menuBtn")){$("#mainNav").classList.toggle("open");return}
   if(t.closest("#toTop")){window.scrollTo({top:0,behavior:"smooth"});return}
+  if(t.closest("#payCopyBtn")){copyPaymentNumber();return}
   if(t.closest("#okWa")){sendWA(orderText(window._lastOrder));return}
   if(t.closest("#okMs")){sendMS(orderText(window._lastOrder));return}
   const go=t.closest("[data-go]"); if(go){e.preventDefault();document.getElementById(go.dataset.go).scrollIntoView({behavior:"smooth"});return}
