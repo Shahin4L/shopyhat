@@ -39,7 +39,11 @@ async function query(table,selection='*',limit=1000){const q=await db.from(table
 async function loginSend(){
  const email=$('email').value.trim().toLowerCase();
  if(!/^\S+@\S+\.\S+$/.test(email))return notice('loginMsg','Enter a valid email.',true);
- $('sendOtp').disabled=true;notice('loginMsg','Requesting a secure sign-in email…');
+ // Always display the OTP form: an earlier code may still be valid even if
+ // the SMTP provider refuses another email due to rate limits.
+ show('codeWrap',true);
+ $('sendOtp').disabled=true;
+ notice('loginMsg','Requesting a secure sign-in email…');
  try{
    const response=await fetch(SUPABASE_URL+'/functions/v1/shopyhat-auth-request',{
      method:'POST',
@@ -48,14 +52,16 @@ async function loginSend(){
    });
    const data=await response.json();
    if(!response.ok)throw Error(data.error||'Email sign-in request failed');
-   show('codeWrap',true);
-   notice('loginMsg','Check your inbox/spam for the 6-digit code or sign-in link. A sign-in link will return you to this Admin page.');
- }catch(e){notice('loginMsg',e.message||'Unable to send email',true)}
- finally{$('sendOtp').disabled=false}
+   notice('loginMsg','Check inbox/spam for the code or one-time link. If you already have a valid code, enter it below.');
+ }catch(e){
+   notice('loginMsg',(e.message||'Email request failed')+' You can still try a previously received, unexpired code below.',true);
+ }finally{$('sendOtp').disabled=false}
 }
 async function loginVerify(){const email=$('email').value.trim().toLowerCase(),token=$('otp').value.trim();if(!/^\d{6,8}$/.test(token))return notice('loginMsg','Enter the verification code.',true);
  $('verifyOtp').disabled=true;try{const r=await db.auth.verifyOtp({email,token,type:'email'});if(r.error)throw r.error;await boot()}
  catch(e){notice('loginMsg',e.message,true)}finally{$('verifyOtp').disabled=false}}
+// A confirmation link may return with a session in the URL. Supabase-js
+// processes that session automatically; boot checks it before showing Login.
 async function boot(){const {data:{user},error}=await db.auth.getUser();
  if(error||!user){show('login',true);show('dashboard',false);show('logout',false);return}
  const r=await db.from('sh_staff').select('*').eq('email',(user.email||'').toLowerCase()).maybeSingle();
