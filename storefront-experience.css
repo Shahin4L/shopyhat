@@ -1,0 +1,47 @@
+/* SHOPYHAT cinematic storefront enhancement — additive, mobile-first */
+.sh-announcement{background:#100b07;color:#f8eee2;text-align:center;font-size:12px;padding:7px 12px;border-bottom:1px solid #6f391a}
+.sh-announcement a{color:#ff9b4e;margin-left:15px}
+.sh-menu-host{position:relative;display:flex;align-items:center}
+.sh-menu-trigger{border:1px solid #ef7927;border-radius:8px;padding:9px 14px;color:#db641a;font-weight:700;white-space:nowrap}
+.sh-menu-trigger[aria-expanded=true],.sh-menu-trigger:hover{background:#f47721;color:#fff}
+.sh-mega{position:absolute;top:calc(100% + 17px);left:-160px;width:min(760px,90vw);padding:18px;z-index:115;background:#17100c;border:1px solid #9c4c19;box-shadow:0 24px 60px #0008;border-radius:14px;color:#fff}
+.sh-mega[hidden]{display:none}
+.sh-mega-title{color:#ffa25c;font-size:12px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px}
+.sh-mega-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.sh-mega-card{display:flex;flex-direction:column;gap:8px;color:#fff;font-size:13px;font-weight:700;min-width:0}
+.sh-mega-card .sh-photo{aspect-ratio:3/3.7;background:linear-gradient(135deg,#5c2b18,#23140e);border-radius:9px;overflow:hidden;display:grid;place-items:center}
+.sh-mega-card img{width:100%;height:100%;object-fit:cover;transition:transform .25s}
+.sh-mega-card:hover img{transform:scale(1.07)}
+.sh-mega-card small{color:#d5ac8c;font-size:11px;font-weight:400}
+.sh-header-search{position:relative;flex:0 1 220px;min-width:165px}
+.sh-header-search input{width:100%;padding:11px 12px 11px 37px;border:1px solid #e1d6cb;border-radius:30px;background:#faf9f7;font-size:13px;outline:0}
+.sh-header-search input:focus{border-color:#ef7927;box-shadow:0 0 0 3px #f4772125}
+.sh-header-search:before{content:'⌕';position:absolute;top:4px;left:13px;font-size:25px;color:#a56738}
+.sh-suggestions{position:absolute;top:calc(100% + 7px);right:0;width:min(380px,85vw);max-height:420px;overflow:auto;background:#fff;color:#1d1611;box-shadow:0 18px 55px #0003;border:1px solid #e6d6c9;border-radius:12px;z-index:130}
+.sh-suggestions[hidden]{display:none}
+.sh-suggest{display:flex;align-items:center;gap:12px;padding:9px 12px;text-align:left;width:100%;border-bottom:1px solid #f1eee9}
+.sh-suggest:hover{background:#fff6ed}
+.sh-suggest img{width:51px;height:59px;object-fit:cover;border-radius:6px;background:#eee}
+.sh-suggest strong{font-size:12px;display:block}.sh-suggest small{font-size:11px;color:#a35d2a}
+.sh-cinematic{position:relative;isolation:isolate;background:#130a07!important;min-height:590px}
+.sh-cinematic:before{content:'';position:absolute;inset:0;z-index:-2;background:radial-gradient(ellipse at 72% 50%,#b85c1c50,transparent 52%),linear-gradient(100deg,#100906,#2f170c 65%,#140905)}
+.sh-cinematic.sh-has-image:before{background:linear-gradient(90deg,#090504eF 5%,#170b08c9 44%,#1a0e0850 100%),var(--sh-hero-image) center/cover no-repeat}
+.sh-hero-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}
+.sh-cinematic:after{content:'';pointer-events:none;position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#110806b8 5%,#13080846 75%),linear-gradient(0deg,#160b09aa,transparent 30%)}
+.sh-cinematic .wrap{position:relative;z-index:1;min-height:660px}
+.sh-cinematic h1{font-family:var(--serif);text-shadow:0 6px 22px #0006}
+.sh-cinematic h1 span:last-child{color:#fa7d25}
+.sh-cinematic .btn{border-radius:32px}
+.sh-cinematic .btn.ghost{background:#170d0b44}
+.sh-cinematic .sh-eyebrow{color:#f08a36;font-weight:700;letter-spacing:.24em;font-size:12px;margin-bottom:20px}
+.sh-cinematic .sh-cards{position:absolute;right:2%;bottom:10%;display:flex;gap:13px;z-index:2;pointer-events:none}
+.sh-cinematic .sh-cards img{height:125px;width:92px;object-fit:cover;border:5px solid #fff;box-shadow:0 13px 28px #0008;transform:rotate(var(--tilt));border-radius:3px;animation:shFloat 5s ease-in-out infinite alternate}
+@keyframes shFloat{to{translate:0 -14px}}
+.sh-cinematic.sh-no-ribbon #heroArt .rp,.sh-cinematic.sh-no-ribbon #heroArt .bow{display:none}
+.sh-cinematic.sh-no-cards .sh-cards{display:none}
+.sh-campaign{padding:22px;text-align:center;background:#1d100b;color:#fff}
+.sh-campaign b{font-family:var(--serif);font-size:clamp(20px,3vw,30px);color:#ffad72}
+@media(max-width:1100px){.sh-header-search{flex:0 1 180px}.sh-menu-trigger{padding:8px}.sh-mega{left:-90px}}
+@media(max-width:820px){.sh-header-search{display:none}.sh-menu-host{display:none}.sh-cinematic .wrap{min-height:570px}.sh-cinematic .sh-cards{display:none}}
+@media(max-width:650px){.sh-cinematic{min-height:550px}.sh-cinematic .wrap{min-height:550px}.sh-cinematic h1{font-size:clamp(48px,11vw,76px)}}
+@media(prefers-reduced-motion:reduce){.sh-cinematic .sh-cards img{animation:none}}
