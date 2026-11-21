@@ -36,6 +36,16 @@ function setupLocalPhotoPreview(fileInputId,previewId){
  };
 }
 async function query(table,selection='*',limit=1000){const q=await db.from(table).select(selection).limit(limit);if(q.error)throw q.error;return q.data||[]}
+async function queryTraffic(){
+ const out=[],batch=1000;
+ for(let offset=0;offset<12000;offset+=batch){
+  const r=await db.from('sh_web_daily_stats').select('*').order('event_date',{ascending:false}).range(offset,offset+batch-1);
+  if(r.error)throw r.error;
+  out.push(...(r.data||[]));
+  if(!r.data||r.data.length<batch)break;
+ }
+ return out;
+}
 
 /* SHOPYHAT Operations — date filtering and verified database audit. */
 const tzDate=v=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dhaka',year:'numeric',month:'2-digit',day:'2-digit'}).format(v instanceof Date?v:new Date(v));
@@ -131,7 +141,7 @@ async function boot(){const {data:{user},error}=await db.auth.getUser();
  await refresh()}
 async function refresh(){notice('appMsg','Loading live data…');
  try{
- const [p,v,i,o,oi,pa,st,rv,cs,cm,cu,cr,ws,rm]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff'),query('sh_reviews'),query('sh_customer_cases'),query('sh_case_media'),query('sh_case_updates'),query('sh_case_replies'),query('sh_web_daily_stats','*',1000),query('sh_review_media')]);
+ const [p,v,i,o,oi,pa,st,rv,cs,cm,cu,cr,ws,rm]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff'),query('sh_reviews'),query('sh_customer_cases'),query('sh_case_media'),query('sh_case_updates'),query('sh_case_replies'),queryTraffic(),query('sh_review_media')]);
  products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;reviews=rv;cases=cs;caseMedia=cm;caseUpdates=cu;caseReplies=cr;dailyStats=ws;reviewMedia=rm;
  try{await loadAudit()}catch(e){audit=[];console.warn('Audit log not loaded:',e.message)}
  if(roleCan('owner','manager')){try{const r=await db.rpc('sh_admin_archive_health');archiveHealth=r.error?null:r.data}catch(e){archiveHealth=null}}else archiveHealth=null;
@@ -290,7 +300,7 @@ function renderInsights(){
  $('biTopProducts').innerHTML=r.top.map(x=>'<tr><td>'+esc(x.name)+'</td><td>'+x.qty+'</td><td>'+money(x.value)+'</td></tr>').join('')||'<tr><td colspan="3">No product sales in this period.</td></tr>';
  $('biPages').innerHTML=r.pages.map(x=>'<tr><td>'+esc(x.page)+'</td><td>'+x.views+'</td><td>'+x.visitors+'</td></tr>').join('')||'<tr><td colspan="3">No recorded traffic yet.</td></tr>';
  const h=archiveHealth;
- $('biArchiveHealth').textContent=h?'Database: '+(Number(h.database_bytes)/1024/1024).toFixed(1)+' MB · Monitoring threshold: '+(Number(h.threshold_bytes)/1024/1024).toFixed(0)+' MB · Audit rows older than 6 months: '+h.eligible_audit_rows+' · '+(h.needs_archive?'Archive review required (backup not yet configured).':'No archive action needed.'):'Capacity data unavailable (only Owner / Manager can view).';
+ $('biArchiveHealth').textContent=h?'Database: '+(Number(h.database_bytes)/1024/1024).toFixed(1)+' MB · Files: '+(Number(h.storage_bytes||0)/1024/1024).toFixed(1)+' MB ('+Number(h.storage_files||0)+' files) · Audit threshold: '+(Number(h.threshold_bytes)/1024/1024).toFixed(0)+' MB · 6+ month audit rows: '+h.eligible_audit_rows+' · '+(h.needs_archive?'Verified archive required.':'Archive not required.')+' · Google Sheets auto-sync: '+(h.archive_configured?'Configured':'Inactive; setup required.'):'Capacity data unavailable (only Owner / Manager can view).';
 }
 function exportInsightReport(){
  if(!roleCan('owner','manager'))return;
