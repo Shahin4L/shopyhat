@@ -162,7 +162,14 @@ function editProduct(id){
  <div class="fieldrow"><div><label>Category</label><input name="category" required value="${esc(p.category)}"></div><div><label>Status</label><select name="status">${['active','draft','hidden','sold_out'].map(v=>'<option '+(p.status===v?'selected':'')+'>'+v+'</option>').join('')}</select></div>
  <div><label>Price (BDT)</label><input name="base_price" type="number" min="0" step=".01" required value="${esc(p.base_price)}"></div><div><label>Previous price</label><input name="old_price" type="number" min="0" step=".01" value="${esc(p.old_price||'')}"></div></div>
  <label>Sizes (comma separated)</label><input name="sizes" value="${esc((p.sizes||[]).join(', '))}"><label>Description</label><textarea name="description">${esc(p.description)}</textarea>
- <label>Product details</label><textarea name="details">${esc(p.details)}</textarea>
+ <label>Product details (English)</label><textarea name="details">${esc(p.details)}</textarea>
+ <div class="media-section" style="margin:14px 0">
+  <div class="section-heading"><h3>বাংলা পণ্যের তথ্য / Bengali Product Content</h3><span class="step-number">OPTIONAL · BN</span></div>
+  <p class="muted">Enter accurate Bengali translations here. English will remain the fallback if a Bengali field is empty.</p>
+  <label for="productNameBn">পণ্যের নাম (বাংলা)</label><input id="productNameBn" lang="bn" name="name_bn" placeholder="বাংলায় পণ্যের নাম" value="${esc(p.name_bn||'')}">
+  <label for="productDescBn">পণ্যের বিবরণ (বাংলা)</label><textarea id="productDescBn" lang="bn" name="description_bn" placeholder="বাংলায় সংক্ষিপ্ত বিবরণ">${esc(p.description_bn||'')}</textarea>
+  <label for="productDetailsBn">পণ্যের বিস্তারিত (বাংলা)</label><textarea id="productDetailsBn" lang="bn" name="details_bn" placeholder="প্রতিটি তথ্য নতুন লাইনে লিখুন">${esc(p.details_bn||'')}</textarea>
+ </div>
  <label><input type="checkbox" name="is_new" ${p.is_new?'checked':''} style="width:auto"> New Arrival</label>
  <div class="media-section">
  <div class="section-heading"><h3>Step 1 · Product Photos</h3><span class="step-number">PHOTO FIRST</span></div>
@@ -178,7 +185,7 @@ function editProduct(id){
  ${variantList.map(v=>'<div class="variant-card"><div class="topline"><div><b>'+esc(v.color)+'</b> · '+esc(v.sku||'No SKU')+'<div class="muted">Stock: '+esc(v.stock??'Unlimited')+' · '+money(v.price??p.base_price)+'</div></div><button type="button" class="btn small" data-edit-variant="'+v.id+'">Edit Color / Photos</button></div><div class="photos">'+productPhotoTiles(images.filter(i=>i.variant_id===v.id),v.color)+'</div></div>').join('')||'<p class="muted">No colors yet. Choose a color to create a separate gallery.</p>'}
  </div>`:''}`);
  setupLocalPhotoPreview('productInitialFiles','productInitialPreview');
- $('productForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('productForm');const payload={name:String(f.name).trim(),category:String(f.category).trim(),base_price:Number(f.base_price),old_price:f.old_price?Number(f.old_price):null,description:String(f.description||''),details:String(f.details||''),sizes:String(f.sizes||'').split(',').map(s=>s.trim()).filter(Boolean),status:f.status,is_new:!!f.is_new};
+ $('productForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('productForm');const payload={name:String(f.name).trim(),category:String(f.category).trim(),base_price:Number(f.base_price),old_price:f.old_price?Number(f.old_price):null,description:String(f.description||''),details:String(f.details||''),name_bn:String(f.name_bn||'').trim(),description_bn:String(f.description_bn||'').trim(),details_bn:String(f.details_bn||'').trim(),sizes:String(f.sizes||'').split(',').map(s=>s.trim()).filter(Boolean),status:f.status,is_new:!!f.is_new};
  try{
  const files=[...($('productInitialFiles')?.files||[])];
  const q=id?db.from('sh_products').update(payload).eq('id',id).select('id').single():db.from('sh_products').insert(payload).select('id').single();
