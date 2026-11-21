@@ -1259,7 +1259,7 @@ function buildHero(){
    PRODUCT DATA — from Google Sheet (or the sample list above)
    ===================================================================== */
 const SHEET=CONFIG.sheetUrl||"";
-const VARIANT_FEED_URL="PASTE_PUBLIC_VARIANT_FEED_EXEC_URL_HERE";
+const VARIANT_FEED_URL="https://script.google.com/macros/s/AKfycbxYZdwDnsjYMgNxYDbGqclJvThHuHCHIqjSS7gz04ZwjOJUAe9WJUPJA7uoF7c0QO99/exec";
 let VARIANT_MAP={};
 const slug=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const catKey=s=>slug(s).replace(/-/g,"").replace(/s$/,"");
