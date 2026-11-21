@@ -15,10 +15,23 @@ function closeDrawer(){show('overlay',false)}
 function formData(id){return Object.fromEntries(new FormData($(id)).entries())}
 function imgTag(url,label='Product photo'){return url?'<img src="'+esc(imageUrl(url))+'" alt="'+esc(label)+'" loading="lazy" onerror="this.style.visibility=\'hidden\'">':''}
 async function query(table,selection='*',limit=1000){const q=await db.from(table).select(selection).limit(limit);if(q.error)throw q.error;return q.data||[]}
-async function loginSend(){const email=$('email').value.trim().toLowerCase();if(!/^\S+@\S+\.\S+$/.test(email))return notice('loginMsg','Enter a valid email.',true);
- $('sendOtp').disabled=true;notice('loginMsg','Requesting verification email…');
- try{const r=await db.auth.signInWithOtp({email,options:{shouldCreateUser:true}});if(r.error)throw r.error;show('codeWrap',true);notice('loginMsg','Check inbox or spam. Enter the 6-digit code. If your template sends a link, open it in the same browser.')}
- catch(e){notice('loginMsg',e.message,true)}finally{$('sendOtp').disabled=false}}
+async function loginSend(){
+ const email=$('email').value.trim().toLowerCase();
+ if(!/^\S+@\S+\.\S+$/.test(email))return notice('loginMsg','Enter a valid email.',true);
+ $('sendOtp').disabled=true;notice('loginMsg','Requesting a secure sign-in email…');
+ try{
+   const response=await fetch(SUPABASE_URL+'/functions/v1/shopyhat-auth-request',{
+     method:'POST',
+     headers:{'content-type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY},
+     body:JSON.stringify({email})
+   });
+   const data=await response.json();
+   if(!response.ok)throw Error(data.error||'Email sign-in request failed');
+   show('codeWrap',true);
+   notice('loginMsg','Check your inbox/spam for the 6-digit code or sign-in link. A sign-in link will return you to this Admin page.');
+ }catch(e){notice('loginMsg',e.message||'Unable to send email',true)}
+ finally{$('sendOtp').disabled=false}
+}
 async function loginVerify(){const email=$('email').value.trim().toLowerCase(),token=$('otp').value.trim();if(!/^\d{6,8}$/.test(token))return notice('loginMsg','Enter the verification code.',true);
  $('verifyOtp').disabled=true;try{const r=await db.auth.verifyOtp({email,token,type:'email'});if(r.error)throw r.error;await boot()}
  catch(e){notice('loginMsg',e.message,true)}finally{$('verifyOtp').disabled=false}}
