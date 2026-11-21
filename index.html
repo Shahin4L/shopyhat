@@ -1547,12 +1547,15 @@ function parseProduct(r,i){
       return base;
     })(),sizes:sizes.length?sizes:undefined,imgs:imgs.length?imgs:undefined,
     type:types.includes(t)?t:guessType(catName+" "+name),
-    desc:String(r.desc||"").trim(),details:list(r.details,/[\n|]+/)}
+    desc:String(r.desc||"").trim(),details:list(r.details,/[\n|]+/),
+    nameBn:String(r.name_bn||"").trim(),descBn:String(r.description_bn||"").trim(),
+    detailsBn:list(r.details_bn,/[\n|]+/)}
 }
 function applyProducts(list){
   const seenIds=new Set();let top=Math.max(0,...list.map(p=>p.id));
   list.forEach(p=>{if(seenIds.has(p.id))p.id=++top;seenIds.add(p.id)});
-  PRODUCTS=list;const seen=[],cats=[];
+  PRODUCTS=list;window.SHOPYHAT_I18N?.registerProducts(list);
+  const seen=[],cats=[];
   list.forEach(p=>{if(!seen.includes(p.cat)){seen.push(p.cat);
     const d=DEFAULT_CATS.find(c=>catKey(c.id)===catKey(p.cat));cats.push({id:p.cat,name:p.catName,note:d?d.note:""})}});
   CATS=cats;maxPrice=Math.max(1000,...list.map(p=>p.price));F.max=0;
@@ -1610,13 +1613,18 @@ function renderHome(){
 }
 const F={cat:"all",q:"",sort:"new",max:0,sale:false};
 let maxPrice=1000;
+function productSearchText(p){
+ const tr=window.SHOPYHAT_I18N?.translate;
+ const colors=(p.colors||[]).flatMap(c=>[c.n,typeof tr==='function'?(tr(c.n)||''):'']);
+ return [p.name,p.nameBn||'',p.catName||'',catName(p.cat),p.desc,p.descBn||'',...colors].join(' ').toLowerCase();
+}
 function renderShop(){
   $("#chips").innerHTML=[{id:"all",name:"All"},...CATS].map(c=>`<button class="chip ${F.cat===c.id?"on":""}" data-cat="${c.id}">${esc(c.name)}</button>`).join("");
   $("#shopTitle").textContent=F.cat==="all"?"All products":catName(F.cat);
   const pm=$("#pmax"); pm.min=0; pm.max=Math.ceil(maxPrice/100)*100; pm.step=50; if(!F.max)F.max=+pm.max; pm.value=F.max; $("#pmaxv").textContent=money(F.max);
   $("#onlySale").checked=F.sale; $("#sort").value=F.sort;
   let a=PRODUCTS.filter(p=>(F.cat==="all"||p.cat===F.cat)&&p.price<=F.max&&(!F.sale||isSale(p)));
-  if(F.q){const q=F.q.toLowerCase();a=a.filter(p=>(p.name+" "+catName(p.cat)+" "+p.colors.map(c=>c.n).join(" ")+" "+p.desc).toLowerCase().includes(q))}
+  if(F.q){const q=F.q.toLowerCase();a=a.filter(p=>productSearchText(p).includes(q))}
   if(F.sort==="lh")a.sort((x,y)=>x.price-y.price);else if(F.sort==="hl")a.sort((x,y)=>y.price-x.price);else if(F.sort==="az")a.sort((x,y)=>x.name.localeCompare(y.name));else a.sort((x,y)=>Number(y.isNew)-Number(x.isNew)||y.id-x.id);
   $("#pcount").textContent=a.length+" product"+(a.length===1?"":"s")+(F.q?` for “${F.q}”`:"");
   $("#shopGrid").innerHTML=a.length?a.map(cardHTML).join(""):`<div class="empty" style="grid-column:1/-1"><b style="color:var(--ink)">Nothing matches these filters.</b><br>Try another category, a higher price or clear the filters.</div>`;
@@ -1630,7 +1638,7 @@ function closeSearch(){$("#sov").classList.remove("show");if(!$(".modal.show,.dr
 function renderSearch(q){
   q=q.trim().toLowerCase(); const box=$("#sRes");
   if(!q){box.innerHTML=`<div style="margin-top:14px;color:var(--muted);font-size:14px">Popular searches</div><div class="sq">${["Tangail","Silk","Kurti","Hijab","Earrings"].map(t=>`<button class="chip" data-sq="${t}">${t}</button>`).join("")}</div>`;return}
-  const a=PRODUCTS.filter(p=>(p.name+" "+catName(p.cat)+" "+p.colors.map(c=>c.n).join(" ")+" "+p.desc).toLowerCase().includes(q));
+  const a=PRODUCTS.filter(p=>productSearchText(p).includes(q));
   box.innerHTML=a.length?a.slice(0,6).map(p=>`<button class="sr" data-open="${p.id}"><div class="art">${storefrontArt(p)}</div><div><b>${esc(p.name)}</b><small>${esc(catName(p.cat))} · ${money(p.price)}</small></div></button>`).join("")+`<div style="margin-top:14px"><button class="link" data-seeall="${esc(q)}">See all results</button></div>`:`<div class="empty" style="margin-top:14px">No results for “${esc(q)}”. Try a different word.</div>`;
 }
 
@@ -2107,11 +2115,12 @@ async function fetchShopyhatCatalog(){
     images:imgs.filter(i=>i.variant_id===v.id).map(i=>i.image_url)
   }));
   const photos=imgs.filter(i=>i.product_id===p.id&&!i.variant_id).map(i=>i.image_url);
-  return {id:p.legacy_id,name:p.name,category:p.category,price:p.base_price,
+  return {id:p.legacy_id,name:p.name,name_bn:p.name_bn||"",category:p.category,price:p.base_price,
     old:p.old_price,availability:p.status==="active"?"Available":"Hidden",
     isNew:p.is_new?"YES":"NO",type:"",sizes:(p.sizes||[]).join(","),
     colors:pv.map(v=>v.color+(v.hex?":"+v.hex:"")).join(","),
-    images:photos.join("\n"),desc:p.description,details:p.details};
+    images:photos.join("\n"),desc:p.description,details:p.details,
+    description_bn:p.description_bn||"",details_bn:p.details_bn||""};
  });
  return rows;
 }
@@ -2134,5 +2143,6 @@ async function boot(){
 }
 boot();
 </script>
+<script src="./i18n.js" defer></script>
 </body>
 </html>
