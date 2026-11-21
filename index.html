@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SHOPYHAT | Tangail Sarees, Women's Clothing & Accessories</title>
 <meta name="description" content="Shop Tangail sarees, three-piece sets, kurti, hijab and accessories at SHOPYHAT. Your Choice, Our Gift. Delivery across Bangladesh.">
-<meta name="theme-color" content="#171716">
+<meta name="theme-color" content="#191817">
 <meta name="color-scheme" content="light">
 <link rel="dns-prefetch" href="//script.google.com">
 <meta property="og:title" content="SHOPYHAT — Your Choice, Our Gift">
@@ -708,6 +708,204 @@ img,svg,video,iframe{max-width:100%}
 @media(min-width:861px){.box{max-height:none}}
 @media(prefers-reduced-motion:reduce){.card,.card .im .art,.mt .art img,.btn{animation:none!important;transition:none!important}}
 
+
+/* ===============================================================
+   SHOPYHAT / Atelier Commerce Edition — November 2026
+   Design-only progressive enhancement. No API, payment or order
+   contract changes. All visual elements are responsive.
+   =============================================================== */
+:root{
+  --sh-ivory:#faf8f5;--sh-white:#fff;--sh-coal:#191817;--sh-accent:#d8692e;
+  --sh-sand:#f1ebe3;--sh-border:#e9e2da;--sh-shadow:0 18px 48px rgba(30,24,19,.08);
+  --sh-motion:cubic-bezier(.22,.7,.22,1);
+}
+body{background:var(--sh-ivory);font-feature-settings:"kern" 1}
+button,input,select,textarea{font-family:var(--sans)}
+main{overflow:clip}
+.wrap{width:min(100%,1320px)!important;max-width:1320px!important;padding-inline:clamp(16px,3vw,32px)!important;margin-inline:auto!important}
+/* Headline rhythm */
+.overline{font:800 10px/1.5 var(--sans);letter-spacing:.21em;color:var(--sh-accent);margin-bottom:12px;text-transform:uppercase}
+.title-accent{color:var(--sh-accent)}
+.sec-h{display:flex;align-items:end;gap:24px;justify-content:space-between;margin-bottom:30px}
+.sec-h h2{font-size:clamp(36px,5vw,62px)!important;line-height:.99;letter-spacing:-.035em;margin:0;color:var(--sh-coal)}
+.sec-h p{font-size:13.5px;line-height:1.7;max-width:500px;margin:13px 0 0}
+.section-link{display:inline-flex;gap:16px;align-items:center;flex-shrink:0;font-size:12px;font-weight:800;letter-spacing:.015em;border-bottom:1px solid #aaa095;padding:0 0 8px;transition:border-color .2s,color .2s}
+.section-link span{font-size:17px;font-weight:400;color:var(--sh-accent)}
+.section-link:hover{color:var(--sh-accent);border-color:var(--sh-accent)}
+/* The trust panel is a designed unit, not three unaligned text columns. */
+.facts{background:transparent!important;box-shadow:none!important;border:0!important;position:relative;z-index:2;margin:-34px auto 0;padding:0!important}
+.facts .wrap.trust-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:9px 14px!important;background:#fff;border:1px solid #eee8e0;border-radius:18px;box-shadow:0 20px 60px rgba(21,16,12,.1);width:calc(100% - 32px)!important;max-width:1220px!important}
+.facts .trust-item{min-width:0;display:flex!important;align-items:center;gap:15px;padding:19px clamp(14px,2.35vw,32px)!important;border:0!important;border-right:1px solid var(--sh-border)!important;color:var(--sh-coal);}
+.facts .trust-item:last-child{border-right:0!important}
+.trust-ico{flex:0 0 49px;width:49px;height:49px;display:grid;place-items:center;border-radius:14px;background:#f9f1eb;color:#b75a2a}
+.trust-ico svg{width:24px;height:24px;display:block}
+.trust-copy{min-width:0;display:block}
+.facts .trust-copy b{display:block;color:var(--sh-coal);font:800 13.2px/1.4 var(--sans);margin:0 0 4px;letter-spacing:0}
+.facts .trust-copy small{display:block;color:#81776d;font:500 11.7px/1.6 var(--sans)}
+/* Collections — image-led, editorial but readable. */
+.collection-section{padding-top:80px}
+.mosaic{display:grid;grid-template-columns:1.17fr 1fr 1fr;grid-template-rows:repeat(2,minmax(205px,1fr));gap:14px}
+.mt{border-radius:18px;background:linear-gradient(145deg,#ede4df,#d9d3c7);border:1px solid rgba(30,21,15,.05);box-shadow:0 5px 16px rgba(34,25,18,.045);min-height:0;isolation:isolate}
+.mt .art{inset:0;overflow:hidden}
+.mt .art img,.mt .art svg{object-fit:cover;transition:transform .65s var(--sh-motion)}
+.mt:hover .art img,.mt:hover .art svg{transform:scale(1.055)}
+.mt::after{background:linear-gradient(180deg,rgba(0,0,0,.03) 18%,rgba(17,13,10,.2) 45%,rgba(17,13,10,.82) 100%)}
+.category-count{position:absolute;z-index:2;left:18px;top:18px;color:#fff;background:rgba(16,15,14,.48);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.17);border-radius:99px;padding:6px 11px;font-size:11px;font-weight:700;letter-spacing:.015em}
+.mt .ml{left:24px;right:22px;bottom:21px}
+.mt .ml b{font-size:clamp(25px,2.4vw,36px);letter-spacing:-.015em;line-height:1.08}
+.mt.big .ml b{font-size:clamp(38px,4vw,55px)}
+.mt .ml small{display:block;color:#e7ded2;font-size:12px;margin-top:5px;line-height:1.6}
+.category-cta{display:inline-flex;align-items:center;gap:14px;border-bottom:1px solid rgba(255,255,255,.6);font-size:11px;font-weight:800;letter-spacing:.05em;margin-top:13px;padding-bottom:4px;color:#fff}
+.category-cta span{font-size:16px}
+/* Two individually navigable arrivals and offers collections */
+.arrivals-block{padding-block:75px 90px;background:linear-gradient(180deg,#fff 0%,#fcfaf7 100%)}
+.offers-block{background:#f4eee8;padding-block:70px 82px}
+.arrivals-block .sec-h,.offers-block .sec-h{margin-bottom:30px}
+/* Product cards — premium catalogue treatment with clear pricing and CTA */
+.grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:28px 20px;align-items:stretch}
+.grid>*{min-width:0}
+.card.pro-card{display:flex;min-width:0;height:100%;flex-direction:column;transform:none!important;max-width:100%}
+.pro-card .im{width:100%;aspect-ratio:4/5;border-radius:17px;box-shadow:none!important;background:#ece7e0;position:relative;overflow:hidden}
+.pro-card .im .art{width:100%;height:100%;transition:transform .6s var(--sh-motion)}
+.pro-card .im .art img{width:100%;height:100%;object-fit:cover}
+@media(hover:hover){.pro-card:hover .im .art{transform:scale(1.045)}}
+.pro-card .nb{left:12px;top:12px;font-size:10.5px;letter-spacing:.03em;padding:6px 10px;max-width:calc(100% - 66px);box-shadow:0 4px 16px rgba(0,0,0,.06)}
+.pro-card .nb.new{background:#fff;color:#8b4d2a}
+.pro-card .nb.sale{background:var(--sh-accent);color:#fff}
+.pro-card .wish{top:10px;right:10px;width:36px;height:36px;border-radius:12px;box-shadow:0 6px 18px rgba(20,15,10,.08)}
+.pro-card .hover-caption{position:absolute;pointer-events:none;bottom:12px;left:12px;right:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);color:#241e1a;padding:12px 16px;border-radius:11px;font-size:12px;font-weight:800;opacity:0;transform:translateY(10px);transition:opacity .25s,transform .25s}
+.pro-card .hover-caption span{font-size:18px;font-weight:400;color:var(--sh-accent)}
+@media(hover:hover){.pro-card:hover .hover-caption{opacity:1;transform:none}}
+.pro-card .info{display:flex;flex:1;min-width:0;max-width:100%;padding:15px 2px 2px;gap:7px;align-items:stretch}
+.pro-card .card-kicker{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;color:#8a7c70;font-size:10px;text-transform:uppercase;font-weight:800;letter-spacing:.105em;line-height:1.5}
+.pro-card .card-kicker span:last-child{color:#bb6c3e}
+.pro-card .card-kicker-dot{color:#c4afa0}
+.pro-card .cname{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;text-align:left;color:#26211e;font-size:14px;font-weight:750;line-height:1.45;min-height:2.9em;letter-spacing:-.01em}
+.pro-card .cname:hover{color:#c45e2b}
+.pro-card .card-price{display:flex;align-items:center;gap:9px;flex-wrap:wrap;line-height:1.5}
+.pro-card .card-price b{font-size:16px;color:#211d19;font-weight:800}
+.pro-card .card-price s{font-size:12px;color:#978a7f}
+.pro-card .card-colors{display:flex;gap:9px;align-items:center;color:#84776e;font-size:11px;margin:1px 0 0;min-height:21px}
+.pro-card .dots{display:flex;gap:4px;align-items:center;margin:0;flex-wrap:nowrap}
+.pro-card .dots i{width:13px;height:13px;flex:0 0 13px;border-radius:50%;box-shadow:0 0 0 1px #dbd5cc,inset 0 0 0 2px #fff}
+.pro-card .product-cta{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:9px;width:100%;min-height:43px;border:1px solid #e6ded6;background:#fff;color:#302925;border-radius:11px;padding:10px 14px;font-size:11.5px;font-weight:800;transition:background .2s,color .2s,border-color .2s,transform .2s}
+.pro-card .product-cta span:last-child{font-size:17px;font-weight:400;color:var(--sh-accent)}
+.pro-card .product-cta:not(:disabled):hover{background:#191817;color:#fff;border-color:#191817;transform:translateY(-1px)}
+.pro-card .product-cta:disabled{opacity:.55;cursor:not-allowed}
+/* Better product view, colour choice and low-friction checkout presentation */
+.modal .box{border-radius:20px;box-shadow:0 30px 90px rgba(14,12,11,.22)}
+.pd .body{gap:14px}
+.pd h2{font-size:clamp(32px,3.5vw,47px);letter-spacing:-.035em}
+.pd .body>p{font-size:13.5px;line-height:1.8}
+.product-reassurance{background:#f8f4ed;border:1px solid #efe6db;padding:11px 14px;color:#765b46;font-size:11.5px!important;font-weight:700;border-radius:10px;margin:0}
+.sw{outline-offset:3px}
+.sw:focus-visible{outline:2px solid var(--sh-accent)}
+.buy-acts .btn{min-height:50px}
+.gal .main{background:#f1ede6;aspect-ratio:4/5}
+.gal .main img{object-fit:contain}
+.thumbs button{border-radius:8px;overflow:hidden}
+/* Checkout gets a visual step hierarchy without changing payment or form rules */
+.co .f{padding:40px clamp(20px,3vw,44px)}
+.co .s{padding:40px clamp(18px,2.5vw,36px);background:#f8f4ef;border-left:1px solid #eae3da}
+.checkout-topline{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;color:#a35c31;font:800 10px/1.5 var(--sans);letter-spacing:.1em;margin-bottom:15px}
+.checkout-topline span+span{color:#98897d;letter-spacing:0;text-transform:none;font-weight:600}
+.co .f h2{font-size:clamp(38px,4vw,50px);line-height:1.02;letter-spacing:-.035em;margin:0 0 12px}
+.checkout-intro{font-size:12.5px;color:#766f68;margin:0 0 23px;line-height:1.75}
+.co h4{font-size:13px;color:#2d2925;margin:24px 0 12px;font-weight:800;letter-spacing:.01em}
+.co .fld{margin-bottom:15px}
+.co .fld label{font-size:11.5px;font-weight:800;margin-bottom:7px}
+.co .fld input,.co .fld textarea,.co .fld select{border-radius:11px;background:#fff;min-height:45px;font-size:13px;padding:11px 13px}
+.co .fld input:focus,.co .fld textarea:focus,.co .fld select:focus{box-shadow:0 0 0 3px rgba(216,105,46,.1)}
+.co .opt{border-radius:11px;padding:14px 15px;align-items:center}
+.co .opt b{font-size:12.5px}.co .opt small{font-size:11.5px}
+.co .agree{line-height:1.6}
+.co #placeBtn{min-height:51px}
+.checkout-footnote{font-size:11px;text-align:center;color:#87796e;line-height:1.55;margin-top:12px}
+.summary-heading{display:flex;align-items:center;gap:12px;margin-bottom:13px}
+.summary-icon{width:42px;height:42px;border-radius:12px;background:#fff;border:1px solid #e8ddd1;display:grid;place-items:center;color:#b86b3c;font-size:20px}
+.summary-kicker{font-size:9px;letter-spacing:.13em;font-weight:800;color:#9b6d4e}
+.summary-heading h2{margin:0}.summary-hint{margin-top:18px;color:#81776c;font-size:11.5px;line-height:1.65}
+.cart-reassurance{font-size:11px;color:#887668;text-align:center;margin:13px 0 0}
+#cartFoot .btn{min-height:50px}
+#coSum .mini{gap:11px}
+#coSum .mini .art{width:53px;height:64px;border-radius:8px;overflow:hidden}
+/* Mobile-first tailoring */
+@media(max-width:1100px){
+  .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .facts .trust-item{gap:12px;padding:18px 14px!important}
+  .trust-ico{flex-basis:43px;width:43px;height:43px}
+}
+@media(max-width:860px){
+  .facts{margin-top:-22px}
+  .facts .wrap.trust-grid{padding:6px 10px!important;max-width:calc(100% - 22px)!important}
+  .facts .trust-item{border:0!important;border-right:1px solid var(--sh-border)!important;border-top:0!important;gap:9px;padding:14px 10px!important;flex-direction:column;align-items:flex-start}
+  .facts .trust-item:last-child{border-right:0!important}
+  .trust-ico{width:40px;height:40px;flex-basis:40px;border-radius:11px}
+  .trust-ico svg{width:20px;height:20px}
+  .facts .trust-copy b{font-size:11px;line-height:1.25}
+  .facts .trust-copy small{font-size:10px;line-height:1.45}
+  .mosaic{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none;gap:10px}
+  .mt{aspect-ratio:1}
+  .mt.big{grid-row:auto;grid-column:1/-1;aspect-ratio:16/10}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 14px}
+  .co .s{border-left:0;border-bottom:1px solid var(--sh-border)}
+  .collection-section{padding-top:66px}
+}
+@media(max-width:560px){
+  .facts{margin-top:-12px}
+  .facts .wrap.trust-grid{border-radius:15px;max-width:calc(100% - 20px)!important;width:calc(100% - 20px)!important;padding:5px!important}
+  .facts .trust-item{padding:12px 8px!important;align-items:center;text-align:center;gap:8px}
+  .trust-ico{width:36px;height:36px;flex-basis:36px}
+  .trust-ico svg{width:19px;height:19px}
+  .facts .trust-copy b{font-size:10.5px}
+  .facts .trust-copy small{font-size:9px}
+  .sec-h{align-items:flex-start;gap:12px;flex-direction:column;margin-bottom:23px}
+  .sec-h h2{font-size:clamp(35px,9.5vw,49px)!important}
+  .section-link{font-size:11px;align-self:flex-start;margin-top:6px}
+  .collection-section{padding-top:54px}
+  .mt .ml{left:15px;right:10px;bottom:14px}
+  .mt .ml b{font-size:clamp(22px,5.5vw,31px)}
+  .mt.big .ml b{font-size:clamp(35px,8vw,43px)}
+  .mt .ml small{font-size:10px;margin-top:4px}
+  .category-count{left:11px;top:10px;padding:5px 8px;font-size:9px}
+  .category-cta{font-size:10px;margin-top:7px}
+  .arrivals-block,.offers-block{padding-block:52px 62px}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:25px 10px}
+  .pro-card .im{border-radius:12px}
+  .pro-card .info{padding:10px 1px 1px;gap:5px}
+  .pro-card .cname{font-size:12.2px;line-height:1.4;min-height:2.8em}
+  .pro-card .card-kicker{font-size:9px;letter-spacing:.05em;gap:5px}
+  .pro-card .card-kicker span:last-child{display:none}
+  .pro-card .card-price{gap:6px}
+  .pro-card .card-price b{font-size:13.5px}
+  .pro-card .card-price s{font-size:10.5px}
+  .pro-card .card-colors{font-size:10px;gap:6px}
+  .pro-card .dots{gap:3px}
+  .pro-card .dots i{width:11px;height:11px;flex-basis:11px}
+  .pro-card .product-cta{min-height:38px;padding:8px 9px;font-size:10.5px;border-radius:9px}
+  .pro-card .product-cta span:last-child{font-size:16px}
+  .pro-card .nb{font-size:9px;padding:4px 8px;left:7px;top:7px}
+  .pro-card .wish{width:31px;height:31px;border-radius:9px;right:7px;top:7px}
+  .pro-card .wish svg{width:16px;height:16px}
+  .pro-card .hover-caption{display:none}
+  .co .f,.co .s{padding:27px 19px}
+  .co .f h2{font-size:35px}
+  .checkout-topline{font-size:9px}
+  .summary-heading h2{font-size:25px!important}
+}
+@media(max-width:360px){
+  .facts .trust-item{padding:9px 5px!important}
+  .trust-ico{width:33px;height:33px;flex-basis:33px}
+  .facts .trust-copy b{font-size:9.5px}
+  .facts .trust-copy small{font-size:8.5px}
+  .pro-card .cname{font-size:11.5px}
+  .pro-card .product-cta{font-size:10px;padding-inline:7px}
+  .mt .ml b{font-size:21px}
+}
+@media(prefers-reduced-motion:reduce){
+  .pro-card .im .art,.mt .art img,.mt .art svg,.pro-card .product-cta,.pro-card .hover-caption{transition:none!important}
+}
+
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -759,22 +957,25 @@ img,svg,video,iframe{max-width:100%}
     </div>
   </section>
 
-  <section class="facts"><div class="wrap">
-    <div><b>Cash on delivery</b>Pay when your order arrives.</div>
-    <div><b>Delivery across Bangladesh</b>Inside and outside Dhaka.</div>
-    <div><b>3-day return request</b>For damaged, defective or wrong items.</div>
+  <section class="facts" aria-label="Shopping with SHOPYHAT"><div class="wrap trust-grid">
+    <div class="trust-item"><span class="trust-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3M16 3v3"/></svg></span><span class="trust-copy"><b>Cash on delivery</b><small>Pay when your order arrives</small></span></div>
+    <div class="trust-item"><span class="trust-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v10H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg></span><span class="trust-copy"><b>Bangladesh-wide delivery</b><small>Inside and outside Dhaka</small></span></div>
+    <div class="trust-item"><span class="trust-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/><path d="m9 12 2 2 4-4"/></svg></span><span class="trust-copy"><b>3-day return request</b><small>For damaged, defective or wrong items</small></span></div>
   </div></section>
 
-  <section class="sec"><div class="wrap">
-    <div class="sec-h"><div><div class="swallow"></div><h2>Shop by category</h2></div><a class="link" href="#shop">All products</a></div>
+  <section class="sec collection-section"><div class="wrap">
+    <div class="sec-h"><div><div class="overline">EXPLORE THE COLLECTION</div><h2>Find your kind of beautiful.</h2><p>Discover styles by category, thoughtfully organised for easy shopping.</p></div><a class="section-link" href="#shop">Explore all <span aria-hidden="true">↗</span></a></div>
     <div class="mosaic" id="mosaic"></div>
   </div></section>
 
-  <section class="sec" style="padding-top:8px"><div class="wrap">
-    <div class="sec-h"><div><h2>Just in</h2></div>
-      <div class="tabs" id="homeTabs"><button class="on" data-ht="new">New arrivals</button><button data-ht="sale">On sale</button></div>
-    </div>
-    <div class="grid" id="homeGrid"></div>
+  <section class="sec arrivals-block" id="newArrivals"><div class="wrap">
+    <div class="sec-h"><div><div class="overline">FRESH FINDS</div><h2>New arrivals<span class="title-accent">.</span></h2><p>Fresh picks from SHOPYHAT, ready to explore.</p></div><a class="section-link" href="#shop">Shop all products <span aria-hidden="true">↗</span></a></div>
+    <div class="grid" id="homeGrid" aria-live="polite"></div>
+  </div></section>
+
+  <section class="sec offers-block hidden" id="saleSec"><div class="wrap">
+    <div class="sec-h"><div><div class="overline">GOOD FINDS, BETTER PRICES</div><h2>Special offers<span class="title-accent">.</span></h2><p>Selected products at reduced prices while available.</p></div><a class="section-link" href="#shop">Browse the shop <span aria-hidden="true">↗</span></a></div>
+    <div class="grid" id="saleGrid" aria-live="polite"></div>
   </div></section>
 
   <section class="band"><div class="wrap">
@@ -789,12 +990,12 @@ img,svg,video,iframe{max-width:100%}
   </div></section>
 
   <section class="sec" id="rvSec"><div class="wrap">
-    <div class="sec-h"><div><h2>Recently viewed</h2></div></div>
+    <div class="sec-h"><div><div class="overline">PICK UP WHERE YOU LEFT OFF</div><h2>Recently viewed</h2></div></div>
     <div class="grid" id="rvGrid"></div>
   </div></section>
 
   <section class="sec"><div class="wrap">
-    <div class="sec-h"><div><div class="swallow"></div><h2>How to order</h2><p>Four steps, and you can pay when it arrives.</p></div></div>
+    <div class="sec-h"><div><div class="overline">SIMPLE FROM START TO FINISH</div><h2>Shop with confidence.</h2><p>A clear journey from your favourite colour to your doorstep.</p></div></div>
     <ol class="how">
       <li><div class="n">1</div><b>Choose</b><span>Pick a product, colour and size.</span></li>
       <li><div class="n">2</div><b>Add to cart</b><span>Check your items and apply a coupon.</span></li>
@@ -811,7 +1012,7 @@ img,svg,video,iframe{max-width:100%}
     <div class="toolbar">
       <div class="chips" id="chips"></div>
       <select class="sel" id="sort" aria-label="Sort products">
-        <option value="new">Featured</option>
+        <option value="new">Newest &amp; featured</option>
         <option value="lh">Price: low to high</option>
         <option value="hl">Price: high to low</option>
         <option value="az">Name: A to Z</option>
@@ -1320,27 +1521,35 @@ const defaultList=()=>DEFAULT_PRODUCTS.map(p=>({...p,catName:(DEFAULT_CATS.find(
    RENDER — products
    ===================================================================== */
 function cardHTML(p){
-  const sale=isSale(p), on=wish.includes(p.id);
-  return `<article class="card" data-id="${p.id}">
-    ${p.soldOut?`<span class="nb">Sold out</span>`:sale?`<span class="nb sale">Save ${Math.round((1-p.price/p.old)*100)}%</span>`:p.isNew?`<span class="nb">New</span>`:""}
-    <div class="im" data-open="${p.id}">
+  const on=wish.includes(p.id);
+  const colCount=(p.colors||[]).length;
+  const displayPrice=variantPrice(p,colCount?p.colors[0].n:"");
+  const sale=Number(p.old)>displayPrice;
+  const oldPrice=sale?`<s>${money(p.old)}</s>`:"";
+  const badge=p.soldOut?`<span class="nb">Sold out</span>`:sale?`<span class="nb sale">Save ${Math.round((1-displayPrice/p.old)*100)}%</span>`:p.isNew?`<span class="nb new">New in</span>`:"";
+  return `<article class="card pro-card" data-id="${p.id}">
+    <div class="im" data-open="${p.id}" title="View ${esc(p.name)}">
       <div class="art">${storefrontArt(p)}</div>
-      <button class="wish ${on?"on":""}" data-wish="${p.id}" aria-label="Save to wishlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button>
-      <div class="ptag ${sale?"sale":""}">${money(p.price)}${sale?`<s>${money(p.old)}</s>`:""}</div>
-      <button class="qa" data-open="${p.id}" aria-label="Quick view">+</button>
+      ${badge}
+      <button class="wish ${on?"on":""}" data-wish="${p.id}" aria-label="${on?"Remove from":"Add to"} wishlist" title="Wishlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button>
+      <span class="hover-caption" aria-hidden="true">View details <span>↗</span></span>
     </div>
     <div class="info">
-      <div class="cname" data-open="${p.id}">${esc(p.name)}</div>
-      <div class="ccat">${esc(catName(p.cat))}</div>
-      <div class="dots">${p.colors.map(c=>`<i style="background:${c.h}" title="${esc(c.n)}"></i>`).join("")}</div>
-    </div></article>`;
+      <div class="card-kicker">${esc(catName(p.cat))}${p.isNew?'<span class="card-kicker-dot">•</span><span>Just added</span>':''}</div>
+      <button class="cname" type="button" data-open="${p.id}">${esc(p.name)}</button>
+      <div class="card-price"><b>${money(displayPrice)}</b>${oldPrice}</div>
+      ${colCount?`<div class="card-colors"><div class="dots" aria-hidden="true">${p.colors.slice(0,5).map(c=>`<i style="background:${c.h}" title="${esc(c.n)}"></i>`).join("")}</div><span>${colCount} colour${colCount===1?"":"s"}</span></div>`:''}
+      <button class="product-cta" type="button" data-open="${p.id}" ${p.soldOut?'disabled':''}><span>${p.soldOut?"Currently unavailable":"Choose options"}</span><span aria-hidden="true">↗</span></button>
+    </div>
+  </article>`;
 }
-let homeTab="new";
 function renderHomeGrid(){
-  let a=homeTab==="sale"?PRODUCTS.filter(isSale):[...PRODUCTS.filter(p=>p.isNew),...PRODUCTS.filter(p=>!p.isNew)];
-  a=a.slice(0,8);
-  $("#homeGrid").innerHTML=a.length?a.map(cardHTML).join(""):`<div class="empty" style="grid-column:1/-1">${homeTab==="sale"?"No sale items right now. Check back soon.":"New products are coming soon."}</div>`;
-  $$("#homeTabs button").forEach(b=>b.classList.toggle("on",b.dataset.ht===homeTab));
+  const arrivals=PRODUCTS.filter(p=>p.isNew);
+  const list=(arrivals.length?arrivals:[...PRODUCTS]).slice().sort((a,b)=>Number(b.id)-Number(a.id)).slice(0,8);
+  $("#homeGrid").innerHTML=list.length?list.map(cardHTML).join(""):`<div class="empty" style="grid-column:1/-1">New pieces are on their way. Explore our shop for more styles.<div style="margin-top:14px"><a class="btn ink" href="#shop">Explore collection</a></div></div>`;
+  const offers=PRODUCTS.filter(isSale).slice(0,4);
+  $("#saleSec").classList.toggle("hidden",!offers.length);
+  $("#saleGrid").innerHTML=offers.map(cardHTML).join("");
 }
 function renderRV(){
   const L=rv.map(byId).filter(Boolean).slice(0,4);
@@ -1350,7 +1559,7 @@ function renderRV(){
 function renderHome(){
   const cnt=id=>PRODUCTS.filter(p=>p.cat===id).length;
   $("#mosaic").innerHTML=CATS.slice(0,5).map((c,i)=>{const p=PRODUCTS.find(x=>x.cat===c.id);
-    return `<a class="mt ${i===0?"big":""}" href="#shop/${c.id}"><div class="art">${p?storefrontArt(p):""}</div><span class="ml"><b>${esc(c.name)}</b><small>${cnt(c.id)} style${cnt(c.id)===1?"":"s"}${c.note?", "+esc(c.note):""}</small></span></a>`}).join("");
+    return `<a class="mt ${i===0?"big":""}" href="#shop/${c.id}" aria-label="Shop ${esc(c.name)}"><div class="art">${p?storefrontArt(p):""}</div><span class="category-count">${cnt(c.id)} ${cnt(c.id)===1?"style":"styles"}</span><span class="ml"><b>${esc(c.name)}</b><small>${c.note?esc(c.note):"Explore collection"}</small><span class="category-cta">Explore <span aria-hidden="true">↗</span></span></span></a>`}).join("");
   const sp=PRODUCTS.find(p=>catKey(p.cat)==="saree")||PRODUCTS[0]; $("#bandArt").innerHTML=sp?storefrontArt(sp):"";
   $("#fCats").innerHTML=CATS.map(c=>`<li><a href="#shop/${c.id}">${esc(c.name)}</a></li>`).join("");
   const pays=["Cash on delivery"];if(CONFIG.bkash)pays.push("bKash");if(CONFIG.nagad)pays.push("Nagad");
@@ -1366,7 +1575,7 @@ function renderShop(){
   $("#onlySale").checked=F.sale; $("#sort").value=F.sort;
   let a=PRODUCTS.filter(p=>(F.cat==="all"||p.cat===F.cat)&&p.price<=F.max&&(!F.sale||isSale(p)));
   if(F.q){const q=F.q.toLowerCase();a=a.filter(p=>(p.name+" "+catName(p.cat)+" "+p.colors.map(c=>c.n).join(" ")+" "+p.desc).toLowerCase().includes(q))}
-  if(F.sort==="lh")a.sort((x,y)=>x.price-y.price);else if(F.sort==="hl")a.sort((x,y)=>y.price-x.price);else if(F.sort==="az")a.sort((x,y)=>x.name.localeCompare(y.name));else a.sort((x,y)=>x.id-y.id);
+  if(F.sort==="lh")a.sort((x,y)=>x.price-y.price);else if(F.sort==="hl")a.sort((x,y)=>y.price-x.price);else if(F.sort==="az")a.sort((x,y)=>x.name.localeCompare(y.name));else a.sort((x,y)=>Number(y.isNew)-Number(x.isNew)||y.id-x.id);
   $("#pcount").textContent=a.length+" product"+(a.length===1?"":"s")+(F.q?` for “${F.q}”`:"");
   $("#shopGrid").innerHTML=a.length?a.map(cardHTML).join(""):`<div class="empty" style="grid-column:1/-1"><b style="color:var(--ink)">Nothing matches these filters.</b><br>Try another category, a higher price or clear the filters.</div>`;
 }
@@ -1426,11 +1635,12 @@ function drawProduct(){
     <h2>${esc(p.name)}</h2>
     <div class="price"><b>${money(selectedPrice)}</b>${sale&&p.old>selectedPrice?`<s>${money(p.old)}</s><em>You save ${money(p.old-selectedPrice)}</em>`:""}</div>
     <p>${esc(p.desc)}</p>
-    <div><div class="lbl">Colour <span>${esc(col.n)}${selectedStock!==null?" · "+(selectedStock?selectedStock+" available":"Sold out"):""}</span></div><div class="swatches">${p.colors.map((c,i)=>`<button class="sw ${i===ci?"on":""}" style="background:${c.h}" data-ci="${i}" title="${esc(c.n)}" aria-label="${esc(c.n)}"></button>`).join("")}</div></div>
+    <div><div class="lbl">Select colour <span>${esc(col.n)}${selectedStock!==null?" · "+(selectedStock?selectedStock+" available":"Sold out"):""}</span></div><div class="swatches" role="group" aria-label="Available colours">${p.colors.map((c,i)=>`<button class="sw ${i===ci?"on":""}" style="background:${c.h}" data-ci="${i}" title="${esc(c.n)}" aria-label="${esc(c.n)}" aria-pressed="${i===ci}"></button>`).join("")}</div></div>
     ${p.sizes?`<div><div class="lbl">Size</div><div class="sizes">${p.sizes.map(z=>`<button class="sz ${z===size?"on":""}" data-sz="${z}">${z}</button>`).join("")}</div></div>`:""}
     <div><div class="lbl">Quantity</div><div class="qty"><button data-q="-1" aria-label="Decrease">−</button><span>${qty}</span><button data-q="1" aria-label="Increase">+</button></div></div>
+    <p class="product-reassurance">✓ Cash on delivery &nbsp;·&nbsp; Delivery across Bangladesh</p>
     <div class="err" id="pdErr"></div>
-    ${variantSoldOut?`<div class="note">This color is sold out right now. Message us to ask when it will be back.</div>`:`<div class="acts"><button class="btn" id="pdAdd">Add to cart</button><button class="btn ink" id="pdBuy">Buy now</button></div>`}
+    ${variantSoldOut?`<div class="note">This color is sold out right now. Message us to ask when it will be back.</div>`:`<div class="acts buy-acts"><button class="btn" id="pdAdd">Add to bag</button><button class="btn ink" id="pdBuy">Buy now →</button></div>`}
     <div class="acts" style="margin-top:-4px"><button class="btn line wish-in" data-wish="${p.id}">${on?"Saved to wishlist":"Save to wishlist"}</button><button class="btn line" id="pdShare">Share</button></div>
     <div class="acc">
       ${p.details&&p.details.length?`<details open><summary>Details</summary><ul>${p.details.map(d=>`<li>${esc(d)}</li>`).join("")}</ul></details>`:""}
@@ -1480,15 +1690,16 @@ function renderCart(){
     <div class="n">${esc(i.p.name)}</div><div class="m">${esc(i.color)}${i.size?", size "+esc(i.size):""} · ${money(i.unitPrice)}</div>
     <div class="row"><div class="qty"><button data-cq="${esc(i.k)}" data-d="-1" aria-label="Decrease">−</button><span>${i.qty}</span><button data-cq="${esc(i.k)}" data-d="1" aria-label="Increase">+</button></div><b>${money(i.unitPrice*i.qty)}</b></div>
     <button class="rm" data-rm="${esc(i.k)}">Remove</button></div></div>`).join("")+
-    (more.length?`<div class="up"><div class="lbl">Add something else</div><div class="row2">${more.map(p=>`<div class="u" data-open="${p.id}"><div class="art">${art(p)}</div><b>${esc(p.name)}</b><small>${money(p.price)}</small></div>`).join("")}</div></div>`:"");
+    (more.length?`<div class="up"><div class="lbl">Add something else</div><div class="row2">${more.map(p=>`<div class="u" data-open="${p.id}"><div class="art">${storefrontArt(p)}</div><b>${esc(p.name)}</b><small>${money(p.price)}</small></div>`).join("")}</div></div>`:"");
   const sub=subtotal(), cp=couponInfo(sub), fd=CONFIG.freeDeliveryOver;
   const free=fd>0?`<div style="margin-bottom:12px;font-size:13.5px">${sub>=fd?"You have free delivery.":`Add ${money(fd-sub)} more for free delivery.`}<div class="ship-bar"><i style="width:${Math.min(100,sub/fd*100)}%"></i></div></div>`:"";
   foot.innerHTML=`${free}<div class="coupon"><input id="cpIn" placeholder="Coupon code" value="${esc(lastCoupon)}" aria-label="Coupon code"><button id="cpBtn">Apply</button></div>
   <div class="err" id="cpErr">${lastCoupon&&!cp.ok?esc(cp.msg||"This coupon code is not valid."):""}</div>
   <div class="line-r"><span>Subtotal</span><b>${money(sub)}</b></div>
   ${cp.ok?`<div class="line-r" style="color:var(--ok)"><span>Coupon ${esc(lastCoupon.toUpperCase())}</span><b>−${money(cp.amt)}</b></div>`:""}
-  <div class="line-r"><span>Delivery</span><span style="color:var(--muted)">Calculated at checkout</span></div>
-  <button class="btn block" id="goCo" style="margin-top:12px">Checkout</button>`;
+  <div class="line-r"><span>Delivery</span><span style="color:var(--muted)">${money(CONFIG.delivery.dhaka)} Dhaka / ${money(CONFIG.delivery.outside)} outside</span></div>
+  <div class="cart-reassurance">No account needed · Confirm your total at checkout</div>
+  <button class="btn block" id="goCo" style="margin-top:12px">Continue to checkout <span aria-hidden="true">→</span></button>`;
 }
 
 /* =====================================================================
@@ -1502,7 +1713,7 @@ function toggleWish(id){
 }
 function renderWish(){
   const L=wish.map(byId).filter(Boolean);
-  $("#wishBody").innerHTML=L.length?L.map(p=>`<div class="ci"><div class="art" data-open="${p.id}" style="cursor:pointer">${art(p)}</div><div><div class="n">${esc(p.name)}</div><div class="m">${money(p.price)}</div><div class="row"><button class="btn ink" style="padding:8px 16px;font-size:13px" data-open="${p.id}">View</button><button class="rm" data-wish="${p.id}">Remove</button></div></div></div>`).join(""):`<div class="empty" style="margin-top:20px"><b style="color:var(--ink)">Nothing saved yet.</b><br>Tap the heart on any product to keep it here.</div>`;
+  $("#wishBody").innerHTML=L.length?L.map(p=>`<div class="ci"><div class="art" data-open="${p.id}" style="cursor:pointer">${storefrontArt(p)}</div><div><div class="n">${esc(p.name)}</div><div class="m">${money(p.price)}</div><div class="row"><button class="btn ink" style="padding:8px 16px;font-size:13px" data-open="${p.id}">View</button><button class="rm" data-wish="${p.id}">Remove</button></div></div></div>`).join(""):`<div class="empty" style="margin-top:20px"><b style="color:var(--ink)">Nothing saved yet.</b><br>Tap the heart on any product to keep it here.</div>`;
 }
 
 /* =====================================================================
@@ -1518,21 +1729,24 @@ function openCheckout(){
   if(CONFIG.nagad)pay.push({id:"nagad",t:"Nagad",s:"Send payment to "+CONFIG.nagad});
   const saved=LS.get("sh_cust",{});
   $("#coBox").innerHTML=`<form class="f" id="coForm" novalidate>
-    <h2>Checkout</h2>
-    <h4>Delivery details</h4>
+    <div class="checkout-topline"><span>SHOPYHAT CHECKOUT</span><span>One simple step</span></div>
+    <h2>Almost yours<span class="title-accent">.</span></h2>
+    <p class="checkout-intro">No account needed. Enter your delivery details and review your total before placing your order.</p>
+    <h4>01 &nbsp; Delivery details</h4>
     <div class="fld"><label for="kName">Full name</label><input id="kName" autocomplete="name" value="${esc(saved.name||"")}"></div>
     <div class="fld"><label for="kPhone">Phone number</label><input id="kPhone" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" value="${esc(saved.phone||"")}"></div>
     <div class="fld"><label for="kZone">Delivery area</label><select id="kZone"><option value="dhaka">Inside Dhaka, ${money(CONFIG.delivery.dhaka)}</option><option value="outside">Outside Dhaka, ${money(CONFIG.delivery.outside)}</option></select></div>
     <div class="fld"><label for="kAddr">Full address</label><textarea id="kAddr" rows="3" placeholder="House, road, area, thana, district">${esc(saved.addr||"")}</textarea></div>
     <div class="fld"><label for="kNote">Order note (optional)</label><input id="kNote" placeholder="Anything we should know?"></div>
-    <h4>Payment method</h4>
+    <h4>02 &nbsp; Payment method</h4>
     ${pay.map((m,i)=>`<label class="opt"><input type="radio" name="pay" value="${m.id}" ${i?"":"checked"}><span><b>${m.t}</b><small>${m.s}</small></span></label>`).join("")}
     <div class="pay-extra hidden" id="payX"><div id="payT"></div><div class="fld" style="margin:10px 0 0"><label for="kTrx">Transaction ID</label><input id="kTrx" placeholder="e.g. 9A7B6C5D"></div></div>
     <label class="agree"><input type="checkbox" id="kAgree"><span>I have read the <a href="#policies" target="_blank" rel="noopener">return, exchange and privacy policies</a> and my order details are correct.</span></label>
     <div class="err" id="kErr"></div>
-    <button class="btn block" type="submit" id="placeBtn">Place order</button>
+    <button class="btn block" type="submit" id="placeBtn">Place order <span aria-hidden="true">→</span></button>
+    <p class="checkout-footnote">Your delivery charge is included in the total shown in the order summary.</p>
   </form>
-  <div class="s"><h2 style="font-size:24px">Order summary</h2><div id="coSum"></div></div>`;
+  <div class="s"><div class="summary-heading"><span class="summary-icon" aria-hidden="true">◈</span><div><span class="summary-kicker">YOUR SELECTION</span><h2 style="font-size:28px">Order summary</h2></div></div><div id="coSum"></div><p class="summary-hint">Confirm your selected colours, quantities and delivery area before placing your order.</p></div>`;
   renderSummary();openModal("coModal");
 }
 function calcTotals(){
