@@ -1641,10 +1641,9 @@ function applyProducts(list){
   const seen=[],cats=[];
   list.forEach(p=>{if(!seen.includes(p.cat)){seen.push(p.cat);
     const d=DEFAULT_CATS.find(c=>catKey(c.id)===catKey(p.cat));cats.push({id:p.cat,name:p.catName,note:d?d.note:""})}});
-  for(const top of activeRoots()){
-    if(!cats.some(c=>c.id===top.slug))cats.unshift({id:top.slug,name:top.name,name_bn:top.name_bn||"",note:top.description||""});
-  }
-  CATS=cats;maxPrice=Math.max(1000,...list.map(p=>p.price));F.max=0;F.sub='all';
+  const published=activeRoots().map(top=>({id:top.slug,name:top.name,name_bn:top.name_bn||"",note:top.description||""}));
+  CATS=[...published,...cats.filter(c=>!published.some(root=>root.id===c.id))];
+  maxPrice=Math.max(1000,...list.map(p=>p.price));F.max=0;F.sub='all';
 }
 const defaultList=()=>DEFAULT_PRODUCTS.map(p=>({...p,catName:(DEFAULT_CATS.find(c=>c.id===p.cat)||{}).name||p.cat,soldOut:false}));
 
