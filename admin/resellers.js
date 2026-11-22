@@ -38,6 +38,14 @@ export function setupResellerOperations({db,roleCan,notify}){
      if(!['approved','suspended','rejected'].includes(status))throw Error('Invalid reseller status');
      const {error}=await db.from('sh_reseller_accounts').update({status,approved_at:status==='approved'?new Date().toISOString():null}).eq('user_id',id);
      if(error)throw error;
+    }else if(action==='force-password'){
+     const {error}=await db.from('sh_reseller_accounts').update({must_change_password:true}).eq('user_id',id);
+     if(error)throw error;
+    }else if(action==='slug'){
+     const row=target.closest('tr'),slug=String(row.querySelector('[data-edit-slug]').value||'').trim().toLowerCase();
+     if(!/^[a-z0-9][a-z0-9-]{2,39}$/.test(slug))throw Error('Shop URL must be 3–40 lowercase letters, digits or hyphens');
+     const {error}=await db.from('sh_reseller_accounts').update({shop_slug:slug}).eq('user_id',id);
+     if(error)throw error;
     }else if(action==='price'){
      const row=target.closest('tr'),amount=Number(row.querySelector('[data-price-value]').value);
      const active=row.querySelector('[data-price-active]').checked;
@@ -119,8 +127,15 @@ export function setupResellerOperations({db,roleCan,notify}){
    for(const q of [a,p,r,o,rf,apps])if(q.error)throw q.error;
    accounts=a.data||[];products=p.data||[];prices=r.data||[];orders=o.data||[];referrals=rf.data||[];applications=apps.data||[];
    renderApplications();
-   $('resellerAccounts').innerHTML=accounts.map(x=>`<tr><td><b>${esc(x.business_name||'New reseller')}</b><div class="muted">${esc(x.user_id)}</div></td><td>${esc(x.status)}</td><td>${new Date(x.created_at).toLocaleDateString('en-BD')}</td>
-    <td><div class="tools"><button type="button" class="btn small" data-reseller-action="account" data-status="approved" data-id="${esc(x.user_id)}">Approve</button><button type="button" class="btn small" data-reseller-action="account" data-status="suspended" data-id="${esc(x.user_id)}">Suspend</button><button type="button" class="btn small danger" data-reseller-action="account" data-status="rejected" data-id="${esc(x.user_id)}">Reject</button></div></td></tr>`).join('')||'<tr><td colspan="4">No reseller applications.</td></tr>';
+   $('resellerAccounts').innerHTML=accounts.map(x=>`<tr><td><b>${esc(x.business_name||'Reseller')}</b><div class="muted">Login: ${esc(x.login_name||'Not configured')}</div><small>${esc(x.user_id)}</small></td>
+    <td><span>${esc(x.status)}</span>${x.must_change_password?'<small class="muted">Password change required</small>':''}</td>
+    <td>${new Date(x.created_at).toLocaleDateString('en-BD')}</td>
+    <td><label>Shop URL <input data-edit-slug value="${esc(x.shop_slug||'')}" maxlength="40" placeholder="partner-shop"></label>
+    <div class="tools"><button type="button" class="btn small" data-reseller-action="slug" data-id="${esc(x.user_id)}">Save URL</button>
+    <button type="button" class="btn small" data-reseller-action="account" data-status="approved" data-id="${esc(x.user_id)}">Approve</button>
+    <button type="button" class="btn small" data-reseller-action="account" data-status="suspended" data-id="${esc(x.user_id)}">Suspend</button>
+    <button type="button" class="btn small" data-reseller-action="force-password" data-id="${esc(x.user_id)}">Require Password Change</button>
+    <button type="button" class="btn small danger" data-reseller-action="account" data-status="rejected" data-id="${esc(x.user_id)}">Reject</button></div></td></tr>`).join('')||'<tr><td colspan="4">No reseller accounts created yet.</td></tr>';
    $('resellerPrices').innerHTML=products.map(x=>{
     const p=prices.find(p=>p.product_id===x.id),retail=Number(x.base_price);
     return `<tr><td>${esc(x.name)}</td><td>${money(retail)}</td><td><input data-price-value type="number" step="0.01" min="0" max="${retail}" value="${p?Number(p.wholesale_price):retail}" aria-label="Wholesale price for ${esc(x.name)}"></td><td><input data-price-active type="checkbox" ${p?.active?'checked':''} style="width:auto"></td><td><button type="button" class="btn small" data-reseller-action="price" data-id="${esc(x.id)}" data-public-price="${retail}">Save</button></td></tr>`;
