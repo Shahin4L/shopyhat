@@ -1,11 +1,11 @@
 /* SHOPYHAT Account Hub — verified mobile/password sign-in, guest checkout remains optional. */
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
 const URL='https://xwfqgmgiunlxzvzoermn.supabase.co',KEY='sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP';
-const db=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'sh_customer_auth_v1'},global:{headers:{'X-Client-Info':'shopyhat-customer-v1'}}});
+const db=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'sh_customer_auth_v1'},global:{headers:{'X-Client-Info':'shopyhat-customer-v1'}}});
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'৳'+Number(n||0).toLocaleString('en-BD');
 const normalPhone=s=>{let n=String(s||'').trim().replace(/[\s-]/g,'');if(n.startsWith('+88'))n=n.slice(3);else if(n.startsWith('88'))n=n.slice(2);return /^01[3-9]\d{8}$/.test(n)?n:null};
-let profile=null,pendingName='',signedUser=null,inboxTimer=null;
+let profile=null,pendingName='',pendingPhone='',signedUser=null,inboxTimer=null;
 window.SHOPYHAT_CUSTOMER={getProfile:()=>profile,getUser:()=>signedUser,show:()=>open(),db};
 const message=(s,bad=false)=>{const n=$('shAccountMessage');if(n){n.textContent=s;n.classList.toggle('error',bad)}};
 const view=(html)=>{$('shAccountBody').innerHTML=html};
@@ -26,72 +26,73 @@ function signupStep1(){
  $('shGoLogin').onclick=loginView;
  $('shSignup1').onsubmit=e=>{
   e.preventDefault();const f=new FormData(e.currentTarget),phone=normalPhone(f.get('phone'));if(!phone)return message('Enter a valid Bangladesh mobile number.',true);
-  pendingName=String(f.get('name')||'').trim();if(pendingName.length<2)return message('Enter your full name.',true);
+  pendingName=String(f.get('name')||'').trim();pendingPhone=phone;if(pendingName.length<2)return message('Enter your full name.',true);
   passwordView(phone);
  };
 }
 function passwordView(phone){
- view('<h3>Choose a password</h3><p>Step 2 of 2 — '+esc(phone)+'</p><form id="shSignup2">'+field('password','Password','password','minlength="8" autocomplete="new-password"')+field('confirm','Confirm password','password','minlength="8" autocomplete="new-password"')+formButton('Create account')+'</form><p><button class="sh-text-button" id="shBackAccount">Back</button></p>');
+ view('<h3>Secure your account</h3><p>Step 2 of 2 — '+esc(phone)+'. No SMS OTP is required. Use a valid email for password recovery.</p><form id="shSignup2">'+field('email','Email address','email','maxlength="180" autocomplete="email"')+field('password','Password','password','minlength="8" autocomplete="new-password"')+field('confirm','Confirm password','password','minlength="8" autocomplete="new-password"')+formButton('Create account')+'</form><p><button class="sh-text-button" id="shBackAccount">Back</button></p>');
  $('shBackAccount').onclick=signupStep1;
  $('shSignup2').onsubmit=async e=>{
-  e.preventDefault();const f=new FormData(e.currentTarget),pass=String(f.get('password')),confirmation=String(f.get('confirm'));
-  if(pass!==confirmation)return message('Passwords do not match.',true);
-  if(pass.length<8)return message('Use at least eight characters.',true);
-  const b=e.currentTarget.querySelector('[type=submit]');b.disabled=true;
+  e.preventDefault();const form=e.currentTarget,f=new FormData(form);
+  const pass=String(f.get('password')),confirm=String(f.get('confirm')),email=String(f.get('email')||'').trim().toLowerCase();
+  if(pass!==confirm)return message('Passwords do not match.',true);
+  if(pass.length<8)return message('Use at least 8 characters.',true);
+  const button=form.querySelector('[type=submit]');button.disabled=true;
   try{
-   const {data,error}=await db.auth.signUp({phone:'+88'+phone,password:pass,options:{data:{name:pendingName}}});
+   const {data,error}=await db.auth.signUp({email,password:pass,options:{
+     emailRedirectTo:location.origin+'/account-confirmed.html',
+     data:{name:pendingName,mobile:pendingPhone}
+   }});
    if(error)throw error;
-   if(data.session){await loadAccount();render();return}
-   otpView(phone);
-   message('Enter the verification code sent by SMS. SMS delivery requires the mobile provider to be enabled.');
-  }catch(err){message(err.message,true)}finally{b.disabled=false}
- };
-}
-function otpView(phone,mode='signup'){
- view('<h3>Verify your number</h3><p>Enter the SMS code for '+esc(phone)+'.</p><form id="shVerifyOtp">'+field('otp','Verification code','text','inputmode="numeric" minlength="4" maxlength="8" autocomplete="one-time-code"')+formButton('Verify mobile')+'</form><p><button type="button" class="sh-text-button" id="shOtpBack">Back to sign in</button></p>');
- $('shOtpBack').onclick=loginView;
- $('shVerifyOtp').onsubmit=async e=>{
-  e.preventDefault();const token=String(new FormData(e.currentTarget).get('otp')||'').trim();
-  const {error}=await db.auth.verifyOtp({phone:'+88'+phone,token,type:'sms'});
-  if(error){message(error.message,true);return}
-  await loadAccount();render();
+   if(data.session?.user?.email_confirmed_at){await loadAccount();render();return}
+   view('<h3>Check your email</h3><p>We sent an account confirmation link if the address can be registered. Open the link to activate your account, then sign in.</p><button class="sh-account-primary" id="shReturnLogin" type="button">Go to Sign in</button>');
+   $('shReturnLogin').onclick=loginView;
+  }catch(error){message(error.message,true)}finally{button.disabled=false}
  };
 }
 function loginView(){
- view('<h3>Welcome back</h3><p>Sign in using your mobile and password.</p><form id="shLogin">'+field('phone','Mobile number','tel','inputmode="tel" placeholder="01XXXXXXXXX" autocomplete="tel"')+field('password','Password','password','autocomplete="current-password"')+formButton('Sign in')+'</form><p><button class="sh-text-button" id="shGoSignup">Create account</button> · <button class="sh-text-button" id="shForgot">Forgot password?</button></p>');
+ view('<h3>Welcome back</h3><p>Sign in with your email and password. Your mobile number is saved in your profile.</p><form id="shLogin">'+field('email','Email address','email','autocomplete="email"')+field('password','Password','password','autocomplete="current-password"')+formButton('Sign in')+'</form><p><button class="sh-text-button" id="shGoSignup">Create account</button> · <button class="sh-text-button" id="shForgot">Forgot password?</button></p>');
  $('shGoSignup').onclick=signupStep1;$('shForgot').onclick=forgotView;
  $('shLogin').onsubmit=async e=>{
-  e.preventDefault();const f=new FormData(e.currentTarget),phone=normalPhone(f.get('phone'));
-  if(!phone)return message('Invalid mobile number.',true);
-  const b=e.currentTarget.querySelector('[type=submit]');b.disabled=true;
-  try{const {error}=await db.auth.signInWithPassword({phone:'+88'+phone,password:String(f.get('password'))});if(error)throw error;await loadAccount();render()}
-  catch(err){message(err.message,true)}finally{b.disabled=false}
+  e.preventDefault();const f=new FormData(e.currentTarget),email=String(f.get('email')||'').trim().toLowerCase();
+  const button=e.currentTarget.querySelector('[type=submit]');button.disabled=true;
+  try{
+   const {data,error}=await db.auth.signInWithPassword({email,password:String(f.get('password')||'')});
+   if(error)throw error;
+   if(!data.user?.email_confirmed_at){await db.auth.signOut();throw Error('Please confirm your email before signing in.')}
+   await loadAccount();render();
+  }catch(error){message(error.message,true)}finally{button.disabled=false}
  };
 }
 function forgotView(){
- view('<h3>Recover access</h3><p>Request an SMS verification code to recover your account.</p><form id="shForgotForm">'+field('phone','Mobile number','tel','inputmode="tel" placeholder="01XXXXXXXXX"')+formButton('Send recovery code')+'</form>');
+ view('<h3>Reset your password</h3><p>Enter your account email. We will send a free recovery link—no SMS OTP.</p><form id="shForgotForm">'+field('email','Email address','email','autocomplete="email"')+formButton('Send reset link')+'</form><p><button class="sh-text-button" id="shForgotBack" type="button">Back to sign in</button></p>');
+ $('shForgotBack').onclick=loginView;
  $('shForgotForm').onsubmit=async e=>{
-  e.preventDefault();const phone=normalPhone(new FormData(e.currentTarget).get('phone'));
-  if(!phone)return message('Invalid mobile number.',true);
-  const {error}=await db.auth.signInWithOtp({phone:'+88'+phone,options:{shouldCreateUser:false}});
-  if(error)return message(error.message,true);
-  otpView(phone,'recovery');message('After verification, open Profile to update your password.');
+  e.preventDefault();const email=String(new FormData(e.currentTarget).get('email')||'').trim().toLowerCase();
+  const btn=e.currentTarget.querySelector('[type=submit]');btn.disabled=true;
+  try{
+   const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/reset-password.html'});
+   if(error)throw error;
+   view('<h3>Check your inbox</h3><p>If this email belongs to an account, a password reset link will arrive shortly.</p><button class="sh-account-primary" type="button" id="shForgotReturn">Back to sign in</button>');
+   $('shForgotReturn').onclick=loginView;
+  }catch(err){message(err.message,true)}finally{btn.disabled=false}
  };
 }
 async function loadAccount(){
- const {data:{user}}=await db.auth.getUser();signedUser=user?.phone_confirmed_at?user:null;profile=null;
- if(!user){window.dispatchEvent(new Event('sh:account'));return}
+ const {data:{user}}=await db.auth.getUser();signedUser=user?.email_confirmed_at?user:null;profile=null;
+ if(!signedUser){window.dispatchEvent(new Event('sh:account'));return}
  const result=await db.from('sh_customer_profiles').select('*').eq('user_id',user.id).maybeSingle();
  if(!result.error&&result.data)profile=result.data;
- else if(!result.error&&user.phone_confirmed_at&&user.phone){
+ else if(!result.error&&user.email_confirmed_at&&user.email){
   const fullName=pendingName||String(user.user_metadata?.name||'Customer').slice(0,100);
-  const {data}=await db.from('sh_customer_profiles').insert({user_id:user.id,full_name:fullName,phone:user.phone}).select().maybeSingle();
+  const {data}=await db.from('sh_customer_profiles').insert({user_id:user.id,full_name:fullName,phone:'+88'+normalPhone(user.user_metadata?.mobile||pendingPhone||''),email:user.email.toLowerCase()}).select().maybeSingle();
   if(data)profile=data;
  }
- if(!profile&&user.phone_confirmed_at){profile={user_id:user.id,full_name:pendingName||user.user_metadata?.name||'Customer',phone:user.phone,preferred_address:''}}
+ if(!profile&&user.email_confirmed_at){profile={user_id:user.id,full_name:pendingName||user.user_metadata?.name||'Customer',phone:'+88'+(normalPhone(user.user_metadata?.mobile||'')||''),email:user.email,preferred_address:''}}
  pendingName='';
  window.dispatchEvent(new Event('sh:account'));
- if(signedUser?.phone_confirmed_at)scheduleWatchSync();
+ if(signedUser?.email_confirmed_at)scheduleWatchSync();
  if(inboxTimer)clearInterval(inboxTimer);
  checkInbox(true).catch(()=>{});
  inboxTimer=setInterval(()=>{if(!document.hidden&&signedUser)checkInbox(true)},45000);
@@ -99,8 +100,8 @@ async function loadAccount(){
 function render(){
  message('');
  if(!signedUser){loginView();return}
- const phone=normalPhone(profile?.phone||signedUser.phone)||'';
- view('<div class="sh-account-greeting"><h3>Hello, '+esc(profile?.full_name||'Customer')+'</h3><p>'+esc(phone)+'</p></div><div class="sh-account-tabs"><button type="button" data-account-tab="orders">My Orders</button><button type="button" data-account-tab="notifications">Notifications</button><button type="button" data-account-tab="reseller">Reseller</button><button type="button" data-account-tab="profile">Profile</button></div><div id="shAccountPanel"></div><button class="sh-text-button" id="shSignOut" type="button">Sign out</button>');
+ const phone=normalPhone(profile?.phone)||'';
+ view('<div class="sh-account-greeting"><h3>Hello, '+esc(profile?.full_name||'Customer')+'</h3><p>'+esc(phone)+' · '+esc(signedUser.email||'')+'</p></div><div class="sh-account-tabs"><button type="button" data-account-tab="orders">My Orders</button><button type="button" data-account-tab="notifications">Notifications</button><button type="button" data-account-tab="reseller">Reseller</button><button type="button" data-account-tab="profile">Profile</button></div><div id="shAccountPanel"></div><button class="sh-text-button" id="shSignOut" type="button">Sign out</button>');
  $('shSignOut').onclick=async()=>{await db.auth.signOut();signedUser=null;profile=null;render()};
  document.querySelectorAll('[data-account-tab]').forEach(b=>b.onclick=()=>loadTab(b.dataset.accountTab));
  loadTab('orders');
@@ -118,11 +119,11 @@ async function ordersView(){
  const {data,error}=await db.rpc('sh_customer_orders');
  if(error)return panel('<p>'+esc(error.message)+'</p>');
  const orders=Array.isArray(data)?data:[];
- panel('<h3>Order History</h3><p class="sh-account-note">Your verified mobile links previous guest orders as well.</p>'+
+ panel('<h3>Order History</h3><p class="sh-account-note">Your signed-in orders are saved securely. Previous guest orders still use order number and mobile tracking.</p>'+
  (orders.length?orders.map(o=>'<div class="sh-account-line"><div><b>'+esc(o.order_number)+'</b><small>'+esc(o.status||'Pending')+' · '+new Date(o.created_at).toLocaleDateString('en-BD')+'</small></div><div><span>'+money(o.total)+'</span><button type="button" class="sh-account-secondary" data-track-order="'+esc(o.order_number)+'">Track</button></div></div>').join(''):'<p>No orders yet. You can check out as a guest anytime.</p>'));
  document.querySelectorAll('[data-track-order]').forEach(button=>button.onclick=()=>{
   const number=String(button.dataset.trackOrder||'');
-  const mobile=normalPhone(profile?.phone||signedUser?.phone)||'';
+  const mobile=normalPhone(profile?.phone)||'';
   $('shAccountModal')?.close();
   window.location.hash='#track';
   setTimeout(()=>{
@@ -172,7 +173,7 @@ async function watchSaved(){
 let watchSyncTimer=null;
 const localArray=key=>{try{const x=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(x)?x:[]}catch{return []}};
 async function syncSavedWatches(){
- if(!signedUser?.phone_confirmed_at)return -1;
+ if(!signedUser?.email_confirmed_at)return -1;
  const wishIDs=new Set(localArray('sh_wish').map(String));
  const cartItems=localArray('sh_cart');
  const allIDs=[...new Set([...wishIDs,...cartItems.map(c=>String(c.id||''))].filter(x=>/^\d+$/.test(x)))].slice(0,70);
@@ -262,7 +263,7 @@ db.auth.onAuthStateChange((_event,session)=>{if(session?.user?.id!==signedUser?.
 /* Existing checkout/support forms remain usable for guests. Only populate blank fields of verified customers. */
 function prefillCustomerForms(){
  const p=window.SHOPYHAT_CUSTOMER?.getProfile?.();
- if(!p||!signedUser?.phone_confirmed_at)return;
+ if(!p||!signedUser?.email_confirmed_at)return;
  const short=normalPhone(p.phone);const name=p.full_name||'';
  const fill=(selector,value)=>{const field=document.querySelector(selector);if(field&&!field.value&&value)field.value=value};
  fill('#kName',name);fill('#kPhone',short);fill('#kAddr',p.preferred_address);
