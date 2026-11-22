@@ -70,8 +70,7 @@ export function setupResellerOperations({db,roleCan,notify}){
    if(key==='pricing')loadPrices();
    if(key==='courier')apiHub.refresh()
   }
-  const apiHub=mountApiHub({panel,db,notify});
-  subpage('applications');
+  let apiHub={refresh:()=>{}};
   const css=document.createElement('style');css.textContent=`
   .reseller-subnav{display:flex;align-items:center;gap:8px;padding:11px 0 15px;margin:10px 0 14px;overflow-x:auto;border-bottom:1px solid #e8ddd1;scrollbar-width:thin}
   .reseller-subnav .btn{white-space:nowrap;flex:none;padding:10px 13px}.reseller-subnav .btn.active{background:#f47721;color:#fff;border-color:#f47721}
@@ -91,6 +90,8 @@ export function setupResellerOperations({db,roleCan,notify}){
   @media(prefers-reduced-motion:reduce){.reseller-subpanel{animation:none}}
   `;document.head.append(css);
   $('dashboard').append(panel);
+  apiHub=mountApiHub({panel,db,notify});
+  subpage('applications');
   $('resellerRefresh').onclick=reload;
   $('resellerPriceSearch').addEventListener('input',()=>{pricePage=0;loadPrices()});
   $('resellerPriceMode').addEventListener('change',()=>{pricePage=0;loadPrices()});
