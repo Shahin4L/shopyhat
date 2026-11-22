@@ -112,9 +112,9 @@ async function loadAccount(){
  if(!signedUser){window.dispatchEvent(new Event('sh:account'));return}
  const result=await db.from('sh_customer_profiles').select('*').eq('user_id',user.id).maybeSingle();
  if(!result.error&&result.data)profile=result.data;
- else if(!result.error&&user.email){
+ else if(!result.error&&user.email&&normalPhone(user.user_metadata?.mobile||pendingPhone||'')){
   const fullName=pendingName||String(user.user_metadata?.name||'Customer').slice(0,100);
-  const {data}=await db.from('sh_customer_profiles').insert({user_id:user.id,full_name:fullName,phone:normalPhone(user.user_metadata?.mobile||pendingPhone||'')?'+88'+normalPhone(user.user_metadata?.mobile||pendingPhone||''):null,email:user.email.toLowerCase()}).select().maybeSingle();
+  const {data}=await db.from('sh_customer_profiles').insert({user_id:user.id,full_name:fullName,phone:'+88'+normalPhone(user.user_metadata?.mobile||pendingPhone||''),email:user.email.toLowerCase()}).select().maybeSingle();
   if(data)profile=data;
  }
  if(!profile){profile={user_id:user.id,full_name:pendingName||user.user_metadata?.name||'Customer',phone:normalPhone(user.user_metadata?.mobile||'')?'+88'+normalPhone(user.user_metadata?.mobile||''):null,email:user.email,preferred_address:''}}
