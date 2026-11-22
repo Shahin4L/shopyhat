@@ -91,7 +91,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
  $('experienceTab').onclick=()=>window.SHOPYHAT_SHOW_PAGE?.('experience');
  $('shExperienceReload').onclick=reload;
  $('shExperienceForm').onsubmit=save;
- $('shResetDesign').onclick=()=>{const form=$('shExperienceForm');for(const [key,,options,fallback] of designSelects)form.elements[key].value=fallback;for(const [key,,,value] of designNumbers)form.elements[key].value=value;form.elements.accent_color.value='#f47721';sectionOrder=sectionDefs.map(x=>x[0]);renderOrder();notify('shExperienceMsg','Recommended design selected. Save & Publish to apply.');};
+ $('shResetDesign').onclick=()=>{const form=$('shExperienceForm');for(const [key,,options,fallback] of designSelects)form.elements[key].value=fallback;for(const [key,,,,initial] of designNumbers)form.elements[key].value=initial;form.elements.accent_color.value='#f47721';sectionOrder=sectionDefs.map(x=>x[0]);renderOrder();notify('shExperienceMsg','Recommended design selected. Save & Publish to apply.');};
  renderOrder();
  $('shHeroUploadButton').onclick=uploadHero;
  $('shHeroUpload').onchange=()=>{const file=$('shHeroUpload').files?.[0];if(!file)return;const u=URL.createObjectURL(file);const img=$('shHeroPreview');img.onload=()=>URL.revokeObjectURL(u);img.src=u;img.style.display='block'};
