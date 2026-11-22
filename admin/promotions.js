@@ -6,6 +6,7 @@ export function setupPromotions({db,roleCan,notify}){
  const dateInput=s=>s?new Date(s).toISOString().slice(0,16):'';
  let rows=[],editId=null;
  const isAllowed=()=>roleCan('owner','manager');
+ const liveStatus=r=>!r.active?'Paused':r.starts_at&&new Date(r.starts_at)>new Date()?'Scheduled':r.expires_at&&new Date(r.expires_at)<=new Date()?'Expired':r.usage_limit&&r.used_count>=r.usage_limit?'Limit reached':'Live';
  function mount(){
   if($('promoTab'))return;
   const nav=$('nav'),original=nav.querySelector('[data-page="experience"]')||nav.querySelector('[data-page="catalog"]');
@@ -69,7 +70,7 @@ export function setupPromotions({db,roleCan,notify}){
    $('promoRows').innerHTML=rows.map(r=>`<tr><td><b>${esc(r.code)}</b><div class="muted">${esc(r.title||'')}</div></td>
     <td>${r.discount_type==='percent'?esc(r.discount_value)+'%':'৳'+esc(r.discount_value)}${r.max_discount?' · max ৳'+esc(r.max_discount):''}</td>
     <td>৳${esc(r.min_order)}</td><td>${fmtDate(r.starts_at)} — ${fmtDate(r.expires_at)}</td>
-    <td>${r.used_count||0} / ${r.usage_limit||'∞'}</td><td><span class="pill">${r.active?'Active':'Draft'}</span></td>
+    <td>${r.used_count||0} / ${r.usage_limit||'∞'}</td><td><span class="pill">${liveStatus(r)}</span></td>
     <td><div class="tools"><button type="button" class="btn small" data-promo-action="edit" data-id="${esc(r.id)}">Edit</button>
     <button type="button" class="btn small" data-promo-action="toggle" data-id="${esc(r.id)}">${r.active?'Pause':'Activate'}</button></div></td></tr>`).join('')||'<tr><td colspan="7">No promotions created. Use + Create Promo Code.</td></tr>';
    notify('promoMsg',rows.length+' promotion code(s) loaded');
