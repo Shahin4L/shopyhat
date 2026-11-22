@@ -963,6 +963,7 @@ main{overflow:clip}
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./about-enhanced.css?v=20261122b">
 <link rel="stylesheet" href="./storefront-experience.css?v=20261122promo">
+<link rel="stylesheet" href="./customer-account.css?v=20261122a">
 </head>
 <body>
 
@@ -1911,7 +1912,12 @@ function openCheckout(){
    const pay=[{id:"cod",t:"Cash on delivery",s:"Pay after your parcel arrives",enabled:true,symbol:"COD"},
      {id:"bkash",t:"bKash — Send Money",s:CONFIG.bkash?"Send Money via bKash app · manual verification":"Payment account not configured yet",enabled:isConfiguredMFS(CONFIG.bkash),symbol:"bKash"},
      {id:"nagad",t:"Nagad — Send Money",s:CONFIG.nagad?"Send Money via Nagad app · manual verification":"Payment account not configured yet",enabled:isConfiguredMFS(CONFIG.nagad),symbol:"Nagad"}];
-   const saved=LS.get("sh_cust",{});
+   const loggedProfile=window.SHOPYHAT_CUSTOMER?.getUser?.()?.phone_confirmed_at?window.SHOPYHAT_CUSTOMER?.getProfile?.():null;
+   const saved=loggedProfile?{
+     name:loggedProfile.full_name||'',
+     phone:String(loggedProfile.phone||'').replace(/^\+?88/,''),
+     addr:loggedProfile.preferred_address||''
+   }:LS.get("sh_cust",{});
   $("#coBox").innerHTML=`<form class="f" id="coForm" novalidate>
     <div class="checkout-topline"><span>SHOPYHAT CHECKOUT</span><span>One simple step</span></div>
     <h2>Almost yours<span class="title-accent">.</span></h2>
@@ -2348,5 +2354,6 @@ boot();
 <script src="./visitor-analytics.js" defer></script>
 <script src="./brand-about.js?v=20261122b" defer></script>
 <script src="./storefront-experience.js?v=20261122promo" defer></script>
+<script type="module" src="./customer-account.js?v=20261122a"></script>
 </body>
 </html>
