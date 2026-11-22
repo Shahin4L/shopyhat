@@ -90,6 +90,7 @@ function applyDesign(){
  root.setProperty('--sh-content-width',clampNum(cfg.content_width,1000,1540,1240)+'px');
  root.setProperty('--sh-hero-min-height',clampNum(cfg.hero_height,500,840,660)+'px');
  root.setProperty('--sh-category-columns',String(Math.round(clampNum(cfg.category_columns,3,5,5))));
+ document.body.classList.toggle('sh-custom-category-cols',cfg.category_columns!=null);
  const accent=/^#[0-9a-f]{6}$/i.test(cfg.accent_color||'')?cfg.accent_color:'#f47721';
  root.setProperty('--sh-accent',accent);
  root.setProperty('--sh-hero-position',validatedChoice(cfg.hero_image_position,['center top','center center','center bottom','left center','right center'],'center center'));
