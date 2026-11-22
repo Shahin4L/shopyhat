@@ -36,3 +36,62 @@
 .sh-account-dialog summary{cursor:pointer;color:#994a1a;font-weight:700;padding:13px 0}
 @media(max-width:650px){.sh-account-dialog{width:calc(100vw - 12px);max-height:92dvh;border-radius:16px}#shAccountBody{padding:15px 17px 22px}.sh-account-dialog .sh-account-head{padding:16px 18px}.sh-account-dialog .sh-account-head h2{font-size:23px}.sh-account-tabs{gap:4px}#shAccountBody .sh-account-tabs button{padding:8px;font-size:11px}.sh-reseller-product{flex-wrap:wrap}.sh-reseller-product button{width:100%}}
 @media(prefers-reduced-motion:reduce){.sh-account-dialog::backdrop{backdrop-filter:none}}
+
+/* SHOPYHAT premium account experience — elegant, minimal, accessible. */
+#hdr .sh-account-trigger{transition:color .18s,transform .18s}
+#hdr .sh-account-trigger:hover{color:#f47721;transform:translateY(-1px)}
+.sh-account-dialog{width:min(510px,calc(100vw - 26px));border:1px solid #ecd9c7;background:#fffdf9;border-radius:22px;max-height:min(92dvh,940px);box-shadow:0 26px 100px #1e0e0870;overflow:auto}
+.sh-account-dialog .sh-account-head{background:linear-gradient(112deg,#1c120e,#382014 85%);padding:22px 26px;border-bottom:1px solid #ffffff22}
+.sh-account-dialog .sh-account-head small{font-size:10px;letter-spacing:.15em;color:#f7bd88}
+.sh-account-brand{display:flex;align-items:center;gap:13px;min-width:0}
+.sh-account-logo{display:grid;place-items:center;width:45px;height:45px;border:1.6px solid #fa8a37;color:#fa8a37;border-radius:12px;font-family:Georgia,serif;font-weight:800;font-size:28px;flex:none}
+.sh-account-dialog .sh-account-head h2{font-size:25px;letter-spacing:-.02em}
+.sh-account-dialog #shAccountClose{background:#ffffff0b;border:1px solid #ffffff35;width:38px;height:38px;flex:none;cursor:pointer}
+.sh-account-dialog #shAccountClose:hover{background:#ffffff25}
+#shAccountBody{padding:26px 29px 24px}
+#shAccountBody h3{font-size:clamp(23px,4.5vw,31px);margin:8px 0 9px;letter-spacing:-.028em;font-weight:700}
+#shAccountBody .sh-auth-intro p{font-size:13px;line-height:1.65;margin:0;color:#736254}
+.sh-auth-eyebrow{font-size:10px;font-weight:850;letter-spacing:.16em;color:#d96a17;margin-bottom:8px}
+.sh-auth-nav{display:grid;grid-template-columns:1fr 1fr;background:#f5ece3;border-radius:12px;padding:4px;gap:3px;margin:22px 0 20px}
+#shAccountBody .sh-auth-nav button{border:0;border-radius:9px;min-height:42px;background:transparent;color:#766254;font-weight:750;font-size:13px;transition:background .2s ease,color .2s ease}
+#shAccountBody .sh-auth-nav button.active{background:#fff;color:#2d1d12;box-shadow:0 3px 10px #381b0c12}
+.sh-auth-progress{font-size:11px;font-weight:700;color:#9a6b4b;margin:0 0 15px}
+.sh-progress-bars{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.sh-progress-bars i{height:4px;background:#e9d8c8;border-radius:9px}
+.sh-progress-bars i.on{background:#f47721}
+#shAccountBody .sh-auth-form{display:grid;gap:14px}
+#shAccountBody .sh-auth-form label{margin:0}
+#shAccountBody .sh-auth-form label>span:first-child{display:block;font-weight:750;font-size:12px;margin-bottom:7px;color:#463126}
+#shAccountBody .sh-auth-form input:not([type=checkbox]){background:#fff;border:1px solid #dfd1c3;border-radius:11px;padding:12px 14px;min-height:49px;font-size:14px;transition:border-color .16s,box-shadow .16s}
+#shAccountBody .sh-auth-form input:focus{outline:none;border-color:#ee7b2d;box-shadow:0 0 0 3px #f4772125}
+#shAccountBody .sh-password-input{position:relative;display:block}
+#shAccountBody .sh-password-input input{padding-right:72px}
+#shAccountBody .sh-password-input .sh-eye{position:absolute;right:5px;top:50%;transform:translateY(-50%);border:0;background:#f5efe9;color:#875436;border-radius:7px;font-weight:700;font-size:11px;min-height:32px;padding:0 12px}
+#shAccountBody .sh-password-input .sh-eye:hover{background:#f2e2d1}
+#shAccountBody .sh-account-primary{margin-top:3px;min-height:49px;background:linear-gradient(120deg,#f47721,#eb6716);border-radius:11px;font-size:14px;box-shadow:0 7px 16px #f477212b}
+#shAccountBody .sh-account-primary:hover{filter:brightness(.97)}
+#shAccountBody .sh-account-primary:focus-visible,#shAccountBody button:focus-visible,#shAccountClose:focus-visible{outline:2px solid #ff913a;outline-offset:3px}
+#shAccountBody .sh-text-button{text-decoration:none;font-weight:750;color:#b65a1a}
+#shAccountBody .sh-text-button:hover{text-decoration:underline}
+.sh-forgot-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px;font-size:11px;color:#8f8173}
+.sh-auth-footnote{text-align:center;color:#715c50;font-size:12px;margin-top:17px}
+#shAccountBody .sh-form-hint{font-size:11px;background:#f8f2eb;border-radius:8px;padding:9px 11px;margin:0;color:#786758}
+.sh-signup-summary{padding:12px 14px;border:1px solid #ecdac8;background:#fffbf7;border-radius:11px;display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;margin:0 0 16px}
+.sh-signup-summary span{grid-column:1/-1;font-size:10px;color:#8e7662}
+.sh-signup-summary strong{font-size:13px;overflow-wrap:anywhere}
+.sh-signup-summary small{text-align:right;font-size:12px;color:#7b604b}
+#shAccountBody .sh-auth-back{border:0;background:transparent;color:#ad5a22;padding:10px 0;font-size:12px;font-weight:700;margin-top:10px;min-height:36px}
+.sh-auth-complete{text-align:center;padding:24px 0}
+.sh-auth-done{display:grid;place-items:center;margin:0 auto 14px;width:60px;height:60px;border-radius:50%;background:#e7f6ec;color:#19834e;font-size:29px;font-weight:800}
+.sh-account-bottom{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 28px;background:#f7f0e9;border-top:1px solid #ecdfd2;color:#8a7260;font-size:11px}
+.sh-account-bottom a{color:#ad561b;font-weight:750;text-decoration:none}
+.sh-account-bottom a:hover{text-decoration:underline}
+#shAccountMessage:not(:empty){margin:13px 28px 0;padding:11px 13px;background:#edf7ef;color:#216d40;border-radius:9px}
+#shAccountMessage.error:not(:empty){background:#fff0e9;color:#a52d1a}
+.sh-account-dialog .sh-account-greeting{border-radius:13px;background:linear-gradient(110deg,#26170f,#54301c);padding:19px;color:#fff}
+#shAccountBody .sh-account-greeting h3{color:#fff;font-size:23px;margin:0}
+#shAccountBody .sh-account-greeting p{color:#f1d5bf;margin:4px 0 0;overflow-wrap:anywhere}
+#shAccountBody .sh-account-tabs{margin:19px 0 13px;padding:0 0 9px;gap:8px}
+#shAccountBody .sh-account-tabs button{min-height:40px;padding:9px 13px;border-radius:10px}
+@media(max-width:650px){.sh-account-dialog{width:calc(100vw - 12px);max-height:94dvh;border-radius:16px}.sh-account-dialog .sh-account-head{padding:17px 18px}#shAccountBody{padding:20px 18px}.sh-account-bottom{padding:13px 18px}.sh-account-dialog .sh-account-head h2{font-size:22px}#shAccountMessage:not(:empty){margin:10px 18px 0}#shAccountBody h3{font-size:25px}}
+@media(prefers-reduced-motion:reduce){.sh-account-dialog *,#hdr .sh-account-trigger{transition:none!important}}

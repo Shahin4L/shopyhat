@@ -1,4 +1,4 @@
-/* SHOPYHAT Account Hub — verified mobile/password sign-in, guest checkout remains optional. */
+/* SHOPYHAT customer account, password-based login without SMS OTP. Guest checkout stays optional. */
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
 const URL='https://xwfqgmgiunlxzvzoermn.supabase.co',KEY='sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP';
 const db=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'sh_customer_auth_v1'},global:{headers:{'X-Client-Info':'shopyhat-customer-v1'}}});
@@ -13,86 +13,114 @@ const field=(name,label,type='text',more='')=>'<label>'+label+'<input name="'+na
 const formButton=text=>'<button class="sh-account-primary" type="submit">'+text+'</button>';
 function shell(){
  if($('shAccountModal'))return;
- const btn=document.createElement('button');btn.type='button';btn.className='ibtn sh-account-trigger';btn.id='shAccountTrigger';btn.title='Customer account';btn.setAttribute('aria-label','Open customer account');btn.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2"/></svg>';
- const icons=document.querySelector('#hdr .icons');icons?.append(btn);
- const dialog=document.createElement('dialog');dialog.id='shAccountModal';dialog.className='sh-account-dialog';
- dialog.innerHTML='<div class="sh-account-head"><div><small>SHOPYHAT</small><h2>My Account</h2></div><button type="button" id="shAccountClose" aria-label="Close account">×</button></div><div id="shAccountMessage" role="status"></div><div id="shAccountBody"></div>';
+ const btn=document.createElement('button');btn.type='button';btn.className='ibtn sh-account-trigger';btn.id='shAccountTrigger';btn.title='My Account';btn.setAttribute('aria-label','Open My Account');
+ btn.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2"/></svg>';
+ document.querySelector('#hdr .icons')?.append(btn);
+ const dialog=document.createElement('dialog');dialog.id='shAccountModal';dialog.className='sh-account-dialog';dialog.setAttribute('aria-labelledby','shAccountHeading');
+ dialog.innerHTML='<div class="sh-account-head"><div class="sh-account-brand"><span class="sh-account-logo" aria-hidden="true">S</span><div><small>SHOPYHAT · SINCE 2020</small><h2 id="shAccountHeading">My Account</h2></div></div><button type="button" id="shAccountClose" aria-label="Close account window">×</button></div><div id="shAccountMessage" role="status" aria-live="polite"></div><div id="shAccountBody"></div><div class="sh-account-bottom"><span>Secure shopping, simple checkout.</span><a href="#shop" id="shAccountGuest">Continue as guest →</a></div>';
  document.body.append(dialog);btn.onclick=open;$('shAccountClose').onclick=()=>dialog.close();
+ $('shAccountGuest').onclick=()=>dialog.close();
  dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
 }
-function open(){shell();$('shAccountModal').showModal();render()}
+function open(){shell();const dialog=$('shAccountModal');if(!dialog.open)dialog.showModal();render()}
+const authIntro=(title,desc,active,step='')=>'<div class="sh-auth-intro"><div class="sh-auth-eyebrow">YOUR CHOICE, OUR GIFT.</div><h3>'+title+'</h3><p>'+desc+'</p></div><nav class="sh-auth-nav" aria-label="Customer account access"><button type="button" id="shAuthLogin" class="'+(active==='login'?'active':'')+'">Sign in</button><button type="button" id="shAuthSignup" class="'+(active==='signup'?'active':'')+'">Create account</button></nav>'+(step?'<div class="sh-auth-progress">'+step+'<div class="sh-progress-bars"><i class="on"></i><i class="'+(step.includes('2')?'on':'')+'"></i></div></div>':'');
+const bindTabs=()=>{$('shAuthLogin').onclick=loginView;$('shAuthSignup').onclick=signupStep1};
+const passInput=(name,label,mode)=>'<label class="sh-auth-field"><span>'+label+'</span><span class="sh-password-input"><input name="'+name+'" type="password" minlength="8" autocomplete="'+mode+'" required><button class="sh-eye" type="button" data-toggle-password aria-label="Show password">Show</button></span></label>';
+const bindPassword=()=>document.querySelectorAll('#shAccountBody [data-toggle-password]').forEach(b=>b.onclick=()=>{const i=b.parentNode.querySelector('input');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'Show':'Hide';b.setAttribute('aria-label',i.type==='password'?'Show password':'Hide password')});
 function signupStep1(){
- view('<h3>Create an account</h3><p>Step 1 of 2 — name and mobile number. Delivery address is requested only when ordering.</p><form id="shSignup1">'+field('name','Full name','text','minlength="2" maxlength="100" autocomplete="name"')+field('phone','Bangladesh mobile','tel','placeholder="01XXXXXXXXX" inputmode="tel" autocomplete="tel"')+formButton('Continue')+'</form><p>Already registered? <button class="sh-text-button" id="shGoLogin">Sign in</button></p>');
- $('shGoLogin').onclick=loginView;
+ message('');
+ view(authIntro('Create an account','Join SHOPYHAT in two easy steps. No OTP required.','signup','Step 1 of 2 · Your details')+
+ '<form id="shSignup1" class="sh-auth-form">'+field('name','Full name','text','minlength="2" maxlength="100" autocomplete="name" placeholder="Your full name"')+
+ field('phone','Mobile number','tel','placeholder="01XXXXXXXXX" inputmode="tel" maxlength="14" autocomplete="tel"')+
+ '<p class="sh-form-hint">Your delivery address is only needed when you place an order.</p>'+formButton('Continue →')+'</form>');
+ bindTabs();
  $('shSignup1').onsubmit=e=>{
-  e.preventDefault();const f=new FormData(e.currentTarget),phone=normalPhone(f.get('phone'));if(!phone)return message('Enter a valid Bangladesh mobile number.',true);
-  pendingName=String(f.get('name')||'').trim();pendingPhone=phone;if(pendingName.length<2)return message('Enter your full name.',true);
+  e.preventDefault();const f=new FormData(e.currentTarget),phone=normalPhone(f.get('phone'));
+  if(!phone)return message('Enter a valid Bangladesh mobile number.',true);
+  pendingName=String(f.get('name')||'').trim();pendingPhone=phone;
+  if(pendingName.length<2)return message('Please enter your full name.',true);
   passwordView(phone);
  };
 }
 function passwordView(phone){
- view('<h3>Secure your account</h3><p>Step 2 of 2 — '+esc(phone)+'. No SMS OTP is required. Use a valid email for password recovery.</p><form id="shSignup2">'+field('email','Email address','email','maxlength="180" autocomplete="email"')+field('password','Password','password','minlength="8" autocomplete="new-password"')+field('confirm','Confirm password','password','minlength="8" autocomplete="new-password"')+formButton('Create account')+'</form><p><button class="sh-text-button" id="shBackAccount">Back</button></p>');
- $('shBackAccount').onclick=signupStep1;
+ message('');
+ view(authIntro('Secure your account','Choose a password and add an email for account recovery.','signup','Step 2 of 2 · Account security')+
+ '<div class="sh-signup-summary"><span>Creating account for</span><strong>'+esc(pendingName)+'</strong><small>'+esc(phone)+'</small></div>'+
+ '<form id="shSignup2" class="sh-auth-form">'+field('email','Email address','email','maxlength="180" autocomplete="email" placeholder="name@example.com"')+
+ passInput('password','Create password','new-password')+passInput('confirm','Confirm password','new-password')+
+ '<p class="sh-form-hint">At least 8 characters. No signup OTP or verification code.</p>'+
+ formButton('Create my account →')+'</form><button type="button" class="sh-auth-back" id="shBackAccount">← Back to personal details</button>');
+ bindTabs();bindPassword();$('shBackAccount').onclick=signupStep1;
  $('shSignup2').onsubmit=async e=>{
   e.preventDefault();const form=e.currentTarget,f=new FormData(form);
-  const pass=String(f.get('password')),confirm=String(f.get('confirm')),email=String(f.get('email')||'').trim().toLowerCase();
-  if(pass!==confirm)return message('Passwords do not match.',true);
-  if(pass.length<8)return message('Use at least 8 characters.',true);
-  const button=form.querySelector('[type=submit]');button.disabled=true;
+  const pass=String(f.get('password')||''),confirmation=String(f.get('confirm')||'');
+  const email=String(f.get('email')||'').trim().toLowerCase();
+  if(pass!==confirmation)return message('Passwords do not match.',true);
+  if(pass.length<8)return message('Use a password of at least 8 characters.',true);
+  const button=form.querySelector('[type=submit]');button.disabled=true;button.textContent='Creating account…';
   try{
-   const {data,error}=await db.auth.signUp({email,password:pass,options:{
-     emailRedirectTo:location.origin+'/account-confirmed.html',
-     data:{name:pendingName,mobile:pendingPhone}
-   }});
+   const {data,error}=await db.auth.signUp({email,password:pass,options:{data:{name:pendingName,mobile:pendingPhone}}});
    if(error)throw error;
-   if(data.session?.user?.email_confirmed_at){await loadAccount();render();return}
-   view('<h3>Check your email</h3><p>We sent an account confirmation link if the address can be registered. Open the link to activate your account, then sign in.</p><button class="sh-account-primary" id="shReturnLogin" type="button">Go to Sign in</button>');
+   if(data.session){await loadAccount();render();message('Your SHOPYHAT account is ready. Welcome!');return}
+   view('<div class="sh-auth-complete"><span class="sh-auth-done">✓</span><h3>Registration received</h3><p>Supabase is still requiring email confirmation. To enable instant login without verification, SHOPYHAT Admin must turn off Confirm Email in Supabase Authentication settings.</p><button class="sh-account-primary" id="shReturnLogin" type="button">Back to sign in</button></div>');
    $('shReturnLogin').onclick=loginView;
-  }catch(error){message(error.message,true)}finally{button.disabled=false}
+  }catch(error){message(error.message||'Could not register. Please try again.',true)}
+  finally{button.disabled=false;button.textContent='Create my account →'}
  };
 }
 function loginView(){
- view('<h3>Welcome back</h3><p>Sign in with your email and password. Your mobile number is saved in your profile.</p><form id="shLogin">'+field('email','Email address','email','autocomplete="email"')+field('password','Password','password','autocomplete="current-password"')+formButton('Sign in')+'</form><p><button class="sh-text-button" id="shGoSignup">Create account</button> · <button class="sh-text-button" id="shForgot">Forgot password?</button></p>');
- $('shGoSignup').onclick=signupStep1;$('shForgot').onclick=forgotView;
+ message('');
+ view(authIntro('Welcome back','Sign in to manage orders, saved details and notifications.','login')+
+ '<form id="shLogin" class="sh-auth-form">'+field('email','Email address','email','autocomplete="email" placeholder="name@example.com"')+
+ passInput('password','Password','current-password')+
+ '<div class="sh-forgot-row"><span>Protected account access</span><button class="sh-text-button" type="button" id="shForgot">Forgot password?</button></div>'+
+ formButton('Sign in →')+'</form><div class="sh-auth-footnote">New to SHOPYHAT? <button type="button" class="sh-text-button" id="shGoSignup">Create an account</button></div>');
+ bindTabs();bindPassword();$('shGoSignup').onclick=signupStep1;$('shForgot').onclick=forgotView;
  $('shLogin').onsubmit=async e=>{
-  e.preventDefault();const f=new FormData(e.currentTarget),email=String(f.get('email')||'').trim().toLowerCase();
-  const button=e.currentTarget.querySelector('[type=submit]');button.disabled=true;
+  e.preventDefault();const form=e.currentTarget,f=new FormData(form);
+  const email=String(f.get('email')||'').trim().toLowerCase();
+  const button=form.querySelector('[type=submit]');button.disabled=true;button.textContent='Signing in…';
   try{
    const {data,error}=await db.auth.signInWithPassword({email,password:String(f.get('password')||'')});
    if(error)throw error;
-   if(!data.user?.email_confirmed_at){await db.auth.signOut();throw Error('Please confirm your email before signing in.')}
+   if(!data.session)throw Error('Unable to start a secure session. Please try again.');
    await loadAccount();render();
-  }catch(error){message(error.message,true)}finally{button.disabled=false}
+  }catch(error){message(error.message||'Sign in failed. Check your email and password.',true)}
+  finally{button.disabled=false;button.textContent='Sign in →'}
  };
 }
 function forgotView(){
- view('<h3>Reset your password</h3><p>Enter your account email. We will send a free recovery link—no SMS OTP.</p><form id="shForgotForm">'+field('email','Email address','email','autocomplete="email"')+formButton('Send reset link')+'</form><p><button class="sh-text-button" id="shForgotBack" type="button">Back to sign in</button></p>');
+ message('');
+ view('<div class="sh-auth-intro"><div class="sh-auth-eyebrow">ACCOUNT RECOVERY</div><h3>Forgot your password?</h3><p>Enter your account email to receive a secure recovery link. No SMS OTP is required.</p></div>'+
+ '<form id="shForgotForm" class="sh-auth-form">'+field('email','Account email','email','autocomplete="email" placeholder="name@example.com"')+
+ formButton('Send password reset link →')+'</form><button type="button" class="sh-auth-back" id="shForgotBack">← Back to sign in</button>');
  $('shForgotBack').onclick=loginView;
  $('shForgotForm').onsubmit=async e=>{
-  e.preventDefault();const email=String(new FormData(e.currentTarget).get('email')||'').trim().toLowerCase();
-  const btn=e.currentTarget.querySelector('[type=submit]');btn.disabled=true;
+  e.preventDefault();const form=e.currentTarget,email=String(new FormData(form).get('email')||'').trim().toLowerCase();
+  const btn=form.querySelector('[type=submit]');btn.disabled=true;btn.textContent='Sending…';
   try{
    const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/reset-password.html'});
    if(error)throw error;
-   view('<h3>Check your inbox</h3><p>If this email belongs to an account, a password reset link will arrive shortly.</p><button class="sh-account-primary" type="button" id="shForgotReturn">Back to sign in</button>');
+   view('<div class="sh-auth-complete"><span class="sh-auth-done">✉</span><h3>Check your inbox</h3><p>If this email is registered, a secure password reset link will be sent. Check your spam folder if necessary.</p><button class="sh-account-primary" id="shForgotReturn" type="button">Back to sign in</button></div>');
    $('shForgotReturn').onclick=loginView;
-  }catch(err){message(err.message,true)}finally{btn.disabled=false}
+  }catch(error){message(error.message||'Unable to send your recovery link.',true)}
+  finally{btn.disabled=false;btn.textContent='Send password reset link →'}
  };
 }
 async function loadAccount(){
- const {data:{user}}=await db.auth.getUser();signedUser=user?.email_confirmed_at?user:null;profile=null;
+ const {data:{user}}=await db.auth.getUser();signedUser=user||null;profile=null;
  if(!signedUser){window.dispatchEvent(new Event('sh:account'));return}
  const result=await db.from('sh_customer_profiles').select('*').eq('user_id',user.id).maybeSingle();
  if(!result.error&&result.data)profile=result.data;
- else if(!result.error&&user.email_confirmed_at&&user.email){
+ else if(!result.error&&user.email&&normalPhone(user.user_metadata?.mobile||pendingPhone||'')){
   const fullName=pendingName||String(user.user_metadata?.name||'Customer').slice(0,100);
   const {data}=await db.from('sh_customer_profiles').insert({user_id:user.id,full_name:fullName,phone:'+88'+normalPhone(user.user_metadata?.mobile||pendingPhone||''),email:user.email.toLowerCase()}).select().maybeSingle();
   if(data)profile=data;
  }
- if(!profile&&user.email_confirmed_at){profile={user_id:user.id,full_name:pendingName||user.user_metadata?.name||'Customer',phone:'+88'+(normalPhone(user.user_metadata?.mobile||'')||''),email:user.email,preferred_address:''}}
+ if(!profile){profile={user_id:user.id,full_name:pendingName||user.user_metadata?.name||'Customer',phone:normalPhone(user.user_metadata?.mobile||'')?'+88'+normalPhone(user.user_metadata?.mobile||''):null,email:user.email,preferred_address:''}}
  pendingName='';
  window.dispatchEvent(new Event('sh:account'));
- if(signedUser?.email_confirmed_at)scheduleWatchSync();
+ if(signedUser)scheduleWatchSync();
  if(inboxTimer)clearInterval(inboxTimer);
  checkInbox(true).catch(()=>{});
  inboxTimer=setInterval(()=>{if(!document.hidden&&signedUser)checkInbox(true)},45000);
@@ -172,7 +200,7 @@ async function watchSaved(){
 let watchSyncTimer=null;
 const localArray=key=>{try{const x=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(x)?x:[]}catch{return []}};
 async function syncSavedWatches(){
- if(!signedUser?.email_confirmed_at)return -1;
+ if(!signedUser)return -1;
  const wishIDs=new Set(localArray('sh_wish').map(String));
  const cartItems=localArray('sh_cart');
  const allIDs=[...new Set([...wishIDs,...cartItems.map(c=>String(c.id||''))].filter(x=>/^\d+$/.test(x)))].slice(0,70);
@@ -219,7 +247,7 @@ db.auth.onAuthStateChange((_event,session)=>{if(session?.user?.id!==signedUser?.
 /* Existing checkout/support forms remain usable for guests. Only populate blank fields of verified customers. */
 function prefillCustomerForms(){
  const p=window.SHOPYHAT_CUSTOMER?.getProfile?.();
- if(!p||!signedUser?.email_confirmed_at)return;
+ if(!p||!signedUser)return;
  const short=normalPhone(p.phone);const name=p.full_name||'';
  const fill=(selector,value)=>{const field=document.querySelector(selector);if(field&&!field.value&&value)field.value=value};
  fill('#kName',name);fill('#kPhone',short);fill('#kAddr',p.preferred_address);

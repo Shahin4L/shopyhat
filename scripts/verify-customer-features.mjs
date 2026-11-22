@@ -17,7 +17,14 @@ assert(account.includes('db.auth.signUp({email,'),'Email/password customer signu
 assert(!account.includes('db.auth.verifyOtp({phone:'),'SMS OTP must not be present in customer flow');
 assert(account.includes("db.auth.resetPasswordForEmail("),'Email recovery missing');
 assert(reset.includes('db.auth.updateUser({password:a})'),'Secure reset page missing');
-assert(confirm.includes('email_confirmed_at'),'Confirmation page missing');
+assert(confirm.includes('email_confirmed_at'),'Optional confirmation callback page missing');
+assert(account.includes('authIntro(')&&account.includes('sh-auth-nav'),'Premium login/register tabs missing');
+assert(account.includes('data-toggle-password'),'Password visibility toggle missing');
+assert(account.includes('Continue as guest'),'Guest account escape missing');
+assert(!account.includes('if(!data.user?.email_confirmed_at)'),'Customer login must not require email confirmation');
+assert(!account.includes('signedUser=user?.email_confirmed_at?user:null'),'Account ownership must use valid session rather than email-confirmed flag');
+assert(checkout.includes("app_metadata?.account_type!=='reseller'"),'Checkout must exclude reseller sessions');
+assert(!checkout.includes('verified.data.user?.email_confirmed_at'),'Checkout should not require email-confirmed users');
 assert(account.includes("db.rpc('sh_customer_orders')"),'Authenticated customer order history missing');
 assert(account.includes('sh_customer_watches'),'Cart/wishlist stock alerts missing');
 assert(account.includes("db.from('sh_customer_notifications')"),'Notification inbox missing');
