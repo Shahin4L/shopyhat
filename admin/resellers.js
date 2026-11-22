@@ -18,9 +18,9 @@ export function setupResellerOperations({db,roleCan,notify}){
   <div class="ops-filters" aria-label="Reseller date and status filters">
   <div class="date-field"><label for="resellerFrom">From</label><input id="resellerFrom" type="date"></div>
   <div class="date-field"><label for="resellerTo">To</label><input id="resellerTo" type="date"></div>
-  <div class="date-field"><label for="resellerState">Account / Request Status</label><select id="resellerState"><option value="">All Statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="suspended">Suspended</option><option value="rejected">Rejected</option><option value="fulfilled">Fulfilled</option><option value="settled">Settled</option></select></div>
-  <div class="range-actions"><button type="button" class="btn small" data-reseller-range="7">7 Days</button><button type="button" class="btn small" data-reseller-range="30">30 Days</button><button type="button" class="btn small" data-reseller-range="90">90 Days</button><button type="button" class="btn small" data-reseller-range="all">All</button></div>
-  <p class="muted" style="width:100%;margin:0">Filters apply to applications, accounts, fulfillment and referral histories. Product wholesale pricing always shows the current catalog.</p></div>
+  <div class="date-field"><label for="resellerState">Status</label><select id="resellerState"><option value="">All Statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="suspended">Suspended</option><option value="rejected">Rejected</option><option value="fulfilled">Fulfilled</option><option value="settled">Settled</option></select></div>
+  <div class="date-field"><label for="resellerFilterSearch">Search</label><input id="resellerFilterSearch" type="search" placeholder="Search this section"></div><div class="range-actions"><button type="button" class="btn small" data-reseller-range="7">7 Days</button><button type="button" class="btn small" data-reseller-range="30">30 Days</button><button type="button" class="btn small" data-reseller-range="90">90 Days</button><button type="button" class="btn small" data-reseller-range="all">All Dates</button><button type="button" class="btn small" id="resellerFilterClear">Clear Filters</button></div>
+  <p class="muted" style="width:100%;margin:0">Filters apply to the selected section only. Product Pricing has its own search and published-status filter. <span id="resellerFilterCount"></span></p></div>
   <h3>New Reseller Requests</h3><p class="muted">Review an application, choose a login ID and Shop URL. Admin creates the account and receives a one-time temporary password; no Supabase User UUID is required.</p>
 <div id="resellerCredentials" class="media-section hidden" style="padding:18px;border:1px solid #e5b986;background:#fff8ef">
 <div class="topline"><h3>One-time Reseller Access</h3><button class="btn small" type="button" id="resellerCredentialsClose">Hide</button></div>
@@ -63,6 +63,10 @@ export function setupResellerOperations({db,roleCan,notify}){
    panel.querySelectorAll('[data-reseller-panel]').forEach(el=>el.classList.toggle('hidden',el.dataset.resellerPanel!==key));
    panel.querySelectorAll('[data-reseller-goto]').forEach(btn=>{btn.classList.toggle('active',btn.dataset.resellerGoto===key);btn.setAttribute('aria-pressed',String(btn.dataset.resellerGoto===key))});
    const filter=panel.querySelector('.ops-filters');if(filter)filter.classList.toggle('hidden',['pricing','courier'].includes(key));
+   const statusField=$('resellerState');
+   if(statusField){const list=statusBySection[key]||[];statusField.innerHTML='<option value="">All statuses</option>'+list.map(st=>'<option value="'+st+'">'+st[0].toUpperCase()+st.slice(1)+'</option>').join('');}
+   const search=$('resellerFilterSearch');if(search)search.value='';
+   if(key!=='pricing'&&key!=='courier')renderFiltered();
    if(key==='pricing')loadPrices();
    if(key==='courier')apiHub.refresh()
   }
@@ -99,6 +103,8 @@ export function setupResellerOperations({db,roleCan,notify}){
    try{await navigator.clipboard.writeText(text);notify('resellerMsg','Credentials copied. Share privately.')}catch(e){notify('resellerMsg','Copy manually if browser clipboard is blocked.',true)}
   };
   for(const name of ['resellerFrom','resellerTo','resellerState'])$(name).addEventListener('change',renderFiltered);
+  $('resellerFilterSearch').addEventListener('input',renderFiltered);
+  $('resellerFilterClear').onclick=()=>{$('resellerFrom').value='';$('resellerTo').value='';$('resellerState').value='';$('resellerFilterSearch').value='';renderFiltered()};
   panel.querySelectorAll('[data-reseller-range]').forEach(b=>b.onclick=()=>{
    const mode=b.dataset.resellerRange,to=new Date(),from=new Date();
    from.setDate(from.getDate()-(Number(mode)||1)+1);
@@ -171,24 +177,34 @@ export function setupResellerOperations({db,roleCan,notify}){
   if(!response.ok||!out?.ok)throw Error(out.error||'Reseller access operation failed');
   return out;
  }
- function filtered(items){
-  const from=$('resellerFrom')?.value||'',to=$('resellerTo')?.value||'',status=$('resellerState')?.value||'';
+ function filtered(items,section){
+  const from=$('resellerFrom')?.value||'',to=$('resellerTo')?.value||'',
+   status=$('resellerState')?.value||'',query=($('resellerFilterSearch')?.value||'').trim().toLowerCase();
   if(from&&to&&from>to){notify('resellerMsg','From date must be before To date.',true);return []}
   return items.filter(x=>{
-   if(status&&x.status!==status)return false;
-   if(!from&&!to)return true;
+   if(section===activeSubpage&&status&&x.status!==status)return false;
    const date=x.created_at?new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dhaka',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(x.created_at)):'';
-   return date&&(!from||date>=from)&&(!to||date<=to);
+   if(date&&((from&&date<from)||(to&&date>to)))return false;
+   if((from||to)&&!date)return false;
+   if(section!==activeSubpage||!query)return true;
+   const fields=section==='applications'?[x.full_name,x.business_name,x.phone,x.email,x.status]:
+     section==='accounts'?[x.business_name,x.login_name,x.contact_phone,x.shop_slug,x.status]:
+     section==='fulfillment'?[x.customer_name,x.customer_phone,x.delivery_address,x.reseller_id,x.status]:
+     [x.order_id,x.reseller_id,x.status];
+   return fields.some(v=>String(v??'').toLowerCase().includes(query));
   });
  }
  function renderFiltered(){
-  renderApplications();
-  renderAccounts();
-  renderOrdersAndReferrals();
+  if(activeSubpage==='applications')renderApplications();
+  if(activeSubpage==='accounts')renderAccounts();
+  if(activeSubpage==='fulfillment'||activeSubpage==='referrals')renderOrdersAndReferrals();
+  const map={applications:applications,accounts:accounts,fulfillment:orders,referrals:referrals};
+  const section=activeSubpage,el=$('resellerFilterCount');
+  if(el&&map[section])el.textContent='Showing '+filtered(map[section],section).length+' of '+map[section].length+' loaded records.';
  }
  function renderApplications(){
   const host=$('resellerApplications');if(!host)return;
-  host.innerHTML=filtered(applications).map(a=>{
+  host.innerHTML=filtered(applications,'applications').map(a=>{
    const active=a.status==='pending';
    return '<tr><td><b>'+esc(a.full_name)+'</b><div>'+esc(a.business_name)+'</div><small>'+esc(a.email||'No email supplied')+'</small></td>'+
     '<td>'+esc(a.phone)+'</td><td>'+esc(a.status)+'</td><td>'+
@@ -227,7 +243,7 @@ export function setupResellerOperations({db,roleCan,notify}){
   }catch(err){notify('resellerMsg',err.message,true)}finally{submit.disabled=false}
  }
  function renderAccounts(){
-   $('resellerAccounts').innerHTML=filtered(accounts).map(x=>`<tr><td><b>${esc(x.business_name||'Reseller')}</b><div class="muted">Login: ${esc(x.login_name||'Not configured')}</div><small>${esc(x.user_id)}</small></td>
+   $('resellerAccounts').innerHTML=filtered(accounts,'accounts').map(x=>`<tr><td><b>${esc(x.business_name||'Reseller')}</b><div class="muted">Login: ${esc(x.login_name||'Not configured')}</div><small>${esc(x.user_id)}</small></td>
     <td><span>${esc(x.status)}</span>${x.must_change_password?'<small class="muted">Password change required</small>':''}</td>
     <td>${new Date(x.created_at).toLocaleDateString('en-BD')}</td>
     <td><details class="reseller-action-details"><summary>Manage Account</summary><label>Shop URL <input data-edit-slug value="${esc(x.shop_slug||'')}" maxlength="40" placeholder="partner-shop"></label>
@@ -240,14 +256,14 @@ export function setupResellerOperations({db,roleCan,notify}){
  function renderOrdersAndReferrals(){
    const statusOpts=['pending','approved','rejected','fulfilled','cancelled'],settlementOpts=['unsettled','pending','settled'];
    const dropdown=(key,values,current)=>'<select data-'+key+' aria-label="'+key+'">'+values.map(v=>'<option value="'+v+'" '+(current===v?'selected':'')+'>'+v+'</option>').join('')+'</select>';
-   $('resellerOrders').innerHTML=filtered(orders).map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td><td>${esc(x.customer_name)}<small class="muted">${esc(x.customer_phone)}</small><small class="muted">${esc(x.delivery_address)}</small></td><td>${x.quantity}</td><td>${money(x.retail_unit_price)}</td><td>${money(x.wholesale_unit_price)}</td><td>${money(x.margin_total)}</td><td>${dropdown('request-status',statusOpts,x.status)}</td><td>${dropdown('request-settlement',settlementOpts,x.settlement_status)}</td><td><button type="button" class="btn small" data-reseller-action="request" data-id="${esc(x.id)}">Save</button></td></tr>`).join('')||'<tr><td colspan="9">No fulfillment requests yet.</td></tr>';
+   $('resellerOrders').innerHTML=filtered(orders,'fulfillment').map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td><td>${esc(x.customer_name)}<small class="muted">${esc(x.customer_phone)}</small><small class="muted">${esc(x.delivery_address)}</small></td><td>${x.quantity}</td><td>${money(x.retail_unit_price)}</td><td>${money(x.wholesale_unit_price)}</td><td>${money(x.margin_total)}</td><td>${dropdown('request-status',statusOpts,x.status)}</td><td>${dropdown('request-settlement',settlementOpts,x.settlement_status)}</td><td><button type="button" class="btn small" data-reseller-action="request" data-id="${esc(x.id)}">Save</button></td></tr>`).join('')||'<tr><td colspan="9">No fulfillment requests yet.</td></tr>';
    const referralStatuses=['pending','approved','rejected','settled'];
-   $('resellerReferrals').innerHTML=filtered(referrals).map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td>
+   $('resellerReferrals').innerHTML=filtered(referrals,'referrals').map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td>
     <td>${esc(x.order_id)}</td><td>${money(x.retail_net)}</td><td>${money(x.wholesale_total)}</td><td><b>${money(x.margin_total)}</b></td>
     <td>${dropdown('ref-status',referralStatuses,x.status)}</td><td><button class="btn small" type="button" data-reseller-action="referral" data-id="${esc(x.id)}">Save</button></td></tr>`).join('')||'<tr><td colspan="7">No referral-linked orders yet.</td></tr>';
  }
  async function loadPrices(){
-  const search=$('resellerPriceSearch')?.value.trim()||'',mode=$('resellerPriceMode')?.value||'all';
+  const search=$('resellerPriceSearch')?.value.trim()||'',mode=$('resellerPriceMode')?.value||'all',requestToken=++priceQueryToken;
   try{
    let query=db.from('sh_reseller_admin_catalog').select('id,name,base_price,reseller_enabled,wholesale_price',{count:'exact'})
     .eq('status','active').order('name',{ascending:true});
@@ -257,6 +273,7 @@ export function setupResellerOperations({db,roleCan,notify}){
    const from=pricePage*pricingPageSize;
    const {data,error,count}=await query.range(from,from+pricingPageSize-1);
    if(error)throw error;
+   if(requestToken!==priceQueryToken)return;
    priceTotal=count||0;
    if(!data?.length&&pricePage>0){pricePage=0;return loadPrices()}
    const body=$('resellerPrices');
