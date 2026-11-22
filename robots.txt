@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /reseller/
+Disallow: /reset-password.html
+Disallow: /account-confirmed.html
+Sitemap: https://shopyhat.pages.dev/sitemap.xml
