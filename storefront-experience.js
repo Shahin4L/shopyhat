@@ -258,7 +258,7 @@ function decorate(){
  ann.textContent=cfg.announcement||'';ann.hidden=!cfg.announcement;
  syncSlider();
 }
-async function load(){try{const r=await fetch(SH_DB_URL+'/rest/v1/sh_storefront_experience?id=eq.1&select=config',{headers:{apikey:SH_DB_KEY}});if(!r.ok)throw Error('settings unavailable');const rows=await r.json();if(rows[0]?.config)cfg={...cfg,...rows[0].config}}catch(e){console.info('Using default SHOPYHAT experience:',e.message)}decorate()}
+async function load(){if(new URLSearchParams(location.search).get('studio_preview')==='1'){decorate();return}try{const r=await fetch(SH_DB_URL+'/rest/v1/sh_storefront_experience?id=eq.1&select=config',{headers:{apikey:SH_DB_KEY}});if(!r.ok)throw Error('settings unavailable');const rows=await r.json();if(rows[0]?.config)cfg={...cfg,...rows[0].config}}catch(e){console.info('Using default SHOPYHAT experience:',e.message)}decorate()}
 // Preview messages run only when this storefront is framed by its same-origin Admin Studio.
 // Never persist preview settings, alter backend records, or accept cross-origin messages.
 if(new URLSearchParams(location.search).get('studio_preview')==='1'){
