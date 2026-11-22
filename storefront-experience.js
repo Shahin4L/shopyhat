@@ -12,13 +12,14 @@ function nav(){
  if(!header||!main||document.getElementById('shMegaTrigger'))return;
  const shop=main.querySelector('a[data-p="shop"]');
  if(shop){const host=el('div','sh-menu-host'),trigger=el('button','sh-menu-trigger','Shop ⌄'),mega=el('div','sh-mega');
- trigger.id='shMegaTrigger';trigger.type='button';trigger.setAttribute('aria-expanded','false');mega.hidden=true;
+ trigger.id='shMegaTrigger';trigger.type='button';trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-controls','shMegaGrid');mega.hidden=true;
  mega.innerHTML='<div class="sh-mega-title">Explore the collections</div><div class="sh-mega-grid" id="shMegaGrid"></div>';
  shop.replaceWith(host);host.append(trigger,mega);
  const open=val=>{mega.hidden=!val;trigger.setAttribute('aria-expanded',String(val));if(val)populateMega()};
- trigger.addEventListener('click',()=>open(mega.hidden));host.addEventListener('mouseenter',()=>{if(matchMedia('(hover:hover)').matches)open(true)});
- host.addEventListener('mouseleave',()=>open(false));host.addEventListener('keydown',e=>{if(e.key==='Escape'){open(false);trigger.focus()}});
+ trigger.addEventListener('click',e=>{e.stopPropagation();open(mega.hidden)});
+ host.addEventListener('keydown',e=>{if(e.key==='Escape'){open(false);trigger.focus()}});
  document.addEventListener('click',e=>{if(!host.contains(e.target))open(false)});
+ window.addEventListener('hashchange',()=>open(false));
  }
  const arrival=el('a','','New Arrivals');arrival.href='#home';arrival.setAttribute('data-sh-arrivals','');
  arrival.addEventListener('click',()=>setTimeout(()=>document.getElementById('newArrivals')?.scrollIntoView({behavior:'smooth'}),40));
