@@ -1844,6 +1844,20 @@ async function applyPromo(){
   promoQuote={ok:false,code,error:e.message};lastCoupon=code;renderCart();
  }finally{promoQuoteBusy=false}
 }
+async function applyCheckoutPromo(){
+ const input=document.querySelector('#kPromo'),status=document.querySelector('#kPromoMsg');
+ const code=String(input?.value||'').trim().toUpperCase();
+ if(!code){lastCoupon='';promoQuote=null;LS.set('sh_coupon','');renderSummary();renderCart();if(status)status.textContent='Promo removed.';return}
+ const button=document.querySelector('#kPromoBtn');if(button){button.disabled=true;button.textContent='Checking…'}
+ try{
+  const result=await verifyPromo(code,subtotal());
+  if(result.ok){lastCoupon=code;LS.set('sh_coupon',code);promoQuote={...result,code,subtotal:subtotal()};if(status)status.textContent='Promo applied: save '+money(result.discount);}
+  else{promoQuote={ok:false,code,error:result.error};lastCoupon=code;if(status)status.textContent=result.error||'Promo is unavailable';}
+  renderSummary();renderCart();
+ }catch(e){if(status)status.textContent=e.message}
+ finally{if(button){button.disabled=false;button.textContent='Apply'}}
+}
+
 function updateBadges(){
   const n=cart.reduce((s,i)=>s+i.qty,0);
   [$("#cartN"),$("#cartN2")].forEach(b=>{b.textContent=n;b.classList.toggle("hidden",!n)});
@@ -1922,7 +1936,7 @@ function openCheckout(){
     <button class="btn block" type="submit" id="placeBtn">Place order <span aria-hidden="true">→</span></button>
     <p class="checkout-footnote">Your delivery charge is included in the total shown in the order summary.</p>
   </form>
-  <div class="s"><div class="summary-heading"><span class="summary-icon" aria-hidden="true">◈</span><div><span class="summary-kicker">YOUR SELECTION</span><h2 style="font-size:28px">Order summary</h2></div></div><div id="coSum"></div><p class="summary-hint">Confirm your selected colours, quantities and delivery area before placing your order.</p></div>`;
+  <div class="s"><div class="summary-heading"><span class="summary-icon" aria-hidden="true">◈</span><div><span class="summary-kicker">YOUR SELECTION</span><h2 style="font-size:28px">Order summary</h2></div></div><div id="coSum"></div><div class="sh-checkout-promo"><label for="kPromo">Have a promo code?</label><div class="sh-checkout-promo-row"><input id="kPromo" type="text" maxlength="32" placeholder="Enter code" value="${esc(lastCoupon)}" autocomplete="off"><button type="button" id="kPromoBtn">Apply</button><button type="button" id="kPromoClear" aria-label="Remove promo code" title="Remove promo code">×</button></div><p id="kPromoMsg" role="status" class="sh-checkout-promo-message">${lastCoupon?(couponInfo(subtotal()).ok?"Promo applied":"Verify promo before placing your order"):""}</p></div><p class="summary-hint">Confirm your selected colours, quantities and delivery area before placing your order.</p></div>`;
   renderSummary();openModal("coModal");
   if(CONFIG.turnstileSiteKey){
     const host=document.querySelector("#coBox .cf-turnstile");
@@ -2134,6 +2148,10 @@ window.addEventListener('shopyhat:languagechange',()=>{renderHome();if(!$("#p-sh
 /* =====================================================================
    EVENTS
    ===================================================================== */
+document.addEventListener('keydown',e=>{
+ if(e.key==='Enter'&&e.target?.id==='cpIn'){e.preventDefault();applyPromo()}
+ if(e.key==='Enter'&&e.target?.id==='kPromo'){e.preventDefault();applyCheckoutPromo()}
+});
 document.addEventListener("click",e=>{
   const t=e.target;
   const w=t.closest("[data-wish]"); if(w){e.preventDefault();e.stopPropagation();toggleWish(w.dataset.wish);return}
@@ -2154,6 +2172,8 @@ document.addEventListener("click",e=>{
   const cq=t.closest("[data-cq]"); if(cq){const it=cart.find(i=>i.k===cq.dataset.cq);if(it){it.qty+=+cq.dataset.d;if(it.qty<1)cart=cart.filter(i=>i!==it)}saveCart();renderCart();return}
   const rm=t.closest("[data-rm]"); if(rm){cart=cart.filter(i=>i.k!==rm.dataset.rm);saveCart();renderCart();return}
   if(t.closest("#cpBtn")){applyPromo();return}
+  if(t.closest("#kPromoBtn")){applyCheckoutPromo();return}
+  if(t.closest("#kPromoClear")){lastCoupon='';promoQuote=null;LS.set('sh_coupon','');const input=document.querySelector('#kPromo');if(input)input.value='';renderSummary();renderCart();const status=document.querySelector('#kPromoMsg');if(status)status.textContent='Promo removed.';return}
   if(t.closest("#goCo")){openCheckout();return}
   if(t.closest("#cartBtn")||t.closest("#bCart")){renderCart();openDrawer("cartDrawer");return}
   if(t.closest("#wishBtn")||t.closest("#bWish")){renderWish();openDrawer("wishDrawer");return}
