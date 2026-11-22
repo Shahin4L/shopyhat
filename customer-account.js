@@ -155,7 +155,7 @@ async function syncSavedWatches(){
  if(!signedUser?.phone_confirmed_at)return -1;
  const wishIDs=new Set(localArray('sh_wish').map(String));
  const cartItems=localArray('sh_cart');
- const allIDs=[...new Set([...wishIDs,...cartItems.map(c=>String(c.id||''))].filter(x=>/^\\d+$/.test(x)))].slice(0,70);
+ const allIDs=[...new Set([...wishIDs,...cartItems.map(c=>String(c.id||''))].filter(x=>/^\d+$/.test(x)))].slice(0,70);
  if(!allIDs.length){
   const {error}=await db.from('sh_customer_watches').delete().eq('user_id',signedUser.id);
   return error?-1:0;
