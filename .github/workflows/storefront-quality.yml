@@ -17,6 +17,8 @@ on:
       - 'supabase/functions/shopyhat-reseller-access/**'
       - 'supabase/functions/shopyhat-courier/**'
       - 'supabase/functions/shopyhat-reseller-media/**'
+      - 'supabase/functions/shopyhat-api-hub/**'
+      - 'supabase/functions/shopyhat-partner-api/**'
   push:
     branches: [main]
 jobs:
@@ -34,6 +36,7 @@ jobs:
           node --check admin/app.js
           node --check admin/promotions.js
           node --check admin/resellers.js
+          node --check admin/api-hub.js
           node --check customer-account.js
           node --check reseller/app.js
           node --check scripts/verify-customer-features.mjs
@@ -42,6 +45,8 @@ jobs:
           node scripts/verify-admin-ux.mjs
           node --check scripts/verify-reseller-studio.mjs
           node scripts/verify-reseller-studio.mjs
+          node --check scripts/verify-api-hub.mjs
+          node scripts/verify-api-hub.mjs
           node --check scripts/verify-reseller-selling-media.mjs
           node scripts/verify-reseller-selling-media.mjs
           node --check scripts/verify-storefront.mjs
