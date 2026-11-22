@@ -215,49 +215,6 @@ function profileView(){
  $('shProfileForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const {data,error}=await db.from('sh_customer_profiles').update({full_name:String(f.get('full_name')).trim(),preferred_address:String(f.get('preferred_address')||'').trim(),updated_at:new Date().toISOString()}).eq('user_id',signedUser.id).select().maybeSingle();if(data)profile=data;message(error?error.message:'Profile saved.',!!error)};
  $('shPasswordForm').onsubmit=async e=>{e.preventDefault();const pass=String(new FormData(e.currentTarget).get('password'));const {error}=await db.auth.updateUser({password:pass});message(error?error.message:'Password updated.',!!error)};
 }
-async function resellerView(){
- const {data:account,error}=await db.from('sh_reseller_accounts').select('*').eq('user_id',signedUser.id).maybeSingle();
- if(error)return panel('<p>'+esc(error.message)+'</p>');
- if(!account){
-  panel('<h3>Become a SHOPYHAT Reseller</h3><p>Apply to see wholesale prices, public selling prices and available stock. Your margin is your selling price minus the wholesale price, excluding delivery, fees and returns.</p><form id="shResellerApply">'+field('business','Business or shop name','text','maxlength="120"')+formButton('Apply for reseller access')+'</form>');
-  $('shResellerApply').onsubmit=async e=>{e.preventDefault();const name=String(new FormData(e.currentTarget).get('business')||'').trim();if(!name)return message('Enter business name.',true);const {error}=await db.from('sh_reseller_accounts').insert({user_id:signedUser.id,business_name:name});message(error?error.message:'Application sent. Approval is required.',!!error);if(!error)resellerView()};
-  return;
- }
- if(account.status!=='approved')return panel('<h3>Reseller application</h3><p>Status: <b>'+esc(account.status)+'</b>. Approval is required before wholesale prices are available.</p>');
- const [p,v,prices,requests,referrals]=await Promise.all([
-  db.from('sh_products').select('id,legacy_id,name,base_price,status').eq('status','active').limit(250),
-  db.from('sh_variants').select('id,product_id,color,price,stock,active').eq('active',true).limit(800),
-  db.from('sh_reseller_prices').select('product_id,wholesale_price,active').eq('active',true).limit(250),
-  db.from('sh_reseller_fulfillment_requests').select('id,status,quantity,margin_total,created_at').order('created_at',{ascending:false}).limit(30),
-  db.from('sh_reseller_referrals').select('id,status,margin_total,created_at').order('created_at',{ascending:false}).limit(30)]);
- if([p,v,prices,requests,referrals].some(x=>x.error))return panel('<p>Reseller catalog is temporarily unavailable.</p>');
- const products=(p.data||[]).filter(x=>(prices.data||[]).some(z=>z.product_id===x.id));
- const optionRows=(v.data||[]).filter(x=>products.some(p=>p.id===x.product_id));
- const options=optionRows.map(x=>{const item=products.find(p=>p.id===x.product_id),wh=prices.data.find(z=>z.product_id===item.id);return{variant:x,item,wholesale:Number(wh.wholesale_price),retail:Number(x.price??item.base_price)}});
- const optionData=options.map(o=>({id:o.variant.id,name:o.item.name,color:o.variant.color,stock:o.variant.stock,retail:o.retail,wholesale:o.wholesale,legacyId:o.item.legacy_id}));
- window.__shResellerCatalog=optionData;
- panel('<h3>Reseller Catalog</h3><p class="sh-account-note">Stock is live when refreshed. Listed margin is a gross estimate; fulfillment must be approved before shipping.</p><div class="sh-reseller-list">'+options.slice(0,60).map(o=>'<div class="sh-reseller-product"><div><b>'+esc(o.item.name)+'</b><small>'+esc(o.variant.color)+' · Stock: '+(o.variant.stock==null?'Ask availability':o.variant.stock)+'</small><small>Public: '+money(o.retail)+' · Your price: '+money(o.wholesale)+' · Margin: '+money(o.retail-o.wholesale)+'</small></div><div class="sh-account-actions"><button class="sh-account-secondary" data-share-reseller="'+esc(o.item.legacy_id)+'">Copy share link</button><button class="sh-account-secondary" data-resell="'+esc(o.variant.id)+'">Create order</button></div></div>').join('')+'</div><h3>My Fulfillment Requests</h3>'+(requests.data||[]).map(o=>'<div class="sh-account-line"><div><b>'+esc(o.status)+'</b><small>'+new Date(o.created_at).toLocaleDateString()+'</small></div><span>'+money(o.margin_total)+'</span></div>').join('')+'<h3>Referral Link Orders</h3><p>Margins shown here are provisional until orders are paid, delivered and settlements approved.</p>'+(referrals.data||[]).map(x=>'<div class="sh-account-line"><div><b>'+esc(x.status)+'</b><small>'+new Date(x.created_at).toLocaleDateString('en-BD')+'</small></div><span>'+money(x.margin_total)+'</span></div>').join(''));
- document.querySelectorAll('[data-resell]').forEach(b=>b.onclick=()=>resellerOrder(optionData.find(o=>o.id===b.dataset.resell)));
- document.querySelectorAll('[data-share-reseller]').forEach(button=>button.onclick=async()=>{
-  const id=String(button.dataset.shareReseller||'');
-  if(!/^\d+$/.test(id))return message('Product sharing unavailable for this item.',true);
-  const url=location.origin+location.pathname+'?ref='+encodeURIComponent(signedUser.id)+'#p/'+encodeURIComponent(id);
-  try{await navigator.clipboard.writeText(url);message('Share link copied. Linked orders will appear under Referral Link Orders.')}
-  catch(e){message('Copy this link: '+url)}
- });
-}
-function resellerOrder(item){
- if(!item)return;
- panel('<h3>Send customer order</h3><p>'+esc(item.name)+' — '+esc(item.color)+'</p><p>Public '+money(item.retail)+' · Wholesale '+money(item.wholesale)+' · Stock '+esc(item.stock??'Check availability')+'</p><form id="shResellerOrder">'+field('name','Customer full name','text','minlength="2" maxlength="120"')+field('phone','Customer mobile','tel','placeholder="01XXXXXXXXX"')+'<label>Customer delivery address<textarea name="address" required minlength="10" maxlength="400"></textarea></label>'+field('qty','Quantity','number','min="1" max="20" value="1"')+field('price','Selling price per piece (৳)','number','min="'+item.wholesale+'" step="0.01" value="'+item.retail+'"')+'<label class="sh-account-check"><input type="checkbox" name="consent" required> Customer authorized me to share their delivery information with SHOPYHAT.</label>'+formButton('Submit fulfillment request')+'</form><p><button class="sh-text-button" id="shResellerBack">Back to catalog</button></p>');
- $('shResellerBack').onclick=resellerView;
- $('shResellerOrder').onsubmit=async e=>{
-  e.preventDefault();const f=new FormData(e.currentTarget),phone=normalPhone(f.get('phone'));
-  if(!phone)return message('Invalid customer mobile.',true);
-  if(!f.has('consent'))return message('Customer delivery consent is required.',true);
-  const {error}=await db.rpc('sh_reseller_request',{p_variant:item.id,p_qty:Number(f.get('qty')),p_customer:String(f.get('name')),p_phone:phone,p_address:String(f.get('address')),p_retail:Number(f.get('price'))});
-  message(error?error.message:'Request created. SHOPYHAT will review and arrange fulfillment.',!!error);if(!error)resellerView();
- };
-}
 db.auth.onAuthStateChange((_event,session)=>{if(session?.user?.id!==signedUser?.id){setTimeout(()=>loadAccount().then(()=>{if($('shAccountModal')?.open)render()}),0)}});
 /* Existing checkout/support forms remain usable for guests. Only populate blank fields of verified customers. */
 function prefillCustomerForms(){
