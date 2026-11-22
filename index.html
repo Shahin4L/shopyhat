@@ -1723,7 +1723,8 @@ function renderRV(){
 function renderHome(){
   renderPublishedPartners();
   const cnt=id=>PRODUCTS.filter(p=>p.cat===id).length;
-  $("#mosaic").innerHTML=CATS.slice(0,5).map((c,i)=>{const p=PRODUCTS.find(x=>x.cat===c.id);
+  const withPhoto=PRODUCTS.filter(p=>!!storefrontCover(p));
+  $("#mosaic").innerHTML=CATS.slice(0,5).map((c,i)=>{const p=withPhoto.find(x=>x.cat===c.id)||PRODUCTS.find(x=>x.cat===c.id)||withPhoto[0];
     return `<a class="mt ${i===0?"big":""}" href="#shop/${c.id}" aria-label="Shop ${esc(c.name)}"><div class="art">${p?storefrontArt(p):""}</div><span class="category-count">${cnt(c.id)} ${cnt(c.id)===1?"style":"styles"}</span><span class="ml"><b>${esc(catalogLabel(c))}</b><small>${c.note?esc(c.note):"Explore collection"}</small><span class="category-cta">Explore <span aria-hidden="true">↗</span></span></span></a>`}).join("");
   const sp=PRODUCTS.find(p=>catKey(p.cat)==="saree")||PRODUCTS[0]; $("#bandArt").innerHTML=sp?storefrontArt(sp):"";
   $("#fCats").innerHTML=CATS.map(c=>`<li><a href="#shop/${c.id}">${esc(catalogLabel(c))}</a></li>`).join("");
