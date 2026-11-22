@@ -54,7 +54,7 @@ async function loadDashboard(){
 }
 async function loadCatalog(){
  const query=String($('catalogSearch')?.value||'').trim(),stock=$('catalogStock')?.value||'all',sort=$('catalogSort')?.value||'name';
- let q=db.from('sh_reseller_catalog').select('variant_id,product_id,legacy_id,name,color,stock,public_price,wholesale,image_url,created_at',{count:'exact'});
+ let q=db.from('sh_reseller_catalog').select('variant_id,product_id,legacy_id,name,color,stock,public_price,wholesale,resale_price,customized,image_url,created_at',{count:'exact'});
  if(query)q=q.or('name.ilike.%'+query.replace(/[%,()]/g,'')+'%,color.ilike.%'+query.replace(/[%,()]/g,'')+'%');
  if(stock==='available')q=q.gt('stock',0);
  if(stock==='out')q=q.eq('stock',0);
@@ -67,7 +67,7 @@ async function loadCatalog(){
  if(error){message('Cannot load product catalog: '+error.message,true);return}
  catalogTotal=count||0;
  if(!data?.length&&catalogPage>1){catalogPage=1;return loadCatalog()}
- catalog=(data||[]).map(x=>({...x,public_price:Number(x.public_price||0),wholesale:Number(x.wholesale||0),image:x.image_url||''}));
+ catalog=(data||[]).map(x=>({...x,public_price:Number(x.public_price||0),wholesale:Number(x.wholesale||0),resale_price:Number((x.resale_price??x.public_price)||0),customized:!!x.customized,image:x.image_url||''}));
  renderCatalog();
 }
 function renderCatalog(){
@@ -90,7 +90,33 @@ function renderCatalog(){
   const title=document.createElement('div');title.className='product-title';title.textContent=p.name;
   const meta=document.createElement('div');meta.className='product-meta';meta.textContent='Color: '+p.color+' · '+(p.stock===null?'Stock: Ask Admin':p.stock>0?'Available: '+p.stock:'Out of stock');
   const prices=document.createElement('div');prices.className='pricebar';
-  prices.innerHTML='<span>Public<b>'+money(p.public_price)+'</b></span><span>Your price<b>'+money(p.wholesale)+'</b></span><span>Gross margin<b>'+money(Math.max(0,p.public_price-p.wholesale))+'</b></span>';
+  prices.innerHTML='<span>Store price<b>'+money(p.public_price)+'</b></span><span>Wholesale cost<b>'+money(p.wholesale)+'</b></span><span>Your margin<b>'+money(Math.max(0,p.resale_price-p.wholesale))+'</b></span>';
+  const editor=document.createElement('div');editor.className='reseller-price-editor';
+  const label=document.createElement('label');label.textContent='Your customer selling price (৳)';
+  const input=document.createElement('input');input.type='number';input.min=String(p.wholesale);input.max=String(Math.max(p.public_price*5,p.wholesale));input.step='0.01';input.value=String(p.resale_price);input.setAttribute('aria-label','Your selling price for '+p.name+' '+p.color);
+  const margin=document.createElement('small');margin.className='resale-margin';margin.textContent='Estimated margin: '+money(Math.max(0,p.resale_price-p.wholesale));
+  input.oninput=()=>{const n=Number(input.value);margin.textContent=n>=p.wholesale?'Estimated margin: '+money(n-p.wholesale):'Minimum price: '+money(p.wholesale)};
+  label.append(input);editor.append(label,margin);
+  const tools=document.createElement('div');tools.className='reseller-price-actions';
+  const save=document.createElement('button');save.type='button';save.textContent=p.customized?'Update Price':'Save Selling Price';
+  save.onclick=async()=>{
+   const value=Number(input.value);
+   if(!Number.isFinite(value)||value<p.wholesale||value>Math.max(p.public_price*5,p.wholesale))return message('Selling price must be between '+money(p.wholesale)+' and '+money(Math.max(p.public_price*5,p.wholesale)),true);
+   save.disabled=true;
+   try{const {data,error}=await db.rpc('sh_reseller_set_price',{p_variant:p.variant_id,p_price:value});
+    if(error||!data?.ok)throw error||Error('Unable to update price');
+    p.resale_price=value;p.customized=true;message('Selling price saved. New share-link orders use your updated price.');renderCatalog();
+   }catch(e){message(e.message||'Price save failed',true)}finally{save.disabled=false}
+  };
+  const reset=document.createElement('button');reset.type='button';reset.textContent='Use Store Price';reset.className='reseller-reset-price';reset.disabled=!p.customized;
+  reset.onclick=async()=>{
+   reset.disabled=true;
+   try{const {data,error}=await db.rpc('sh_reseller_set_price',{p_variant:p.variant_id,p_price:null});
+    if(error||!data?.ok)throw error||Error('Reset failed');
+    p.resale_price=p.public_price;p.customized=false;message('Selling price reset to SHOPYHAT store price.');renderCatalog();
+   }catch(e){message(e.message||'Reset failed',true)}finally{reset.disabled=false}
+  };
+  tools.append(save,reset);editor.append(tools);
   const actions=document.createElement('div');actions.className='actions';
   const share=document.createElement('button');share.type='button';share.textContent='Copy Link';
   share.disabled=!p.legacy_id||!account?.shop_slug;
@@ -100,15 +126,16 @@ function renderCatalog(){
   };
   const order=document.createElement('button');order.type='button';order.textContent=p.stock!==null&&p.stock<=0?'Out of Stock':'Create Request';order.disabled=p.stock!==null&&p.stock<=0;
   order.onclick=()=>openRequest(p);
-  actions.append(share,order);body.append(title,meta,prices,actions);card.append(body);host.append(card);
+  const media=document.createElement('button');media.type='button';media.textContent='Download Photos';media.onclick=()=>openMediaLibrary(p);
+  actions.append(share,media,order);body.append(title,meta,prices,editor,actions);card.append(body);host.append(card);
  }
  if(!results.length){const empty=document.createElement('div');empty.className='catalog-empty';empty.textContent='No matching reseller products. Try another filter or ask SHOPYHAT Admin to enable products.';host.append(empty)}
  $('catalogSummary').textContent=catalogTotal+' published product variants · Showing '+results.length+' on this page';
  $('catalogPageLabel').textContent='Page '+catalogPage+' of '+totalPages;
  $('catalogPrev').disabled=catalogPage<=1;$('catalogNext').disabled=catalogPage>=totalPages;
 }
-function openRequest(p){selection=p;$('requestProduct').textContent=p.name+' — '+p.color+' · Your price '+money(p.wholesale);
- const f=$('requestForm');f.reset();f.elements.retail.value=p.public_price;
+function openRequest(p){selection=p;$('requestProduct').textContent=p.name+' — '+p.color+' · Wholesale '+money(p.wholesale)+' · Selling '+money(p.resale_price);
+ const f=$('requestForm');f.reset();f.elements.retail.value=p.resale_price;
  f.elements.retail.min=p.wholesale;f.elements.retail.max=Math.max(p.public_price*5,p.wholesale);
  $('requestDialog').showModal();
 }
