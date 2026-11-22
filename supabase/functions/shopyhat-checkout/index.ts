@@ -31,12 +31,14 @@ Deno.serve(async req=>{
   // Owner/Manager/Operator with a valid Supabase JWT may create manual orders.
   const jwt=(req.headers.get('authorization')||'').match(/^Bearer\s+([^\s]+)$/i)?.[1];
   let authorizedStaff=false;
+  let signedCustomerId:string|null=null;
   if(jwt && jwt!==secret){
     const verified=await db.auth.getUser(jwt);
     const email=verified.data?.user?.email?.toLowerCase();
     if(!verified.error && email){
       const staff=await db.from('sh_staff').select('role,active').eq('email',email).maybeSingle();
       authorizedStaff=!!staff.data?.active && ['owner','manager','operator'].includes(staff.data.role);
+      if(!authorizedStaff&&verified.data.user?.email_confirmed_at&&verified.data.user?.app_metadata?.account_type!=='reseller')signedCustomerId=verified.data.user.id;
     }
   }
   if(!authorizedStaff){
@@ -51,17 +53,31 @@ Deno.serve(async req=>{
     }
   }
   if(!Array.isArray(p.items)||p.items.length<1||p.items.length>15)return reply({error:'Invalid items'},400);
+  // Named referral URLs are resolved on the trusted server, never from a customer-supplied UUID.
+  const slug=String(p.referrer_slug||'').trim().toLowerCase();
+  let approvedReferrer='';
+  if(/^[a-z0-9][a-z0-9-]{2,39}$/.test(slug)){
+   const found=await db.from('sh_reseller_accounts').select('user_id').eq('shop_slug',slug).eq('status','approved').maybeSingle();
+   if(!found.error&&found.data)approvedReferrer=found.data.user_id;
+  }
   const shaped={
    request_id:String(p.request_id||'').slice(0,40),name:String(p.name||'').trim().slice(0,121),
    phone:String(p.phone||'').replace(/\s/g,'').slice(0,25),
    address:String(p.address||'').trim().slice(0,401),
    zone:String(p.zone||'').slice(0,20),payment_method:String(p.payment_method||'cod').slice(0,12),
    transaction_id:String(p.transaction_id||'').trim().slice(0,41),sender_last4:String(p.sender_last4||'').slice(0,8),
-   coupon:String(p.coupon||'').slice(0,40),note:String(p.note||'').slice(0,501),
+   coupon:String(p.coupon||'').slice(0,40),referrer_id:approvedReferrer,note:String(p.note||'').slice(0,501),
    items:p.items.map(x=>({variant_id:String(x.variant_id||'').slice(0,40),qty:Number(x.qty),size:String(x.size||'').slice(0,80)}))
   };
   const {data,error}=await db.rpc('sh_checkout_api',{p:shaped});
   if(error){console.error('Checkout rejected:',error.code);return reply({error:error.message||'Order unavailable'},400)}
+  // This independent service-role update links ONLY the authenticated buyer's own new order.
+  // A phone number alone must never claim previous guest orders.
+  if(signedCustomerId&&data?.ok){
+   const linked=await db.from('sh_orders').update({customer_user_id:signedCustomerId})
+    .eq('request_id',shaped.request_id).is('customer_user_id',null);
+   if(linked.error)console.error('Order-account association pending:',linked.error.code);
+  }
   return reply(data,201);
  }catch(e){console.error('Checkout failed',e instanceof Error?e.name:'error');return reply({error:'Unable to process order'},400)}
 });

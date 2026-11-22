@@ -3,10 +3,11 @@ import { join } from 'node:path';
 
 const out = 'dist';
 await mkdir(out, { recursive: true });
-for (const f of ['index.html','admin.html','i18n.js','customer-care.js','visitor-analytics.js','brand-about.js','about-enhanced.css','storefront-experience.css','storefront-experience.js']) {
+for (const f of ['_redirects','index.html','account-confirmed.html','reset-password.html','admin.html','i18n.js','customer-care.js','visitor-analytics.js','brand-about.js','about-enhanced.css','storefront-experience.css','storefront-experience.js','customer-account.css','customer-account.js']) {
   await copyFile(f, join(out,f));
 }
 await cp('admin',join(out,'admin'),{recursive:true});
+await cp('reseller',join(out,'reseller'),{recursive:true});
 for (const name of await readdir('assets').catch(()=>[])) {
   if (!name.startsWith('.')) {
     await mkdir(join(out,'assets'),{recursive:true});
@@ -19,7 +20,7 @@ const js=await readFile(join(out,'admin','app.js'),'utf8');
 if (!html.includes('<!DOCTYPE html>')&&!html.includes('<!doctype html>')) throw new Error('Missing website HTML');
 if (!admin.includes('Secure Admin Login')) throw new Error('Missing SHOPYHAT admin login');
 if (!js.includes('shopyhat-auth-request')) throw new Error('Admin OTP backend missing');
-for (const f of ['index.html','admin.html','i18n.js','customer-care.js','visitor-analytics.js','brand-about.js','about-enhanced.css','admin/index.html','admin/app.js','admin/config.js','admin/brand.js','admin/experience.js','storefront-experience.css','storefront-experience.js','assets/shopyhat-cinematic-art.svg']) {
+for (const f of ['_redirects','index.html','admin.html','i18n.js','customer-care.js','visitor-analytics.js','brand-about.js','about-enhanced.css','admin/index.html','admin/app.js','admin/config.js','admin/brand.js','admin/experience.js','storefront-experience.css','storefront-experience.js','assets/shopyhat-cinematic-art.svg','customer-account.css','customer-account.js','admin/resellers.js','account-confirmed.html','reset-password.html','reseller/index.html','reseller/styles.css','reseller/app.js']) {
   const data=await stat(join(out,f));
   if(data.size===0) throw new Error('Empty file: '+f);
 }

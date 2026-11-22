@@ -963,6 +963,7 @@ main{overflow:clip}
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./about-enhanced.css?v=20261122b">
 <link rel="stylesheet" href="./storefront-experience.css?v=20261122promo">
+<link rel="stylesheet" href="./customer-account.css?v=20261122a">
 </head>
 <body>
 
@@ -1795,7 +1796,7 @@ function addCurrent(){
 /* =====================================================================
    CART
    ===================================================================== */
-const saveCart=()=>{LS.set("sh_cart",cart);updateBadges()};
+const saveCart=()=>{LS.set("sh_cart",cart);updateBadges();window.dispatchEvent(new Event("sh:saved-items"))};
 function addToCart(id,color,size,qty){
   const product=byId(id),stock=product?variantStock(product,color):null;
   if(product&&(product.soldOut||stock===0)){toast('Selected color is sold out');return}
@@ -1889,7 +1890,7 @@ function renderCart(){
    ===================================================================== */
 function toggleWish(id){
   id=+id;const i=wish.indexOf(id);if(i>-1){wish.splice(i,1);toast("Removed from wishlist")}else{wish.push(id);toast("Saved to your wishlist")}
-  LS.set("sh_wish",wish);updateBadges();
+  LS.set("sh_wish",wish);updateBadges();window.dispatchEvent(new Event("sh:saved-items"));
   $$(`[data-wish="${id}"]`).forEach(b=>{b.classList.toggle("on",wish.includes(id));if(b.classList.contains("wish-in"))b.textContent=wish.includes(id)?"Saved to wishlist":"Save to wishlist"});
   renderWish();
 }
@@ -1911,7 +1912,12 @@ function openCheckout(){
    const pay=[{id:"cod",t:"Cash on delivery",s:"Pay after your parcel arrives",enabled:true,symbol:"COD"},
      {id:"bkash",t:"bKash — Send Money",s:CONFIG.bkash?"Send Money via bKash app · manual verification":"Payment account not configured yet",enabled:isConfiguredMFS(CONFIG.bkash),symbol:"bKash"},
      {id:"nagad",t:"Nagad — Send Money",s:CONFIG.nagad?"Send Money via Nagad app · manual verification":"Payment account not configured yet",enabled:isConfiguredMFS(CONFIG.nagad),symbol:"Nagad"}];
-   const saved=LS.get("sh_cust",{});
+   const loggedProfile=window.SHOPYHAT_CUSTOMER?.getUser?.()?.phone_confirmed_at?window.SHOPYHAT_CUSTOMER?.getProfile?.():null;
+   const saved=loggedProfile?{
+     name:loggedProfile.full_name||'',
+     phone:String(loggedProfile.phone||'').replace(/^\+?88/,''),
+     addr:loggedProfile.preferred_address||''
+   }:LS.get("sh_cust",{});
   $("#coBox").innerHTML=`<form class="f" id="coForm" novalidate>
     <div class="checkout-topline"><span>SHOPYHAT CHECKOUT</span><span>One simple step</span></div>
     <h2>Almost yours<span class="title-accent">.</span></h2>
@@ -2015,7 +2021,7 @@ async function submitOrder(e){
  const t=calcTotals();
  const items=lines.map(i=>({variant_id:chosenVariant(i.p,i.color)?.id,qty:i.qty,size:i.size||""}));
  if(items.some(i=>!i.variant_id)){err.textContent="This product needs a valid color selection. Please refresh.";return}
- const fingerprint=JSON.stringify({name,phone,addr,zone:t.zone,pay,trx,senderLast4,items,coupon:lastCoupon||""});
+ const fingerprint=JSON.stringify({name,phone,addr,zone:t.zone,pay,trx,senderLast4,items,coupon:lastCoupon||"",referrer_slug:(new URLSearchParams(location.search).get("ref")||"")});
  let pending=LS.get("sh_pending_checkout_v2",null);
  if(!pending||pending.fingerprint!==fingerprint){
   pending={fingerprint,id:crypto.randomUUID()};LS.set("sh_pending_checkout_v2",pending)
@@ -2026,11 +2032,17 @@ async function submitOrder(e){
  if(button){button.disabled=true;button.dataset.oldText=button.textContent;button.textContent="Confirming order…"}
  err.textContent="Saving your order securely…";
  try{
+   const authHeaders={"content-type":"application/json","apikey":SH_DB_KEY};
+   const customerSession=await window.SHOPYHAT_CUSTOMER?.db?.auth.getSession();
+   const token=customerSession?.data?.session?.access_token;
+   if(token&&window.SHOPYHAT_CUSTOMER?.getUser?.()?.email_confirmed_at)
+     authHeaders.authorization="Bearer "+token;
    const response=await fetch(SH_CHECKOUT_URL,{
-     method:"POST",headers:{"content-type":"application/json","apikey":SH_DB_KEY},
+     method:"POST",headers:authHeaders,
      body:JSON.stringify({request_id:pending.id,name,phone,address:addr,zone:t.zone,
        payment_method:pay,transaction_id:pay==="cod"?"":trx,
        sender_last4:pay==="cod"?"":senderLast4,coupon:lastCoupon||"",
+       referrer_slug:(new URLSearchParams(location.search).get("ref")||"").slice(0,40),
        note:$("#kNote").value.trim(),turnstile_token:tt,items})
    });
    const saved=await response.json();
@@ -2348,5 +2360,6 @@ boot();
 <script src="./visitor-analytics.js" defer></script>
 <script src="./brand-about.js?v=20261122b" defer></script>
 <script src="./storefront-experience.js?v=20261122promo" defer></script>
+<script type="module" src="./customer-account.js?v=20261122a"></script>
 </body>
 </html>

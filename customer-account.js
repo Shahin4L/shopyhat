@@ -1,0 +1,238 @@
+/* SHOPYHAT Account Hub — verified mobile/password sign-in, guest checkout remains optional. */
+import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
+const URL='https://xwfqgmgiunlxzvzoermn.supabase.co',KEY='sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP';
+const db=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'sh_customer_auth_v1'},global:{headers:{'X-Client-Info':'shopyhat-customer-v1'}}});
+const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>'৳'+Number(n||0).toLocaleString('en-BD');
+const normalPhone=s=>{let n=String(s||'').trim().replace(/[\s-]/g,'');if(n.startsWith('+88'))n=n.slice(3);else if(n.startsWith('88'))n=n.slice(2);return /^01[3-9]\d{8}$/.test(n)?n:null};
+let profile=null,pendingName='',pendingPhone='',signedUser=null,inboxTimer=null;
+window.SHOPYHAT_CUSTOMER={getProfile:()=>profile,getUser:()=>signedUser,show:()=>open(),db};
+const message=(s,bad=false)=>{const n=$('shAccountMessage');if(n){n.textContent=s;n.classList.toggle('error',bad)}};
+const view=(html)=>{$('shAccountBody').innerHTML=html};
+const field=(name,label,type='text',more='')=>'<label>'+label+'<input name="'+name+'" type="'+type+'" '+more+' required></label>';
+const formButton=text=>'<button class="sh-account-primary" type="submit">'+text+'</button>';
+function shell(){
+ if($('shAccountModal'))return;
+ const btn=document.createElement('button');btn.type='button';btn.className='ibtn sh-account-trigger';btn.id='shAccountTrigger';btn.title='Customer account';btn.setAttribute('aria-label','Open customer account');btn.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2"/></svg>';
+ const icons=document.querySelector('#hdr .icons');icons?.append(btn);
+ const dialog=document.createElement('dialog');dialog.id='shAccountModal';dialog.className='sh-account-dialog';
+ dialog.innerHTML='<div class="sh-account-head"><div><small>SHOPYHAT</small><h2>My Account</h2></div><button type="button" id="shAccountClose" aria-label="Close account">×</button></div><div id="shAccountMessage" role="status"></div><div id="shAccountBody"></div>';
+ document.body.append(dialog);btn.onclick=open;$('shAccountClose').onclick=()=>dialog.close();
+ dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
+}
+function open(){shell();$('shAccountModal').showModal();render()}
+function signupStep1(){
+ view('<h3>Create an account</h3><p>Step 1 of 2 — name and mobile number. Delivery address is requested only when ordering.</p><form id="shSignup1">'+field('name','Full name','text','minlength="2" maxlength="100" autocomplete="name"')+field('phone','Bangladesh mobile','tel','placeholder="01XXXXXXXXX" inputmode="tel" autocomplete="tel"')+formButton('Continue')+'</form><p>Already registered? <button class="sh-text-button" id="shGoLogin">Sign in</button></p>');
+ $('shGoLogin').onclick=loginView;
+ $('shSignup1').onsubmit=e=>{
+  e.preventDefault();const f=new FormData(e.currentTarget),phone=normalPhone(f.get('phone'));if(!phone)return message('Enter a valid Bangladesh mobile number.',true);
+  pendingName=String(f.get('name')||'').trim();pendingPhone=phone;if(pendingName.length<2)return message('Enter your full name.',true);
+  passwordView(phone);
+ };
+}
+function passwordView(phone){
+ view('<h3>Secure your account</h3><p>Step 2 of 2 — '+esc(phone)+'. No SMS OTP is required. Use a valid email for password recovery.</p><form id="shSignup2">'+field('email','Email address','email','maxlength="180" autocomplete="email"')+field('password','Password','password','minlength="8" autocomplete="new-password"')+field('confirm','Confirm password','password','minlength="8" autocomplete="new-password"')+formButton('Create account')+'</form><p><button class="sh-text-button" id="shBackAccount">Back</button></p>');
+ $('shBackAccount').onclick=signupStep1;
+ $('shSignup2').onsubmit=async e=>{
+  e.preventDefault();const form=e.currentTarget,f=new FormData(form);
+  const pass=String(f.get('password')),confirm=String(f.get('confirm')),email=String(f.get('email')||'').trim().toLowerCase();
+  if(pass!==confirm)return message('Passwords do not match.',true);
+  if(pass.length<8)return message('Use at least 8 characters.',true);
+  const button=form.querySelector('[type=submit]');button.disabled=true;
+  try{
+   const {data,error}=await db.auth.signUp({email,password:pass,options:{
+     emailRedirectTo:location.origin+'/account-confirmed.html',
+     data:{name:pendingName,mobile:pendingPhone}
+   }});
+   if(error)throw error;
+   if(data.session?.user?.email_confirmed_at){await loadAccount();render();return}
+   view('<h3>Check your email</h3><p>We sent an account confirmation link if the address can be registered. Open the link to activate your account, then sign in.</p><button class="sh-account-primary" id="shReturnLogin" type="button">Go to Sign in</button>');
+   $('shReturnLogin').onclick=loginView;
+  }catch(error){message(error.message,true)}finally{button.disabled=false}
+ };
+}
+function loginView(){
+ view('<h3>Welcome back</h3><p>Sign in with your email and password. Your mobile number is saved in your profile.</p><form id="shLogin">'+field('email','Email address','email','autocomplete="email"')+field('password','Password','password','autocomplete="current-password"')+formButton('Sign in')+'</form><p><button class="sh-text-button" id="shGoSignup">Create account</button> · <button class="sh-text-button" id="shForgot">Forgot password?</button></p>');
+ $('shGoSignup').onclick=signupStep1;$('shForgot').onclick=forgotView;
+ $('shLogin').onsubmit=async e=>{
+  e.preventDefault();const f=new FormData(e.currentTarget),email=String(f.get('email')||'').trim().toLowerCase();
+  const button=e.currentTarget.querySelector('[type=submit]');button.disabled=true;
+  try{
+   const {data,error}=await db.auth.signInWithPassword({email,password:String(f.get('password')||'')});
+   if(error)throw error;
+   if(!data.user?.email_confirmed_at){await db.auth.signOut();throw Error('Please confirm your email before signing in.')}
+   await loadAccount();render();
+  }catch(error){message(error.message,true)}finally{button.disabled=false}
+ };
+}
+function forgotView(){
+ view('<h3>Reset your password</h3><p>Enter your account email. We will send a free recovery link—no SMS OTP.</p><form id="shForgotForm">'+field('email','Email address','email','autocomplete="email"')+formButton('Send reset link')+'</form><p><button class="sh-text-button" id="shForgotBack" type="button">Back to sign in</button></p>');
+ $('shForgotBack').onclick=loginView;
+ $('shForgotForm').onsubmit=async e=>{
+  e.preventDefault();const email=String(new FormData(e.currentTarget).get('email')||'').trim().toLowerCase();
+  const btn=e.currentTarget.querySelector('[type=submit]');btn.disabled=true;
+  try{
+   const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/reset-password.html'});
+   if(error)throw error;
+   view('<h3>Check your inbox</h3><p>If this email belongs to an account, a password reset link will arrive shortly.</p><button class="sh-account-primary" type="button" id="shForgotReturn">Back to sign in</button>');
+   $('shForgotReturn').onclick=loginView;
+  }catch(err){message(err.message,true)}finally{btn.disabled=false}
+ };
+}
+async function loadAccount(){
+ const {data:{user}}=await db.auth.getUser();signedUser=user?.email_confirmed_at?user:null;profile=null;
+ if(!signedUser){window.dispatchEvent(new Event('sh:account'));return}
+ const result=await db.from('sh_customer_profiles').select('*').eq('user_id',user.id).maybeSingle();
+ if(!result.error&&result.data)profile=result.data;
+ else if(!result.error&&user.email_confirmed_at&&user.email){
+  const fullName=pendingName||String(user.user_metadata?.name||'Customer').slice(0,100);
+  const {data}=await db.from('sh_customer_profiles').insert({user_id:user.id,full_name:fullName,phone:'+88'+normalPhone(user.user_metadata?.mobile||pendingPhone||''),email:user.email.toLowerCase()}).select().maybeSingle();
+  if(data)profile=data;
+ }
+ if(!profile&&user.email_confirmed_at){profile={user_id:user.id,full_name:pendingName||user.user_metadata?.name||'Customer',phone:'+88'+(normalPhone(user.user_metadata?.mobile||'')||''),email:user.email,preferred_address:''}}
+ pendingName='';
+ window.dispatchEvent(new Event('sh:account'));
+ if(signedUser?.email_confirmed_at)scheduleWatchSync();
+ if(inboxTimer)clearInterval(inboxTimer);
+ checkInbox(true).catch(()=>{});
+ inboxTimer=setInterval(()=>{if(!document.hidden&&signedUser)checkInbox(true)},45000);
+}
+function render(){
+ message('');
+ if(!signedUser){loginView();return}
+ const phone=normalPhone(profile?.phone)||'';
+ view('<div class="sh-account-greeting"><h3>Hello, '+esc(profile?.full_name||'Customer')+'</h3><p>'+esc(phone)+' · '+esc(signedUser.email||'')+'</p></div><div class="sh-account-tabs"><button type="button" data-account-tab="orders">My Orders</button><button type="button" data-account-tab="notifications">Notifications</button><button type="button" data-account-tab="profile">Profile</button></div><div id="shAccountPanel"></div><button class="sh-text-button" id="shSignOut" type="button">Sign out</button>');
+ $('shSignOut').onclick=async()=>{await db.auth.signOut();signedUser=null;profile=null;render()};
+ document.querySelectorAll('[data-account-tab]').forEach(b=>b.onclick=()=>loadTab(b.dataset.accountTab));
+ loadTab('orders');
+}
+function panel(html){$('shAccountPanel').innerHTML=html}
+async function loadTab(tab){
+ document.querySelectorAll('[data-account-tab]').forEach(b=>b.classList.toggle('active',b.dataset.accountTab===tab));
+ panel('<p>Loading…</p>');
+ if(tab==='orders')return ordersView();
+ if(tab==='notifications')return notificationsView();
+  profileView();
+}
+async function ordersView(){
+ const {data,error}=await db.rpc('sh_customer_orders');
+ if(error)return panel('<p>'+esc(error.message)+'</p>');
+ const orders=Array.isArray(data)?data:[];
+ panel('<h3>Order History</h3><p class="sh-account-note">Your signed-in orders are saved securely. Previous guest orders still use order number and mobile tracking.</p>'+
+ (orders.length?orders.map(o=>'<div class="sh-account-line"><div><b>'+esc(o.order_number)+'</b><small>'+esc(o.status||'Pending')+' · '+new Date(o.created_at).toLocaleDateString('en-BD')+'</small></div><div><span>'+money(o.total)+'</span><button type="button" class="sh-account-secondary" data-track-order="'+esc(o.order_number)+'">Track</button></div></div>').join(''):'<p>No orders yet. You can check out as a guest anytime.</p>'));
+ document.querySelectorAll('[data-track-order]').forEach(button=>button.onclick=()=>{
+  const number=String(button.dataset.trackOrder||'');
+  const mobile=normalPhone(profile?.phone)||'';
+  $('shAccountModal')?.close();
+  window.location.hash='#track';
+  setTimeout(()=>{
+   const input=document.getElementById('tId'),phoneInput=document.getElementById('tPhone');
+   if(input)input.value=number;
+   if(phoneInput)phoneInput.value=mobile;
+   document.getElementById('trackForm')?.requestSubmit();
+  },50);
+ });
+}
+async function checkInbox(silent=false){
+ if(!signedUser)return;
+ const {data,error}=await db.from('sh_customer_notifications').select('id,kind,title,body,created_at,read_at').order('created_at',{ascending:false}).limit(30);
+ if(error)return;
+ const unread=(data||[]).filter(n=>!n.read_at);
+ const bell=$('shAccountTrigger');if(bell)bell.title=unread.length?unread.length+' unread notifications':'Customer account';
+ if(silent&&unread.length&&'Notification'in window&&Notification.permission==='granted'){
+  const recent=unread[0];const k='sh_notified_'+recent.id;
+  try{if(!sessionStorage.getItem(k)){new Notification(recent.title,{body:recent.body,tag:recent.id});sessionStorage.setItem(k,'1')}}catch{}
+ }
+ return data||[];
+}
+async function notificationsView(){
+ const [{data:preferences},items]=await Promise.all([db.from('sh_customer_notification_preferences').select('*').eq('user_id',signedUser.id).maybeSingle(),checkInbox()]);
+ const opts=[['restock','Restock alerts'],['low_stock','Low stock'],['new_arrivals','New arrivals'],['offers','New offers'],['order_updates','Order updates']];
+ panel('<h3>Notifications</h3><p>Choose which alerts you want. Browser notifications are shown while the shop is open, after you grant permission.</p><form id="shPreferenceForm">'+opts.map(([key,label])=>'<label class="sh-account-check"><input type="checkbox" name="'+key+'" '+(preferences?preferences[key]:['restock','order_updates'].includes(key)?'checked':'')+'> '+label+'</label>').join('')+formButton('Save preferences')+'</form><div class="sh-account-actions"><button class="sh-account-secondary" id="shBrowserPermission">Allow browser notifications</button><button class="sh-account-secondary" id="shWatchSaved">Notify me about saved products</button></div><h3>Inbox</h3><button class="sh-account-secondary" id="shMarkRead" type="button">Mark all as read</button>'+(items?.length?items.map(n=>'<div class="sh-account-line"><div><b>'+esc(n.title)+'</b><small>'+esc(n.body)+'</small></div><small>'+new Date(n.created_at).toLocaleDateString()+'</small></div>').join(''):'<p>No notifications yet.</p>'));
+ $('shPreferenceForm').onsubmit=async e=>{
+  e.preventDefault();const f=new FormData(e.currentTarget),payload={user_id:signedUser.id};
+  opts.forEach(([key])=>payload[key]=f.has(key));
+  const {error}=await db.from('sh_customer_notification_preferences').upsert(payload);
+  message(error?error.message:'Preferences saved.',!!error);
+ };
+ $('shMarkRead').onclick=async()=>{
+  const ids=(items||[]).filter(n=>!n.read_at).map(n=>n.id);
+  if(!ids.length)return message('All notifications are already read.');
+  const {error}=await db.from('sh_customer_notifications').update({read_at:new Date().toISOString()}).eq('user_id',signedUser.id).in('id',ids);
+  message(error?error.message:'Notifications marked as read.',!!error);
+  if(!error)notificationsView();
+ };
+ $('shBrowserPermission').onclick=async()=>{if(!('Notification'in window))return message('Browser notifications are unavailable.',true);const p=await Notification.requestPermission();message(p==='granted'?'Notifications enabled while website is open.':'Permission not granted.',p!=='granted')};
+ $('shWatchSaved').onclick=watchSaved;
+}
+async function watchSaved(){
+ const count=await syncSavedWatches();
+ message(count<0?'Unable to update saved product alerts.':count+' saved product variants are watched for restock alerts.',count<0);
+}
+let watchSyncTimer=null;
+const localArray=key=>{try{const x=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(x)?x:[]}catch{return []}};
+async function syncSavedWatches(){
+ if(!signedUser?.email_confirmed_at)return -1;
+ const wishIDs=new Set(localArray('sh_wish').map(String));
+ const cartItems=localArray('sh_cart');
+ const allIDs=[...new Set([...wishIDs,...cartItems.map(c=>String(c.id||''))].filter(x=>/^\d+$/.test(x)))].slice(0,70);
+ if(!allIDs.length){
+  const {error}=await db.from('sh_customer_watches').delete().eq('user_id',signedUser.id);
+  return error?-1:0;
+ }
+ const productResult=await db.from('sh_products').select('id,legacy_id').in('legacy_id',allIDs);
+ if(productResult.error)return -1;
+ const matched=productResult.data||[];
+ const variantsResult=matched.length?await db.from('sh_variants').select('id,product_id,color').in('product_id',matched.map(p=>p.id)).limit(250):{data:[],error:null};
+ if(variantsResult.error)return -1;
+ const wanted=new Set();
+ for(const product of matched){
+  const vs=(variantsResult.data||[]).filter(v=>v.product_id===product.id);
+  if(wishIDs.has(String(product.legacy_id)))vs.forEach(v=>wanted.add(v.id));
+  for(const item of cartItems){
+   if(String(item.id)!==String(product.legacy_id))continue;
+   const choice=vs.find(v=>String(v.color||'').toLowerCase()===String(item.color||'').toLowerCase());
+   if(choice)wanted.add(choice.id);
+   else vs.forEach(v=>wanted.add(v.id));
+  }
+ }
+ const {data:previous,error:readErr}=await db.from('sh_customer_watches').select('variant_id').eq('user_id',signedUser.id).limit(250);
+ if(readErr)return -1;
+ const oldSet=new Set((previous||[]).map(x=>x.variant_id));
+ const additions=[...wanted].filter(id=>!oldSet.has(id)).map(variant_id=>({user_id:signedUser.id,variant_id}));
+ const removals=[...oldSet].filter(id=>!wanted.has(id));
+ if(additions.length){const {error}=await db.from('sh_customer_watches').upsert(additions,{onConflict:'user_id,variant_id'});if(error)return -1}
+ if(removals.length){const {error}=await db.from('sh_customer_watches').delete().eq('user_id',signedUser.id).in('variant_id',removals);if(error)return -1}
+ return wanted.size;
+}
+function scheduleWatchSync(){
+ if(watchSyncTimer)clearTimeout(watchSyncTimer);
+ watchSyncTimer=setTimeout(()=>{syncSavedWatches().catch(e=>console.warn('Saved watches unavailable',e))},350);
+}
+window.addEventListener('sh:saved-items',scheduleWatchSync);
+function profileView(){
+ panel('<h3>Profile</h3><p>Delivery address remains optional until checkout.</p><form id="shProfileForm">'+field('full_name','Full name','text','maxlength="120" value="'+esc(profile?.full_name||'')+'"')+'<label>Preferred delivery address<textarea name="preferred_address" maxlength="400">'+esc(profile?.preferred_address||'')+'</textarea></label>'+formButton('Save profile')+'</form><details><summary>Change password</summary><form id="shPasswordForm">'+field('password','New password','password','minlength="8"')+formButton('Update password')+'</form></details>');
+ $('shProfileForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const {data,error}=await db.from('sh_customer_profiles').update({full_name:String(f.get('full_name')).trim(),preferred_address:String(f.get('preferred_address')||'').trim(),updated_at:new Date().toISOString()}).eq('user_id',signedUser.id).select().maybeSingle();if(data)profile=data;message(error?error.message:'Profile saved.',!!error)};
+ $('shPasswordForm').onsubmit=async e=>{e.preventDefault();const pass=String(new FormData(e.currentTarget).get('password'));const {error}=await db.auth.updateUser({password:pass});message(error?error.message:'Password updated.',!!error)};
+}
+db.auth.onAuthStateChange((_event,session)=>{if(session?.user?.id!==signedUser?.id){setTimeout(()=>loadAccount().then(()=>{if($('shAccountModal')?.open)render()}),0)}});
+/* Existing checkout/support forms remain usable for guests. Only populate blank fields of verified customers. */
+function prefillCustomerForms(){
+ const p=window.SHOPYHAT_CUSTOMER?.getProfile?.();
+ if(!p||!signedUser?.email_confirmed_at)return;
+ const short=normalPhone(p.phone);const name=p.full_name||'';
+ const fill=(selector,value)=>{const field=document.querySelector(selector);if(field&&!field.value&&value)field.value=value};
+ fill('#kName',name);fill('#kPhone',short);fill('#kAddr',p.preferred_address);
+ fill('#rvName',name);fill('#csName',name);fill('#csPhone',short);fill('#careCasePhone',short);
+ fill('#tPhone',short);
+}
+function observeFormAutofill(){
+ const host=document.getElementById('shCareContent'),checkout=document.getElementById('coBox');
+ for(const node of [host,checkout].filter(Boolean)){
+  const observer=new MutationObserver(()=>prefillCustomerForms());
+  observer.observe(node,{childList:true,subtree:true});
+ }
+ window.addEventListener('sh:account',prefillCustomerForms);
+}
+document.addEventListener('DOMContentLoaded',()=>{shell();observeFormAutofill();loadAccount()});
+
