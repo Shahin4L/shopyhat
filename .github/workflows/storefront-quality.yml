@@ -24,6 +24,9 @@ jobs:
           node --check storefront-experience.js
           node --check admin/experience.js
           node --check admin/app.js
+          node --check admin/promotions.js
+          node --check scripts/verify-storefront.mjs
+          node scripts/verify-storefront.mjs
       - name: Validate vector illustration
         run: python3 -c "import xml.etree.ElementTree as ET; ET.parse('assets/shopyhat-cinematic-art.svg')"
       - name: Verify site build
