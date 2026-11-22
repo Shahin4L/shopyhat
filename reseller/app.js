@@ -5,7 +5,7 @@ const $=id=>document.getElementById(id),escape=s=>String(s??'').replace(/[&<>"']
 const money=n=>'৳'+Number(n||0).toLocaleString('en-BD',{maximumFractionDigits:2});
 const mobile=s=>{let v=String(s||'').trim().replace(/[\s-]/g,'');if(v.startsWith('+88'))v=v.slice(3);else if(v.startsWith('88'))v=v.slice(2);return /^01[3-9][0-9]{8}$/.test(v)?v:null};
 const message=(text,bad=false)=>{const el=$('alert');el.textContent=text;el.classList.toggle('error',bad);if(text)el.scrollIntoView({behavior:'smooth',block:'nearest'})};
-let user=null,account=null,selection=null,catalog=[],catalogPage=1;
+let user=null,account=null,selection=null,catalog=[],catalogPage=1,catalogTotal=0;
 const CATALOG_PAGE_SIZE=12;
 const mediaURL=raw=>{const url=String(raw||'').trim();const match=url.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||url.match(/[?&]id=([\w-]+)/);if(match&&url.includes('google.com'))return 'https://drive.google.com/thumbnail?id='+encodeURIComponent(match[1])+'&sz=w800';try{const u=new URL(url);return u.protocol==='https:'?u.href:''}catch{return ''}};
 function productFallback(){const el=document.createElement('div');el.className='product-placeholder';el.innerHTML='<span aria-hidden="true">▧</span><strong>SHOPYHAT</strong><small>Image unavailable</small>';return el}
@@ -38,27 +38,12 @@ function tab(which){
  }
 }
 async function loadDashboard(){
- const [products,variants,prices,images,requests,referrals]=await Promise.all([
-  db.from('sh_products').select('id,legacy_id,name,base_price,status').eq('status','active').limit(350),
-  db.from('sh_variants').select('id,product_id,color,price,stock,active').eq('active',true).limit(1200),
-  db.from('sh_reseller_prices').select('product_id,wholesale_price').eq('active',true).limit(350),
-  db.from('sh_product_images').select('product_id,variant_id,image_url,sort_order').order('sort_order').limit(600),
+ const [requests,referrals]=await Promise.all([
   db.from('sh_reseller_fulfillment_requests').select('id,status,quantity,retail_unit_price,wholesale_unit_price,margin_total,created_at').order('created_at',{ascending:false}).limit(80),
   db.from('sh_reseller_referrals').select('id,status,margin_total,created_at').order('created_at',{ascending:false}).limit(80)
  ]);
- if([products,variants,prices,images,requests,referrals].some(r=>r.error)){
-  message('Unable to load the reseller catalog. Please try again.',true);return;
- }
- const allowed=new Map((prices.data||[]).map(p=>[p.product_id,Number(p.wholesale_price)]));
- const productMap=new Map((products.data||[]).map(p=>[p.id,p]));
- catalog=(variants.data||[]).map(v=>{
-  const p=productMap.get(v.product_id),wholesale=allowed.get(v.product_id);
-  if(!p||wholesale===undefined)return null;
-  const image=(images.data||[]).find(im=>im.variant_id===v.id)||(images.data||[]).find(im=>im.product_id===p.id);
-  return{variant_id:v.id,product_id:p.id,legacy_id:p.legacy_id,name:p.name,color:v.color||'Standard',
-   stock:v.stock,public_price:Number(v.price??p.base_price),wholesale,image:image?.image_url||''};
- }).filter(Boolean);
- renderCatalog();
+ if(requests.error||referrals.error){message('Unable to load reseller orders. Please try again.',true);return}
+ await loadCatalog();
  const list=(target,items,formatter)=>{
   $(target).replaceChildren();
   if(!items.length){$(''+target).textContent='No records yet.';return}
@@ -67,15 +52,28 @@ async function loadDashboard(){
  list('requestList',requests.data||[],r=>'<span><b>'+escape(r.status)+'</b><small>'+new Date(r.created_at).toLocaleDateString('en-BD')+' · '+r.quantity+' piece(s)</small></span><span>'+money(r.margin_total)+' gross margin</span>');
  list('referralList',referrals.data||[],r=>'<span><b>'+escape(r.status)+'</b><small>'+new Date(r.created_at).toLocaleDateString('en-BD')+'</small></span><span>'+money(r.margin_total)+' provisional</span>');
 }
+async function loadCatalog(){
+ const query=String($('catalogSearch')?.value||'').trim(),stock=$('catalogStock')?.value||'all',sort=$('catalogSort')?.value||'name';
+ let q=db.from('sh_reseller_catalog').select('variant_id,product_id,legacy_id,name,color,stock,public_price,wholesale,image_url,created_at',{count:'exact'});
+ if(query)q=q.or('name.ilike.%'+query.replace(/[%,()]/g,'')+'%,color.ilike.%'+query.replace(/[%,()]/g,'')+'%');
+ if(stock==='available')q=q.gt('stock',0);
+ if(stock==='out')q=q.eq('stock',0);
+ if(sort==='margin')q=q.order('public_price',{ascending:false});
+ else if(sort==='price')q=q.order('public_price',{ascending:true});
+ else if(sort==='latest')q=q.order('created_at',{ascending:false});
+ else q=q.order('name',{ascending:true});
+ const from=(catalogPage-1)*CATALOG_PAGE_SIZE;
+ const {data,error,count}=await q.range(from,from+CATALOG_PAGE_SIZE-1);
+ if(error){message('Cannot load product catalog: '+error.message,true);return}
+ catalogTotal=count||0;
+ if(!data?.length&&catalogPage>1){catalogPage=1;return loadCatalog()}
+ catalog=(data||[]).map(x=>({...x,public_price:Number(x.public_price||0),wholesale:Number(x.wholesale||0),image:x.image_url||''}));
+ renderCatalog();
+}
 function renderCatalog(){
- const query=String($('catalogSearch')?.value||'').trim().toLowerCase(),stock=$('catalogStock')?.value||'all',sort=$('catalogSort')?.value||'name';
- let results=catalog.filter(p=>{
-   if(stock==='available'&&p.stock!==null&&p.stock<=0)return false;
-   if(stock==='out'&&(p.stock===null||p.stock>0))return false;
-   return !query||(p.name+' '+p.color+' '+p.legacy_id).toLowerCase().includes(query);
- });
- results.sort((a,b)=>sort==='margin'?(b.public_price-b.wholesale)-(a.public_price-a.wholesale):sort==='price'?a.public_price-b.public_price:sort==='latest'?String(b.legacy_id||'').localeCompare(String(a.legacy_id||'')):a.name.localeCompare(b.name));
- const totalPages=Math.max(1,Math.ceil(results.length/CATALOG_PAGE_SIZE));catalogPage=Math.max(1,Math.min(catalogPage,totalPages));
+ const results=catalog;
+ const totalPages=Math.max(1,Math.ceil(catalogTotal/CATALOG_PAGE_SIZE));
+ catalogPage=Math.max(1,Math.min(catalogPage,totalPages));
  const host=$('products');host.replaceChildren();
  for(const p of results.slice((catalogPage-1)*CATALOG_PAGE_SIZE,catalogPage*CATALOG_PAGE_SIZE)){
   const card=document.createElement('article');card.className='product';
@@ -104,8 +102,8 @@ function renderCatalog(){
   order.onclick=()=>openRequest(p);
   actions.append(share,order);body.append(title,meta,prices,actions);card.append(body);host.append(card);
  }
- if(!results.length){const empty=document.createElement('div');empty.className='catalog-empty';empty.textContent=catalog.length?'No products match this filter. Try another search.':'No products enabled for reseller sales. SHOPYHAT Admin can select and publish items in the Reseller Product Pricing panel.';host.append(empty)}
- $('catalogSummary').textContent=results.length+' available catalog entries · '+catalog.length+' published variants';
+ if(!results.length){const empty=document.createElement('div');empty.className='catalog-empty';empty.textContent='No matching reseller products. Try another filter or ask SHOPYHAT Admin to enable products.';host.append(empty)}
+ $('catalogSummary').textContent=catalogTotal+' published product variants · Showing '+results.length+' on this page';
  $('catalogPageLabel').textContent='Page '+catalogPage+' of '+totalPages;
  $('catalogPrev').disabled=catalogPage<=1;$('catalogNext').disabled=catalogPage>=totalPages;
 }
@@ -169,10 +167,10 @@ $('selfPasswordForm').onsubmit=async event=>{
  finally{button.disabled=false}
 };
 for(const id of ['catalogSearch','catalogStock','catalogSort']){
- const el=$(id);if(el)el.addEventListener(id==='catalogSearch'?'input':'change',()=>{catalogPage=1;renderCatalog()});
+ const el=$(id);if(el)el.addEventListener(id==='catalogSearch'?'input':'change',()=>{catalogPage=1;loadCatalog()});
 }
-$('catalogPrev').onclick=()=>{catalogPage--;renderCatalog()};
-$('catalogNext').onclick=()=>{catalogPage++;renderCatalog()};
+$('catalogPrev').onclick=()=>{catalogPage--;loadCatalog()};
+$('catalogNext').onclick=()=>{catalogPage++;loadCatalog()};
 $('resellerRefresh').onclick=()=>loadDashboard();
 $('logout').onclick=logout;$('logoutFirst').onclick=logout;$('closeRequest').onclick=()=>$('requestDialog').close();
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
