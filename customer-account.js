@@ -93,6 +93,7 @@ async function loadAccount(){
  window.dispatchEvent(new Event('sh:account'));
  if(signedUser?.phone_confirmed_at)scheduleWatchSync();
  if(inboxTimer)clearInterval(inboxTimer);
+ checkInbox(true).catch(()=>{});
  inboxTimer=setInterval(()=>{if(!document.hidden&&signedUser)checkInbox(true)},45000);
 }
 function render(){
@@ -135,12 +136,19 @@ async function checkInbox(silent=false){
 async function notificationsView(){
  const [{data:preferences},items]=await Promise.all([db.from('sh_customer_notification_preferences').select('*').eq('user_id',signedUser.id).maybeSingle(),checkInbox()]);
  const opts=[['restock','Restock alerts'],['low_stock','Low stock'],['new_arrivals','New arrivals'],['offers','New offers'],['order_updates','Order updates']];
- panel('<h3>Notifications</h3><p>Choose which alerts you want. Browser notifications are shown while the shop is open, after you grant permission.</p><form id="shPreferenceForm">'+opts.map(([key,label])=>'<label class="sh-account-check"><input type="checkbox" name="'+key+'" '+(preferences?preferences[key]:['restock','order_updates'].includes(key)?'checked':'')+'> '+label+'</label>').join('')+formButton('Save preferences')+'</form><div class="sh-account-actions"><button class="sh-account-secondary" id="shBrowserPermission">Allow browser notifications</button><button class="sh-account-secondary" id="shWatchSaved">Notify me about saved products</button></div><h3>Inbox</h3>'+(items?.length?items.map(n=>'<div class="sh-account-line"><div><b>'+esc(n.title)+'</b><small>'+esc(n.body)+'</small></div><small>'+new Date(n.created_at).toLocaleDateString()+'</small></div>').join(''):'<p>No notifications yet.</p>'));
+ panel('<h3>Notifications</h3><p>Choose which alerts you want. Browser notifications are shown while the shop is open, after you grant permission.</p><form id="shPreferenceForm">'+opts.map(([key,label])=>'<label class="sh-account-check"><input type="checkbox" name="'+key+'" '+(preferences?preferences[key]:['restock','order_updates'].includes(key)?'checked':'')+'> '+label+'</label>').join('')+formButton('Save preferences')+'</form><div class="sh-account-actions"><button class="sh-account-secondary" id="shBrowserPermission">Allow browser notifications</button><button class="sh-account-secondary" id="shWatchSaved">Notify me about saved products</button></div><h3>Inbox</h3><button class="sh-account-secondary" id="shMarkRead" type="button">Mark all as read</button>'+(items?.length?items.map(n=>'<div class="sh-account-line"><div><b>'+esc(n.title)+'</b><small>'+esc(n.body)+'</small></div><small>'+new Date(n.created_at).toLocaleDateString()+'</small></div>').join(''):'<p>No notifications yet.</p>'));
  $('shPreferenceForm').onsubmit=async e=>{
   e.preventDefault();const f=new FormData(e.currentTarget),payload={user_id:signedUser.id};
   opts.forEach(([key])=>payload[key]=f.has(key));
   const {error}=await db.from('sh_customer_notification_preferences').upsert(payload);
   message(error?error.message:'Preferences saved.',!!error);
+ };
+ $('shMarkRead').onclick=async()=>{
+  const ids=(items||[]).filter(n=>!n.read_at).map(n=>n.id);
+  if(!ids.length)return message('All notifications are already read.');
+  const {error}=await db.from('sh_customer_notifications').update({read_at:new Date().toISOString()}).eq('user_id',signedUser.id).in('id',ids);
+  message(error?error.message:'Notifications marked as read.',!!error);
+  if(!error)notificationsView();
  };
  $('shBrowserPermission').onclick=async()=>{if(!('Notification'in window))return message('Browser notifications are unavailable.',true);const p=await Notification.requestPermission();message(p==='granted'?'Notifications enabled while website is open.':'Permission not granted.',p!=='granted')};
  $('shWatchSaved').onclick=watchSaved;
