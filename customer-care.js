@@ -11,6 +11,15 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const bn=()=>{try{return localStorage.getItem('sh_language')==='bn'}catch{return false}};
 const t=(en,bd)=>bn()?bd:en;
 const productName=p=>bn()&&p.name_bn?p.name_bn:p.name;
+const customerProfile=()=>window.SHOPYHAT_CUSTOMER?.getUser?.()?window.SHOPYHAT_CUSTOMER?.getProfile?.():null;
+function prefillAccount(fields){
+ const profile=customerProfile();if(!profile)return;
+ for(const [id,value] of Object.entries(fields)){
+  const input=document.getElementById(id);
+  if(input&&!input.value&&value)input.value=String(value);
+ }
+}
+
 const categoriesBN={'Damaged Item':'ক্ষতিগ্রস্ত পণ্য','Wrong Item':'ভুল পণ্য','Missing Item':'পণ্য অনুপস্থিত','Delivery Delay':'ডেলিভারিতে দেরি','Payment Issue':'পেমেন্ট সমস্যা','Return / Exchange':'রিটার্ন / এক্সচেঞ্জ','Product Quality':'পণ্যের মান','Other':'অন্যান্য'};
 const statusesBN={'Submitted':'জমা হয়েছে','Under Review':'পর্যালোচনাধীন','Investigating':'তদন্ত চলছে','Awaiting Customer':'গ্রাহকের উত্তরের অপেক্ষায়','Resolution Proposed':'সমাধানের প্রস্তাব দেওয়া হয়েছে','Resolved':'সমাধান হয়েছে','Closed':'বন্ধ','Reopened':'পুনরায় খোলা'};
 const msg=(text,error=false)=>{const el=document.getElementById('careMsg');if(el){el.innerHTML='<div class="'+(error?'care-error':'care-success')+'" role="status">'+esc(text)+'</div>';el.scrollIntoView({block:'nearest',behavior:'smooth'})}};
@@ -78,6 +87,7 @@ function renderReviewForm(){
   const image=document.createElement('img');image.src=photoUrl;image.alt=t('Selected review photo preview','নির্বাচিত রিভিউ ছবির প্রিভিউ');preview.append(image);
  };
  document.getElementById('careReviewBack').onclick=renderReviews;bindRetry();
+ prefillAccount({rvName:customerProfile()?.full_name});
  document.getElementById('careReviewForm').onsubmit=async e=>{
   e.preventDefault();const f=e.currentTarget,button=f.querySelector('button[type=submit]');button.disabled=true;
   const p=new FormData(f);p.set('action','review');const photo=p.get('review_photo');
@@ -99,7 +109,10 @@ function renderIssue(){
  '<p class="care-hint">'+t('Max 3 files. JPG, PNG, WebP, MP4 or WebM. Max 15 MB per file and 20 MB total. Attachments are private and used only to investigate your case.','সর্বোচ্চ ৩টি ফাইল। JPG, PNG, WebP, MP4 বা WebM। প্রতি ফাইল সর্বোচ্চ ১৫ MB এবং মোট ২০ MB। সংযুক্তি ব্যক্তিগত থাকবে ও অভিযোগ তদন্তেই ব্যবহার হবে।')+'</p>'+
  '<p class="care-hint">'+t('For damaged, defective or wrong items, contact SHOPYHAT within 3 calendar days of delivery under the published policy.','ক্ষতিগ্রস্ত, ত্রুটিপূর্ণ বা ভুল পণ্যের ক্ষেত্রে প্রকাশিত নীতিমালা অনুযায়ী ডেলিভারির ৩ দিনের মধ্যে যোগাযোগ করুন।')+'</p>'+
  '<label><input id="csConsent" type="checkbox" required style="width:auto"> '+t('I agree to provide this information for issue investigation and customer support.','অভিযোগ তদন্ত ও গ্রাহক সহায়তার জন্য তথ্য ব্যবহারে আমি সম্মত।')+'</label><div class="care-spaced">'+submitButton(t('Submit Issue','অভিযোগ জমা দিন'))+'</div></form><div id="careMsg"></div>';
- bindRetry();let previews=[];document.getElementById('csMedia').onchange=e=>{
+ bindRetry();
+ const account=customerProfile();
+ prefillAccount({csName:account?.full_name,csPhone:String(account?.phone||'').replace(/^\\+?88/,''),csEmail:account?.email});
+ let previews=[];document.getElementById('csMedia').onchange=e=>{
   previews.forEach(URL.revokeObjectURL);previews=[];
   const files=[...e.target.files],out=document.getElementById('careMediaPreview');out.innerHTML='';
   if(files.length>3||files.reduce((n,f)=>n+f.size,0)>20*1024*1024){msg(t('Select at most three files, 20MB total.','সর্বোচ্চ ৩টি ফাইল, মোট ২০ MB নির্বাচন করুন।'),true);e.target.value='';return}
