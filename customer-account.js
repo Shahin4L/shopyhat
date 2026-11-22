@@ -1,7 +1,7 @@
 /* SHOPYHAT Account Hub — verified mobile/password sign-in, guest checkout remains optional. */
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
 const URL='https://xwfqgmgiunlxzvzoermn.supabase.co',KEY='sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP';
-const db=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false},global:{headers:{'X-Client-Info':'shopyhat-customer-v1'}}});
+const db=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false,storageKey:'sh_customer_auth_v1'},global:{headers:{'X-Client-Info':'shopyhat-customer-v1'}}});
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'৳'+Number(n||0).toLocaleString('en-BD');
 const normalPhone=s=>{let n=String(s||'').trim().replace(/[\s-]/g,'');if(n.startsWith('+88'))n=n.slice(3);else if(n.startsWith('88'))n=n.slice(2);return /^01[3-9]\d{8}$/.test(n)?n:null};
@@ -79,7 +79,7 @@ function forgotView(){
  };
 }
 async function loadAccount(){
- const {data:{user}}=await db.auth.getUser();signedUser=user||null;profile=null;
+ const {data:{user}}=await db.auth.getUser();signedUser=user?.phone_confirmed_at?user:null;profile=null;
  if(!user){window.dispatchEvent(new Event('sh:account'));return}
  const result=await db.from('sh_customer_profiles').select('*').eq('user_id',user.id).maybeSingle();
  if(!result.error&&result.data)profile=result.data;
@@ -197,4 +197,23 @@ function resellerOrder(item){
  };
 }
 db.auth.onAuthStateChange((_event,session)=>{if(session?.user?.id!==signedUser?.id){setTimeout(()=>loadAccount().then(()=>{if($('shAccountModal')?.open)render()}),0)}});
-document.addEventListener('DOMContentLoaded',()=>{shell();loadAccount()});
+/* Existing checkout/support forms remain usable for guests. Only populate blank fields of verified customers. */
+function prefillCustomerForms(){
+ const p=window.SHOPYHAT_CUSTOMER?.getProfile?.();
+ if(!p||!signedUser?.phone_confirmed_at)return;
+ const short=normalPhone(p.phone);const name=p.full_name||'';
+ const fill=(selector,value)=>{const field=document.querySelector(selector);if(field&&!field.value&&value)field.value=value};
+ fill('#kName',name);fill('#kPhone',short);fill('#kAddr',p.preferred_address);
+ fill('#rvName',name);fill('#csName',name);fill('#csPhone',short);fill('#careCasePhone',short);
+ fill('#tPhone',short);
+}
+function observeFormAutofill(){
+ const host=document.getElementById('shCareContent'),checkout=document.getElementById('coBox');
+ for(const node of [host,checkout].filter(Boolean)){
+  const observer=new MutationObserver(()=>prefillCustomerForms());
+  observer.observe(node,{childList:true,subtree:true});
+ }
+ window.addEventListener('sh:account',prefillCustomerForms);
+}
+document.addEventListener('DOMContentLoaded',()=>{shell();observeFormAutofill();loadAccount()});
+
