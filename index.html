@@ -2382,7 +2382,7 @@ async function fetchShopyhatCatalog(){
 async function boot(){
  try{await loadReferralPrices()}catch(e){SH_REFERRAL_PRICES_OK=false;console.warn('Referral prices could not load:',e.message);toast('Reseller pricing temporarily unavailable. Please refresh before checkout.')}
  const cached=LS.get("sh_products_v2",null);
- if(cached?.length){applyProducts(cached.map(parseProduct).filter(Boolean));renderAll()}
+ if(cached?.length&&!SH_REFERRAL_SLUG){applyProducts(cached.map(parseProduct).filter(Boolean));renderAll()}
  else{renderAll();showLoading()}
  try{
   const raw=await fetchShopyhatCatalog();
