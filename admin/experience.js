@@ -12,7 +12,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   const b=document.createElement('button');b.type='button';b.className='btn';b.id='experienceTab';b.dataset.page='experience';b.textContent='Storefront Studio';
   const brand=$('brandTab');nav.insertBefore(b,brand||nav.firstChild);
   const panel=document.createElement('div');panel.className='panel hidden';panel.id='page-experience';
-  panel.innerHTML='<div class="topline"><div><h2>Storefront Experience Studio</h2><p class="muted">Control homepage visuals, campaigns and sections without changing order workflows.</p></div><a class="btn" target="_blank" rel="noopener" href="/">↗ Preview Storefront</a></div><div class="media-section" style="margin:18px 0;padding:18px"><h3>Cinematic Hero Photo</h3><p class="muted">Upload JPG, PNG or WebP up to 3 MB. The website will use the new photo immediately after publishing the settings.</p><input type="file" id="shHeroUpload" accept="image/png,image/jpeg,image/webp"><div class="editor-actions"><button type="button" class="btn primary" id="shHeroUploadButton">Upload Hero Image</button></div><img id="shHeroPreview" alt="Current hero preview" style="width:100%;max-width:550px;aspect-ratio:16/9;object-fit:cover;display:none;border-radius:12px;margin-top:12px"><p id="shHeroUploadMsg" class="msg" role="status"></p></div><form id="shExperienceForm" class="sh-experience-form"><div class="sh-experience-fields">'+fields.map(([key,title,type])=>'<label>'+esc(title)+(type==='textarea'?'<textarea name="'+key+'" rows="3"></textarea>':'<input type="'+type+'" name="'+key+'" placeholder="'+(type==='url'?'https://...':'')+'">')+'</label>').join('')+'</div><h3>Homepage visibility</h3><div class="sh-experience-switches">'+switches.map(([key,title])=>'<label><input type="checkbox" name="'+key+'"> '+esc(title)+'</label>').join('')+'</div><p class="muted">Tip: Hero video is optional. For performance, use an optimized, muted looping video and an image fallback. Product images in Mega Menu and Live Search come from your existing catalog.</p><div class="editor-actions"><button class="btn primary" type="submit">Save & Publish Experience</button><button class="btn" type="button" id="shExperienceReload">Reload</button></div><p id="shExperienceMsg" class="msg" role="status"></p></form>';
+  panel.innerHTML='<div class="topline"><div><h2>Storefront Experience Studio</h2><p class="muted">Control homepage visuals, campaigns and sections without changing order workflows.</p></div><a class="btn" target="_blank" rel="noopener" href="/">↗ Preview Storefront</a></div><div class="media-section" style="margin:18px 0;padding:18px"><h3>Cinematic Hero Photo</h3><p class="muted">Upload JPG, PNG or WebP. Larger images are automatically compressed to fit the 2 MB storage limit. The website will use the new photo immediately after publishing the settings.</p><input type="file" id="shHeroUpload" accept="image/png,image/jpeg,image/webp"><div class="editor-actions"><button type="button" class="btn primary" id="shHeroUploadButton">Upload Hero Image</button></div><img id="shHeroPreview" alt="Current hero preview" style="width:100%;max-width:550px;aspect-ratio:16/9;object-fit:cover;display:none;border-radius:12px;margin-top:12px"><p id="shHeroUploadMsg" class="msg" role="status"></p></div><form id="shExperienceForm" class="sh-experience-form"><div class="sh-experience-fields">'+fields.map(([key,title,type])=>'<label>'+esc(title)+(type==='textarea'?'<textarea name="'+key+'" rows="3"></textarea>':'<input type="'+type+'" name="'+key+'" placeholder="'+(type==='url'?'https://...':'')+'">')+'</label>').join('')+'</div><h3>Homepage visibility</h3><div class="sh-experience-switches">'+switches.map(([key,title])=>'<label><input type="checkbox" name="'+key+'"> '+esc(title)+'</label>').join('')+'</div><p class="muted">Tip: Hero video is optional. For performance, use an optimized, muted looping video and an image fallback. Product images in Mega Menu and Live Search come from your existing catalog.</p><div class="editor-actions"><button class="btn primary" type="submit">Save & Publish Experience</button><button class="btn" type="button" id="shExperienceReload">Reload</button></div><p id="shExperienceMsg" class="msg" role="status"></p></form>';
   nav.after(panel);
   const style=document.createElement('style');style.textContent=`
  #dashboard{position:relative;padding-left:215px}#dashboard>.nav{position:fixed;left:0;top:68px;bottom:0;width:205px;z-index:45;overflow-y:auto;margin:0;padding:15px 10px;background:#191310;border-right:1px solid #3c302a;display:flex;flex-direction:column;flex-wrap:nowrap;gap:4px}
@@ -44,20 +44,42 @@ export function setupExperienceStudio({db,roleCan,notify}){
  $('shHeroUploadButton').onclick=uploadHero;
  $('shHeroUpload').onchange=()=>{const file=$('shHeroUpload').files?.[0];if(!file)return;const u=URL.createObjectURL(file);const img=$('shHeroPreview');img.onload=()=>URL.revokeObjectURL(u);img.src=u;img.style.display='block'};
  }
+ async function optimizeHero(file){
+  const cap=2*1024*1024;
+  if(file.size<=cap)return file;
+  const bitmap=await createImageBitmap(file);
+  try{
+   let scale=Math.min(1,1920/bitmap.width,1280/bitmap.height);
+   for(let attempt=0;attempt<5;attempt++){
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+    canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    canvas.getContext('2d',{alpha:false}).drawImage(bitmap,0,0,canvas.width,canvas.height);
+    const quality=Math.max(.6,.86-attempt*.06);
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality));
+    if(blob&&blob.size<=cap)return new File([blob],'shopyhat-hero.webp',{type:'image/webp'});
+    scale*=.8;
+   }
+   throw Error('Image is too complex to optimize under 2 MB. Try a smaller image.');
+  }finally{bitmap.close?.()}
+ }
  async function uploadHero(){
   if(!roleCan('owner','manager'))return;
-  const file=$('shHeroUpload')?.files?.[0];
-  if(!file)return notify('shHeroUploadMsg','Choose an image file first.',true);
-  if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>3*1024*1024)return notify('shHeroUploadMsg','Use PNG, JPG or WebP, maximum 3 MB.',true);
+  const selected=$('shHeroUpload')?.files?.[0];
+  if(!selected)return notify('shHeroUploadMsg','Choose an image file first.',true);
+  if(!['image/png','image/jpeg','image/webp'].includes(selected.type))return notify('shHeroUploadMsg','Use PNG, JPG or WebP.',true);
+  if(selected.size>12*1024*1024)return notify('shHeroUploadMsg','Maximum original image size is 12 MB.',true);
   const btn=$('shHeroUploadButton');btn.disabled=true;
   try{
+   notify('shHeroUploadMsg','Optimizing photo for fast loading…');
+   const file=await optimizeHero(selected);
    const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg';
    const name='hero/cinematic-'+crypto.randomUUID()+'.'+ext;
    const response=await db.storage.from('shopyhat-branding').upload(name,file,{contentType:file.type,cacheControl:'3600',upsert:false});
    if(response.error)throw response.error;
    const url=db.storage.from('shopyhat-branding').getPublicUrl(name).data.publicUrl;
    $('shExperienceForm').elements.hero_image_url.value=url;
-   notify('shHeroUploadMsg','Image uploaded. Click Save & Publish Experience to make it live.');
+   notify('shHeroUploadMsg','Photo uploaded ('+Math.round(file.size/1024)+' KB). Click Save & Publish Experience to show it on the website.');
   }catch(e){notify('shHeroUploadMsg',e.message,true)}finally{btn.disabled=false}
  }
  async function reload(){
