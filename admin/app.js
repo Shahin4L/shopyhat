@@ -2,6 +2,7 @@ import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,CHECKOUT_URL} from './config.js';
 import {setupBrandManager} from './brand.js';
 import {setupCatalogManager} from './catalog.js';
+import {setupExperienceStudio} from './experience.js';
 const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10,6 +11,7 @@ const fmtDate=v=>v?new Date(v).toLocaleString('en-BD',{timeZone:'Asia/Dhaka',dat
 const roleCan=(...r)=>r.includes(role);
 const branding=setupBrandManager({db,roleCan,notify:(id,msg,error)=>notice(id,msg,error),formatDate:fmtDate});
 const catalog=setupCatalogManager({db,roleCan,notify:(id,msg,error)=>notice(id,msg,error),fmtDate});
+const experience=setupExperienceStudio({db,roleCan,notify:(id,msg,error)=>notice(id,msg,error)});
 const imageUrl=v=>{const s=String(v||'');const m=s.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||s.match(/[?&]id=([\w-]+)/);return m&&s.includes('google.com')?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000':s};
 let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],reviews=[],cases=[],caseMedia=[],caseUpdates=[],caseReplies=[],dailyStats=[],archiveHealth=null,reviewMedia=[],archiveRequests=[],activePage='products';
 function notice(id,message,error=false){$(id).textContent=message;$(id).classList.toggle('error',!!error)}
@@ -140,7 +142,7 @@ async function boot(){const {data:{user},error}=await db.auth.getUser();
  const r=await db.from('sh_staff').select('*').eq('email',(user.email||'').toLowerCase()).maybeSingle();
  if(r.error||!r.data?.active){await db.auth.signOut();show('login',true);show('dashboard',false);show('logout',false);return notice('loginMsg','This account is not an active SHOPYHAT staff member. Ask the owner to grant access.',true)}
  actor=user;role=r.data.role;$('profile').textContent=(r.data.display_name||user.email)+' · '+role;
- show('login',false);show('dashboard',true);show('logout',true);show('usersTab',role==='owner');show('addStaff',role==='owner');show('activityTab',roleCan('owner','manager'));show('insightsTab',roleCan('owner','manager'));show('brandTab',roleCan('owner','manager'));show('catalogTab',roleCan('owner','manager'));
+ show('login',false);show('dashboard',true);show('logout',true);show('usersTab',role==='owner');show('addStaff',role==='owner');show('activityTab',roleCan('owner','manager'));show('insightsTab',roleCan('owner','manager'));show('brandTab',roleCan('owner','manager'));show('catalogTab',roleCan('owner','manager'));experience.mount();show('experienceTab',roleCan('owner','manager'));if(roleCan('owner','manager'))experience.reload();
  show('newProduct',roleCan('owner','manager'));show('bulkProducts',roleCan('owner','manager'));show('newOrder',roleCan('owner','manager','operator'));
  await refresh()}
 async function refresh(){notice('appMsg','Loading live data…');
@@ -154,7 +156,8 @@ async function refresh(){notice('appMsg','Loading live data…');
  $('kProducts').textContent=p.length;$('kActive').textContent=p.filter(x=>x.status==='active').length;$('kOrders').textContent=o.length;$('kPending').textContent=o.filter(x=>x.status==='Pending').length;
  render();notice('appMsg','Last refreshed '+new Date().toLocaleTimeString('en-BD'))}
  catch(e){notice('appMsg',e.message,true)}}
-function showPage(page){if(['activity','insights','brand','catalog'].includes(page)&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity','reviews','cases','insights','brand','catalog'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
+function showPage(page){if(['activity','insights','brand','catalog','experience'].includes(page)&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity','reviews','cases','insights','brand','catalog','experience'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
+window.SHOPYHAT_SHOW_PAGE=showPage;
 function cover(product){const base=images.find(i=>i.product_id===product.id&&!i.variant_id);if(base)return base.image_url;
  const v=variants.find(x=>x.product_id===product.id);return images.find(i=>i.variant_id===v?.id)?.image_url||''}
 function render(){
