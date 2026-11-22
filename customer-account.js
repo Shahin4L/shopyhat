@@ -101,7 +101,7 @@ function render(){
  message('');
  if(!signedUser){loginView();return}
  const phone=normalPhone(profile?.phone)||'';
- view('<div class="sh-account-greeting"><h3>Hello, '+esc(profile?.full_name||'Customer')+'</h3><p>'+esc(phone)+' · '+esc(signedUser.email||'')+'</p></div><div class="sh-account-tabs"><button type="button" data-account-tab="orders">My Orders</button><button type="button" data-account-tab="notifications">Notifications</button><button type="button" data-account-tab="reseller">Reseller</button><button type="button" data-account-tab="profile">Profile</button></div><div id="shAccountPanel"></div><button class="sh-text-button" id="shSignOut" type="button">Sign out</button>');
+ view('<div class="sh-account-greeting"><h3>Hello, '+esc(profile?.full_name||'Customer')+'</h3><p>'+esc(phone)+' · '+esc(signedUser.email||'')+'</p></div><div class="sh-account-tabs"><button type="button" data-account-tab="orders">My Orders</button><button type="button" data-account-tab="notifications">Notifications</button><button type="button" data-account-tab="profile">Profile</button></div><div id="shAccountPanel"></div><button class="sh-text-button" id="shSignOut" type="button">Sign out</button>');
  $('shSignOut').onclick=async()=>{await db.auth.signOut();signedUser=null;profile=null;render()};
  document.querySelectorAll('[data-account-tab]').forEach(b=>b.onclick=()=>loadTab(b.dataset.accountTab));
  loadTab('orders');
@@ -112,8 +112,7 @@ async function loadTab(tab){
  panel('<p>Loading…</p>');
  if(tab==='orders')return ordersView();
  if(tab==='notifications')return notificationsView();
- if(tab==='reseller')return resellerView();
- profileView();
+  profileView();
 }
 async function ordersView(){
  const {data,error}=await db.rpc('sh_customer_orders');
