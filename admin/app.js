@@ -159,16 +159,29 @@ async function boot(){const {data:{user},error}=await db.auth.getUser();
  show('newProduct',roleCan('owner','manager'));show('bulkProducts',roleCan('owner','manager'));show('newOrder',roleCan('owner','manager','operator'));
  await refresh()}
 async function refresh(){notice('appMsg','Loading live data…');
- try{
- const [p,v,i,o,oi,pa,st,rv,cs,cm,cu,cr,ws,rm]=await Promise.all([query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff'),query('sh_reviews'),query('sh_customer_cases'),query('sh_case_media'),query('sh_case_updates'),query('sh_case_replies'),queryTraffic(),query('sh_review_media')]);
- products=p;variants=v;images=i;orders=o.sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));orderItems=oi;payments=pa;staff=st;reviews=rv;cases=cs;caseMedia=cm;caseUpdates=cu;caseReplies=cr;dailyStats=ws;reviewMedia=rm;
- try{await loadAudit()}catch(e){audit=[];console.warn('Audit log not loaded:',e.message)}
- if(roleCan('owner','manager')){await branding.reload();await catalog.reload();}
+ const names=['Products','Variants','Product images','Orders','Order items','Payments','Staff','Reviews','Support cases','Case media','Case updates','Case replies','Website statistics','Review media'];
+ const requests=[query('sh_products'),query('sh_variants'),query('sh_product_images'),query('sh_orders'),query('sh_order_items'),query('sh_payments'),query('sh_staff'),query('sh_reviews'),query('sh_customer_cases'),query('sh_case_media'),query('sh_case_updates'),query('sh_case_replies'),queryTraffic(),query('sh_review_media')];
+ const settled=await Promise.allSettled(requests),failed=[];
+ const current=[products,variants,images,orders,orderItems,payments,staff,reviews,cases,caseMedia,caseUpdates,caseReplies,dailyStats,reviewMedia];
+ const values=settled.map((result,i)=>{if(result.status==='fulfilled')return result.value;failed.push(names[i]+': '+String(result.reason?.message||result.reason||'Request failed'));return current[i]});
+ // Never present a failed product fetch as a genuinely empty catalogue.
+ if(settled[0].status==='rejected')return notice('appMsg','Unable to load Products: '+failed[0],true);
+ [products,variants,images,orders,orderItems,payments,staff,reviews,cases,caseMedia,caseUpdates,caseReplies,dailyStats,reviewMedia]=values;
+ orders=orders.slice().sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
+ try{await loadAudit()}catch(e){failed.push('Audit log: '+e.message);console.warn('Audit log not loaded:',e.message)}
+ if(roleCan('owner','manager')){
+  try{await branding.reload()}catch(e){failed.push('Branding: '+e.message)}
+  try{await catalog.reload()}catch(e){failed.push('Categories: '+e.message)}
+ }
  if(roleCan('owner','manager')){try{const r=await db.rpc('sh_admin_archive_health');archiveHealth=r.error?null:r.data}catch(e){archiveHealth=null}}else archiveHealth=null;
  if(roleCan('owner','manager')){try{const response=await db.from('sh_archive_requests').select('id,requested_at,requested_by,database_bytes,eligible_audit_rows,status').order('requested_at',{ascending:false}).limit(20);archiveRequests=response.error?[]:(response.data||[])}catch(e){archiveRequests=[]}}else archiveRequests=[];
- $('kProducts').textContent=p.length;$('kActive').textContent=p.filter(x=>x.status==='active').length;$('kOrders').textContent=o.length;$('kPending').textContent=o.filter(x=>x.status==='Pending').length;
- render();notice('appMsg','Last refreshed '+new Date().toLocaleTimeString('en-BD'))}
- catch(e){notice('appMsg',e.message,true)}}
+ $('kProducts').textContent=products.length;$('kActive').textContent=products.filter(x=>x.status==='active').length;
+ $('kOrders').textContent=settled[3].status==='fulfilled'?orders.length:'—';
+ $('kPending').textContent=settled[3].status==='fulfilled'?orders.filter(x=>x.status==='Pending').length:'—';
+ try{render()}catch(e){failed.push('Dashboard display: '+e.message);console.error('Admin render failed',e)}
+ if(failed.length){console.warn('Partial Admin data load',failed);notice('appMsg','Partial data loaded. '+failed.join(' | '),true)}
+ else notice('appMsg','Last refreshed '+new Date().toLocaleTimeString('en-BD'));
+}
 function showPage(page){if(['activity','insights','brand','catalog','experience','promos','resellers'].includes(page)&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity','reviews','cases','insights','brand','catalog','experience','promos','resellers'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
 window.SHOPYHAT_SHOW_PAGE=showPage;
 function cover(product){const gallery=images.filter(i=>i.product_id===product.id);const hosted=url=>String(url||'').includes('/storage/v1/object/public/shopyhat-products/');
