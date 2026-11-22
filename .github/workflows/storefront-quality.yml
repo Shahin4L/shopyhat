@@ -9,6 +9,8 @@ on:
       - 'assets/**'
       - 'scripts/**'
       - 'package.json'
+      - 'customer-account.*'
+      - 'supabase/functions/shopyhat-checkout/**'
   push:
     branches: [main]
 jobs:
@@ -25,6 +27,10 @@ jobs:
           node --check admin/experience.js
           node --check admin/app.js
           node --check admin/promotions.js
+          node --check admin/resellers.js
+          node --check customer-account.js
+          node --check scripts/verify-customer-features.mjs
+          node scripts/verify-customer-features.mjs
           node --check scripts/verify-storefront.mjs
           node scripts/verify-storefront.mjs
       - name: Validate vector illustration
