@@ -171,8 +171,8 @@ async function refresh(){notice('appMsg','Loading live data…');
  catch(e){notice('appMsg',e.message,true)}}
 function showPage(page){if(['activity','insights','brand','catalog','experience','promos','resellers'].includes(page)&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity','reviews','cases','insights','brand','catalog','experience','promos','resellers'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
 window.SHOPYHAT_SHOW_PAGE=showPage;
-function cover(product){const base=images.find(i=>i.product_id===product.id&&!i.variant_id);if(base)return base.image_url;
- const v=variants.find(x=>x.product_id===product.id);return images.find(i=>i.variant_id===v?.id)?.image_url||''}
+function cover(product){const gallery=images.filter(i=>i.product_id===product.id);const hosted=url=>String(url||'').includes('/storage/v1/object/public/shopyhat-products/');
+ const base=gallery.filter(i=>!i.variant_id);const preferred=base.find(i=>hosted(i.image_url))||base[0]||gallery.find(i=>hosted(i.image_url))||gallery[0];return preferred?.image_url||''}
 function render(){
  if(!rangeValid()){notice('appMsg','From date must be on or before To date.',true);return;}
  const search=$('productSearch').value.toLowerCase().trim(),oq=$('orderSearch').value.toLowerCase().trim(),filter=$('statusFilter').value;
