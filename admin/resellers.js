@@ -18,8 +18,12 @@ export function setupResellerOperations({db,roleCan,notify}){
   <div class="date-field"><label for="resellerState">Account / Request Status</label><select id="resellerState"><option value="">All Statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="suspended">Suspended</option><option value="rejected">Rejected</option><option value="fulfilled">Fulfilled</option><option value="settled">Settled</option></select></div>
   <div class="range-actions"><button type="button" class="btn small" data-reseller-range="7">7 Days</button><button type="button" class="btn small" data-reseller-range="30">30 Days</button><button type="button" class="btn small" data-reseller-range="90">90 Days</button><button type="button" class="btn small" data-reseller-range="all">All</button></div>
   <p class="muted" style="width:100%;margin:0">Filters apply to applications, accounts, fulfillment and referral histories. Product wholesale pricing always shows the current catalog.</p></div>
-  <h3>New Reseller Requests</h3><p class="muted">Security-first setup: create an Auth user in Supabase Dashboard using the private login email below, then paste its User UUID here. Set a temporary password in Supabase Auth. Passwords are never stored in the database or admin page.</p>
-  <p><a class="btn" href="https://supabase.com/dashboard/project/xwfqgmgiunlxzvzoermn/auth/users" target="_blank" rel="noopener">Open Supabase Authentication Users</a></p>
+  <h3>New Reseller Requests</h3><p class="muted">Review an application, choose a login ID and Shop URL. Admin creates the account and receives a one-time temporary password; no Supabase User UUID is required.</p>
+<div id="resellerCredentials" class="media-section hidden" style="padding:18px;border:1px solid #e5b986;background:#fff8ef">
+<div class="topline"><h3>One-time Reseller Access</h3><button class="btn small" type="button" id="resellerCredentialsClose">Hide</button></div>
+<p><strong>Reseller ID: </strong><code id="resellerCreatedUsername"></code></p><p><strong>Temporary Password: </strong><code id="resellerCreatedPassword"></code></p>
+<p class="muted">Copy this password now and share privately. Reseller must change it on first login. Passwords are never stored in this Admin interface.</p>
+<div class="tools"><button type="button" class="btn primary" id="resellerCredentialsCopy">Copy Login Details</button><a href="/reseller/" target="_blank" rel="noopener" class="btn">Reseller Login</a></div></div>
   <div class="scroll"><table><thead><tr><th>Applicant</th><th>Mobile</th><th>Status</th><th>Admin action</th></tr></thead><tbody id="resellerApplications"></tbody></table></div>
   <h3>Approved Reseller Accounts</h3><div class="scroll"><table><thead><tr><th>Business</th><th>Status</th><th>Registered</th><th>Decision</th></tr></thead><tbody id="resellerAccounts"></tbody></table></div>
   <h3>Reseller Product Pricing</h3><p class="muted">Wholesale prices are accessible only to approved resellers. Set a price at or below the public selling price.</p>
@@ -30,6 +34,11 @@ export function setupResellerOperations({db,roleCan,notify}){
   <div class="scroll"><table><thead><tr><th>Reseller</th><th>Order ID</th><th>Net eligible sale</th><th>Wholesale</th><th>Margin</th><th>Referral status</th><th>Update</th></tr></thead><tbody id="resellerReferrals"></tbody></table></div><p id="resellerMsg" class="msg" role="status"></p>`;
   $('dashboard').append(panel);
   $('resellerRefresh').onclick=reload;
+  $('resellerCredentialsClose').onclick=hideCredentials;
+  $('resellerCredentialsCopy').onclick=async()=>{
+   const text='SHOPYHAT Reseller Login\nURL: '+location.origin+'/reseller/\nLogin ID: '+$('resellerCreatedUsername').textContent+'\nTemporary Password: '+$('resellerCreatedPassword').textContent+'\nChange password on first login.';
+   try{await navigator.clipboard.writeText(text);notify('resellerMsg','Credentials copied. Share privately.')}catch(e){notify('resellerMsg','Copy manually if browser clipboard is blocked.',true)}
+  };
   for(const name of ['resellerFrom','resellerTo','resellerState'])$(name).addEventListener('change',renderFiltered);
   panel.querySelectorAll('[data-reseller-range]').forEach(b=>b.onclick=()=>{
    const mode=b.dataset.resellerRange,to=new Date(),from=new Date();
@@ -52,9 +61,10 @@ export function setupResellerOperations({db,roleCan,notify}){
      if(!['approved','suspended','rejected'].includes(status))throw Error('Invalid reseller status');
      const {error}=await db.from('sh_reseller_accounts').update({status,approved_at:status==='approved'?new Date().toISOString():null}).eq('user_id',id);
      if(error)throw error;
-    }else if(action==='force-password'){
-     const {error}=await db.from('sh_reseller_accounts').update({must_change_password:true}).eq('user_id',id);
-     if(error)throw error;
+    }else if(action==='reset-password'){
+     if(!confirm('Reset this reseller password? Old password will stop working.'))return;
+     const credentials=await credentialRequest('reset',{user_id:id});
+     showCredentials(credentials);
     }else if(action==='slug'){
      const row=target.closest('tr'),slug=String(row.querySelector('[data-edit-slug]').value||'').trim().toLowerCase();
      if(!/^[a-z0-9][a-z0-9-]{2,39}$/.test(slug))throw Error('Shop URL must be 3–40 lowercase letters, digits or hyphens');
@@ -82,6 +92,26 @@ export function setupResellerOperations({db,roleCan,notify}){
    }catch(err){notify('resellerMsg',err.message,true)}finally{target.disabled=false}
   });
  }
+ function hideCredentials(){
+  $('resellerCreatedUsername').textContent='';$('resellerCreatedPassword').textContent='';
+  $('resellerCredentials').classList.add('hidden');
+ }
+ function showCredentials(d){
+  $('resellerCreatedUsername').textContent=d.username||'';
+  $('resellerCreatedPassword').textContent=d.temporary_password||'';
+  $('resellerCredentials').classList.remove('hidden');
+  $('resellerCredentials').scrollIntoView({behavior:'smooth',block:'nearest'});
+ }
+ async function credentialRequest(action,params){
+  const {data:{session},error}=await db.auth.getSession();
+  if(error||!session?.access_token)throw Error('Admin login expired. Please sign in again.');
+  const response=await fetch('https://xwfqgmgiunlxzvzoermn.supabase.co/functions/v1/shopyhat-reseller-access',{
+    method:'POST',headers:{'Content-Type':'application/json','apikey':'sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP','Authorization':'Bearer '+session.access_token},
+    body:JSON.stringify({action,...params}),cache:'no-store'});
+  const out=await response.json().catch(()=>({error:'Unexpected response'}));
+  if(!response.ok||!out?.ok)throw Error(out.error||'Reseller access operation failed');
+  return out;
+ }
  function filtered(items){
   const from=$('resellerFrom')?.value||'',to=$('resellerTo')?.value||'',status=$('resellerState')?.value||'';
   if(from&&to&&from>to){notify('resellerMsg','From date must be before To date.',true);return []}
@@ -105,9 +135,9 @@ export function setupResellerOperations({db,roleCan,notify}){
     '<td>'+esc(a.phone)+'</td><td>'+esc(a.status)+'</td><td>'+
     (active?'<form class="sh-provision-form" data-id="'+esc(a.id)+'" style="min-width:250px"><label>Reseller Login ID<input name="login" required pattern="[a-z][a-z0-9_]{3,23}" maxlength="24" placeholder="rahatshop"></label>'+
     '<label>Shop URL Alias<input name="slug" required pattern="[a-z0-9][a-z0-9-]{2,39}" maxlength="40" placeholder="rahat-shop"></label>'+
-    '<label>Supabase Auth User UUID<input name="user_id" required placeholder="Created in Supabase Auth"></label>'+
-    '<small>Use account email <b id="resellerAliasHint">[login]@reseller.shopyhat.com</b> when creating the Auth user.</small>'+
-    '<div class="tools"><button type="submit" class="btn primary small">Approve & Link User</button>'+
+    
+    '<small>Internal reseller identity: <b id="resellerAliasHint">[login]@reseller.shopyhat.com</b> when creating the Auth user.</small>'+
+    '<div class="tools"><button type="submit" class="btn primary small">Create Reseller ID</button>'+
     '<button type="button" class="btn small danger" data-reseller-action="application-reject" data-id="'+esc(a.id)+'">Reject</button></div></form>':
      '<small>'+(a.reseller_id?'Linked User: '+esc(a.reseller_id):'No linked account')+'</small>')+'</td></tr>';
   }).join('')||'<tr><td colspan="4">No reseller registration requests yet.</td></tr>';
@@ -122,24 +152,15 @@ export function setupResellerOperations({db,roleCan,notify}){
   if(!app||app.status!=='pending')return notify('resellerMsg','Application no longer pending.',true);
   const login=String(form.elements.namedItem('login').value||'').trim().toLowerCase();
   const slug=String(form.elements.namedItem('slug').value||'').trim().toLowerCase();
-  const userId=String(form.elements.namedItem('user_id').value||'').trim();
-  if(!/^[a-z][a-z0-9_]{3,23}$/.test(login)||!/^[a-z0-9][a-z0-9-]{2,39}$/.test(slug)||
-  !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId))
-   return notify('resellerMsg','Check reseller ID, shop URL and Supabase User UUID.',true);
+  if(!/^[a-z][a-z0-9_]{3,23}$/.test(login)||!/^[a-z0-9][a-z0-9-]{2,39}$/.test(slug))
+   return notify('resellerMsg','Check login ID and Shop URL.',true);
   const submit=form.querySelector('[type=submit]');submit.disabled=true;
   try{
-   const {error}=await db.from('sh_reseller_accounts').insert({
-    user_id:userId,business_name:app.business_name,login_name:login,shop_slug:slug,
-    contact_phone:app.phone,contact_email:app.email,status:'approved',
-    approved_at:new Date().toISOString(),must_change_password:true
-   });
-   if(error)throw error;
-   const result=await db.from('sh_reseller_applications').update({
-    status:'approved',reseller_id:userId,updated_at:new Date().toISOString()
-   }).eq('id',app.id);
-   if(result.error)throw result.error;
+   hideCredentials();
+   const credentials=await credentialRequest('create',{application_id:app.id,login_name:login,shop_slug:slug});
    await reload();
-   notify('resellerMsg','Reseller approved. Send the login ID and temporary password privately. They must change it on first sign-in.');
+   showCredentials(credentials);
+   notify('resellerMsg','New reseller account created successfully. Send the password privately.');
   }catch(err){notify('resellerMsg',err.message,true)}finally{submit.disabled=false}
  }
  function renderAccounts(){
@@ -150,7 +171,7 @@ export function setupResellerOperations({db,roleCan,notify}){
     <div class="tools"><button type="button" class="btn small" data-reseller-action="slug" data-id="${esc(x.user_id)}">Save URL</button>
     <button type="button" class="btn small" data-reseller-action="account" data-status="approved" data-id="${esc(x.user_id)}">Approve</button>
     <button type="button" class="btn small" data-reseller-action="account" data-status="suspended" data-id="${esc(x.user_id)}">Suspend</button>
-    <button type="button" class="btn small" data-reseller-action="force-password" data-id="${esc(x.user_id)}">Require Password Change</button>
+    <button type="button" class="btn small" data-reseller-action="reset-password" data-id="${esc(x.user_id)}">Reset Password</button>
     <button type="button" class="btn small danger" data-reseller-action="account" data-status="rejected" data-id="${esc(x.user_id)}">Reject</button></div></td></tr>`).join('')||'<tr><td colspan="4">No reseller accounts created yet.</td></tr>';
  }
  function renderOrdersAndReferrals(){
