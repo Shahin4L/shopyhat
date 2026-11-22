@@ -63,7 +63,69 @@ function suggest(q,host){q=q.trim().toLowerCase();host.replaceChildren();
  b.addEventListener('click',()=>{host.hidden=true;typeof openProduct==='function'&&openProduct(p.id)});host.append(b)});
  if(!matches.length)host.append(el('div','sh-suggest','No matching products'));host.hidden=false;
 }
+/* Visual Design Studio: validated whitelist values, no arbitrary CSS injection. */
+const FONT_UI={
+ 'Instrument Sans':'"Instrument Sans","Hind Siliguri",system-ui,sans-serif',
+ 'Inter':'Inter,"Hind Siliguri",system-ui,sans-serif',
+ 'Manrope':'Manrope,"Hind Siliguri",system-ui,sans-serif',
+ 'Plus Jakarta Sans':'"Plus Jakarta Sans","Hind Siliguri",system-ui,sans-serif'
+};
+const FONT_DISPLAY={
+ 'Bodoni Moda':'"Bodoni Moda",Georgia,serif',
+ 'Playfair Display':'"Playfair Display",Georgia,serif',
+ 'DM Serif Display':'"DM Serif Display",Georgia,serif',
+ 'Inter':'Inter,system-ui,sans-serif'
+};
+function validatedChoice(v,options,fallback){return options.includes(v)?v:fallback}
+function clampNum(v,min,max,defaultValue){const n=Number(v);return Number.isFinite(n)?Math.max(min,Math.min(max,n)):defaultValue}
+function applyDesign(){
+ const root=document.documentElement.style;
+ const ui=validatedChoice(cfg.ui_font,Object.keys(FONT_UI),'Instrument Sans');
+ const display=validatedChoice(cfg.heading_font,Object.keys(FONT_DISPLAY),'Bodoni Moda');
+ root.setProperty('--sh-ui-font',FONT_UI[ui]);
+ root.setProperty('--sh-display-font',FONT_DISPLAY[display]);
+ root.setProperty('--sh-base-font-size',clampNum(cfg.body_font_size,13,19,15)+'px');
+ root.setProperty('--sh-headline-size',String(clampNum(cfg.heading_scale,0.7,1.3,1)));
+ root.setProperty('--sh-section-space',String(clampNum(cfg.section_spacing,0.65,1.6,1)));
+ root.setProperty('--sh-content-width',clampNum(cfg.content_width,1000,1540,1240)+'px');
+ root.setProperty('--sh-hero-min-height',clampNum(cfg.hero_height,500,840,660)+'px');
+ root.setProperty('--sh-category-columns',String(Math.round(clampNum(cfg.category_columns,3,5,5))));
+ const accent=/^#[0-9a-f]{6}$/i.test(cfg.accent_color||'')?cfg.accent_color:'#f47721';
+ root.setProperty('--sh-accent',accent);
+ root.setProperty('--sh-hero-position',validatedChoice(cfg.hero_image_position,['center top','center center','center bottom','left center','right center'],'center center'));
+ const hero=document.querySelector('#p-home .hero');
+ if(hero){
+  hero.classList.toggle('sh-layout-center',cfg.hero_alignment==='center');
+  hero.classList.toggle('sh-layout-right',cfg.hero_alignment==='right');
+  hero.classList.toggle('sh-vertical-top',cfg.hero_vertical==='top');
+  hero.classList.toggle('sh-vertical-bottom',cfg.hero_vertical==='bottom');
+  hero.classList.toggle('sh-card-left',cfg.product_card_side==='left');
+  hero.classList.toggle('sh-card-hidden',cfg.product_card_side==='hidden');
+ }
+ // Reorder only homepage sections that have explicit editor controls.
+ const home=document.querySelector('#p-home'),order=Array.isArray(cfg.section_order)?cfg.section_order:[];
+ const ids=['trust','categories','arrivals','offers','story','recent'];
+ const sections={
+  trust:home?.querySelector('.facts'),
+  categories:home?.querySelector('.collection-section'),
+  arrivals:home?.querySelector('#newArrivals'),
+  offers:home?.querySelector('#saleSec'),
+  story:home?.querySelector('.band'),
+  recent:home?.querySelector('#rvSec')
+ };
+ if(home){
+  const present=Object.fromEntries(ids.map(id=>[id,sections[id]]));
+  const after=home.querySelector('#shCampaign')||home.querySelector('.hero');
+  // Only reorder when an explicit full safe order was saved; all other sections stay untouched.
+  if(order.length===ids.length&&ids.every(id=>order.includes(id))){
+   let target=after;
+   for(const id of order){const node=present[id];if(node){target.after(node);target=node}}
+  }
+ }
+}
+
 function decorate(){
+ applyDesign();
  const hero=document.querySelector('#p-home .hero');if(!hero)return;
  hero.classList.toggle('sh-cinematic',cfg.cinematic!==false);
  const imageURL=safeMedia(cfg.hero_image_url||'./assets/shopyhat-cinematic-art.svg');hero.classList.toggle('sh-has-image',!!imageURL);if(imageURL)hero.style.setProperty('--sh-hero-image','url("'+imageURL.replaceAll('"','%22')+'")');else hero.style.removeProperty('--sh-hero-image');
