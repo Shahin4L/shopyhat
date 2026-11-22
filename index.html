@@ -2021,7 +2021,7 @@ async function submitOrder(e){
  const t=calcTotals();
  const items=lines.map(i=>({variant_id:chosenVariant(i.p,i.color)?.id,qty:i.qty,size:i.size||""}));
  if(items.some(i=>!i.variant_id)){err.textContent="This product needs a valid color selection. Please refresh.";return}
- const fingerprint=JSON.stringify({name,phone,addr,zone:t.zone,pay,trx,senderLast4,items,coupon:lastCoupon||"",referrer_id:(new URLSearchParams(location.search).get("ref")||"")});
+ const fingerprint=JSON.stringify({name,phone,addr,zone:t.zone,pay,trx,senderLast4,items,coupon:lastCoupon||"",referrer_slug:(new URLSearchParams(location.search).get("ref")||"")});
  let pending=LS.get("sh_pending_checkout_v2",null);
  if(!pending||pending.fingerprint!==fingerprint){
   pending={fingerprint,id:crypto.randomUUID()};LS.set("sh_pending_checkout_v2",pending)
@@ -2032,12 +2032,17 @@ async function submitOrder(e){
  if(button){button.disabled=true;button.dataset.oldText=button.textContent;button.textContent="Confirming order…"}
  err.textContent="Saving your order securely…";
  try{
+   const authHeaders={"content-type":"application/json","apikey":SH_DB_KEY};
+   const customerSession=await window.SHOPYHAT_CUSTOMER?.db?.auth.getSession();
+   const token=customerSession?.data?.session?.access_token;
+   if(token&&window.SHOPYHAT_CUSTOMER?.getUser?.()?.email_confirmed_at)
+     authHeaders.authorization="Bearer "+token;
    const response=await fetch(SH_CHECKOUT_URL,{
-     method:"POST",headers:{"content-type":"application/json","apikey":SH_DB_KEY},
+     method:"POST",headers:authHeaders,
      body:JSON.stringify({request_id:pending.id,name,phone,address:addr,zone:t.zone,
        payment_method:pay,transaction_id:pay==="cod"?"":trx,
        sender_last4:pay==="cod"?"":senderLast4,coupon:lastCoupon||"",
-       referrer_id:(new URLSearchParams(location.search).get("ref")||"").slice(0,40),
+       referrer_slug:(new URLSearchParams(location.search).get("ref")||"").slice(0,40),
        note:$("#kNote").value.trim(),turnstile_token:tt,items})
    });
    const saved=await response.json();
