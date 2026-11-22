@@ -45,11 +45,12 @@ function populateMega(){
  picks.forEach(c=>{
   const a=el('a','sh-mega-card'),photo=el('div','sh-photo');
   const needle=String(c.match||'').toLowerCase(),parent=String(c.parent||'').toLowerCase();
-  const p=list().find(x=>String(x.subcat||'').toLowerCase()===needle)||list().find(x=>
+  const candidates=list().filter(x=>image(x));
+  const p=candidates.find(x=>String(x.subcat||'').toLowerCase()===needle)||candidates.find(x=>
     String(x.cat||'').toLowerCase()===needle||
     String(x.catName||'').toLowerCase().includes(needle)||
     (parent&&String(x.cat||'').toLowerCase()===parent&&String(x.name||'').toLowerCase().includes(needle))
-  );
+  )||candidates[0]; // Use an existing product photo if this collection has no matching product yet.
   a.href='#shop/'+(c.slug||p?.cat||c.match).split('/').map(encodeURIComponent).join('/');
   if(p&&image(p)){const img=el('img');img.src=image(p);img.alt=c.name;img.loading='lazy';img.onerror=()=>{img.remove();photo.textContent=c.name};photo.append(img)}
   else photo.textContent=c.name;
