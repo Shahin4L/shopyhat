@@ -111,7 +111,7 @@ function renderIssue(){
  '<label><input id="csConsent" type="checkbox" required style="width:auto"> '+t('I agree to provide this information for issue investigation and customer support.','অভিযোগ তদন্ত ও গ্রাহক সহায়তার জন্য তথ্য ব্যবহারে আমি সম্মত।')+'</label><div class="care-spaced">'+submitButton(t('Submit Issue','অভিযোগ জমা দিন'))+'</div></form><div id="careMsg"></div>';
  bindRetry();
  const account=customerProfile();
- prefillAccount({csName:account?.full_name,csPhone:String(account?.phone||'').replace(/^\\+?88/,''),csEmail:account?.email});
+ prefillAccount({csName:account?.full_name,csPhone:String(account?.phone||'').replace(/^\+?88/,''),csEmail:account?.email});
  let previews=[];document.getElementById('csMedia').onchange=e=>{
   previews.forEach(URL.revokeObjectURL);previews=[];
   const files=[...e.target.files],out=document.getElementById('careMediaPreview');out.innerHTML='';
