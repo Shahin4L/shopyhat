@@ -1796,7 +1796,7 @@ function addCurrent(){
 /* =====================================================================
    CART
    ===================================================================== */
-const saveCart=()=>{LS.set("sh_cart",cart);updateBadges()};
+const saveCart=()=>{LS.set("sh_cart",cart);updateBadges();window.dispatchEvent(new Event("sh:saved-items"))};
 function addToCart(id,color,size,qty){
   const product=byId(id),stock=product?variantStock(product,color):null;
   if(product&&(product.soldOut||stock===0)){toast('Selected color is sold out');return}
@@ -1890,7 +1890,7 @@ function renderCart(){
    ===================================================================== */
 function toggleWish(id){
   id=+id;const i=wish.indexOf(id);if(i>-1){wish.splice(i,1);toast("Removed from wishlist")}else{wish.push(id);toast("Saved to your wishlist")}
-  LS.set("sh_wish",wish);updateBadges();
+  LS.set("sh_wish",wish);updateBadges();window.dispatchEvent(new Event("sh:saved-items"));
   $$(`[data-wish="${id}"]`).forEach(b=>{b.classList.toggle("on",wish.includes(id));if(b.classList.contains("wish-in"))b.textContent=wish.includes(id)?"Saved to wishlist":"Save to wishlist"});
   renderWish();
 }
