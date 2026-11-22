@@ -132,7 +132,7 @@ function applyDesign(){
 
 /* Real image slideshow: accessible arrows/dots, interval control, reduced-motion support. */
 let slideIndex=0,lastSlideSignature='',slideTimer=null,slidePointerPaused=false,slideFocusPaused=false;
-let slideLoadSeq=0,stageActive=0;
+let slideLoadSeq=0,stageActive=0,lastRenderedSlideURL='';
 const configuredSlides=()=>Array.isArray(cfg.hero_slides)?cfg.hero_slides.filter(x=>x&&safeMedia(x.image_url)).slice(0,8):[];
 function setHeroTitle(node,title){
  if(!node||!title)return;
@@ -148,7 +148,8 @@ function setSlide(index,manual=false){
  const slide=slides[slideIndex],url=safeMedia(slide.image_url);
  hero.classList.add('sh-has-image');
  const stage=hero.querySelector('.sh-slider-stage');
- if(stage){
+ if(stage&&url!==lastRenderedSlideURL){
+  lastRenderedSlideURL=url;
   const pictures=[...stage.querySelectorAll('img')],prev=pictures[stageActive],nextIndex=1-stageActive,next=pictures[nextIndex];
   const seq=++slideLoadSeq;
   if(next){
@@ -185,7 +186,7 @@ function syncSlider(){
  lastSlideSignature=sig;
  hero.querySelector('.sh-slider-controls')?.remove();
  hero.querySelector('.sh-slider-stage')?.remove();
- stageActive=0;
+ stageActive=0;lastRenderedSlideURL='';
  if(slideTimer){clearInterval(slideTimer);slideTimer=null}
  if(!slides.length)return;
  const stage=el('div','sh-slider-stage');
