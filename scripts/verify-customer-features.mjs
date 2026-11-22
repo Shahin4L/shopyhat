@@ -1,0 +1,28 @@
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+
+const read=f=>readFileSync(f,'utf8');
+const html=read('index.html'),account=read('customer-account.js'),css=read('customer-account.css');
+const admin=read('admin/app.js'),resellers=read('admin/resellers.js');
+const checkout=read('supabase/functions/shopyhat-checkout/index.ts');
+const build=read('scripts/build.mjs');
+const src=account.replace(/^import .*?;\s*$/gm,'').replace(/^export /gm,'');
+new Function(src);
+new Function(resellers.replace(/^export /gm,''));
+assert(html.includes('customer-account.js'),'Customer account is missing from storefront');
+assert(html.includes('customer-account.css'),'Customer styles are missing');
+assert(account.includes("storageKey:'sh_customer_auth_v1'"),'Customer authentication must be isolated from Admin');
+assert(account.includes('db.auth.signUp({phone:'),'Mobile signup missing');
+assert(account.includes('db.auth.verifyOtp({phone:'),'SMS confirmation missing');
+assert(account.includes('db.rpc(\'sh_customer_orders\')'),'Secure account order lookup missing');
+assert(account.includes('sh_customer_watches'),'Wishlist/cart restock subscriptions missing');
+assert(account.includes("db.from('sh_customer_notifications')"),'Notifications missing');
+assert(account.includes('sh_reseller_request'),'Approved reseller order flow missing');
+assert(account.includes('data-share-reseller'),'Referral share link missing');
+assert(html.includes('referrer_id:'),'Referral attribution missing from public checkout');
+assert(checkout.includes('referrer_id:'),'Referral attribution missing from server checkout');
+assert(admin.includes('resellers.mount()'),'Staff reseller module missing');
+assert(resellers.includes('sh_reseller_referrals'),'Reseller referral review panel missing');
+assert(css.includes('@media(max-width:650px)'),'Account responsive layout missing');
+assert(build.includes('customer-account.js'),'Customer JS omitted from production build');
+console.log('SHOPYHAT customer account, notifications and reseller integration checks passed.');
