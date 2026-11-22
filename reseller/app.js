@@ -58,7 +58,7 @@ async function loadCatalog(){
  if(query)q=q.or('name.ilike.%'+query.replace(/[%,()]/g,'')+'%,color.ilike.%'+query.replace(/[%,()]/g,'')+'%');
  if(stock==='available')q=q.gt('stock',0);
  if(stock==='out')q=q.eq('stock',0);
- if(sort==='margin')q=q.order('public_price',{ascending:false});
+ if(sort==='margin')q=q.order('gross_margin',{ascending:false});
  else if(sort==='price')q=q.order('public_price',{ascending:true});
  else if(sort==='latest')q=q.order('created_at',{ascending:false});
  else q=q.order('name',{ascending:true});
@@ -75,7 +75,7 @@ function renderCatalog(){
  const totalPages=Math.max(1,Math.ceil(catalogTotal/CATALOG_PAGE_SIZE));
  catalogPage=Math.max(1,Math.min(catalogPage,totalPages));
  const host=$('products');host.replaceChildren();
- for(const p of results.slice((catalogPage-1)*CATALOG_PAGE_SIZE,catalogPage*CATALOG_PAGE_SIZE)){
+ for(const p of results){
   const card=document.createElement('article');card.className='product';
   const visual=document.createElement('div');visual.className='product-image';
   const url=mediaURL(p.image);
