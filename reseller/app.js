@@ -117,7 +117,7 @@ $('passwordForm').onsubmit=async event=>{
  const btn=event.currentTarget.querySelector('[type=submit]');btn.disabled=true;
  try{
   const result=await db.auth.updateUser({password:pass});if(result.error)throw result.error;
-  const confirmed=await db.rpc('sh_reseller_complete_onboarding');if(confirmed.error||!confirmed.data)throw confirmed.error||Error('Unable to complete onboarding');
+  // Password-change trigger on auth.users clears the first-login gate server-side.
   event.currentTarget.reset();await restore();message('Password updated. Welcome to your reseller dashboard.');
  }catch(err){message(err.message,true)}finally{btn.disabled=false}
 };
