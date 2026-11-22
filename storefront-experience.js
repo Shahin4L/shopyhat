@@ -35,13 +35,22 @@ function populateMega(){
  const host=document.getElementById('shMegaGrid');if(!host)return;
  const roots=typeof activeRoots==='function'?activeRoots():[];
  const cats=[{name:'Sarees',match:'saree'},{name:'Three-piece',match:'three'},{name:'Hijab',match:'hijab'},{name:'Accessories',match:'accessor'}];
- const dynamic=roots.length?roots.map(c=>({name:c.name,match:c.slug,slug:c.slug})):cats;
- const picks=dynamic.slice(0,8);
- host.style.gridTemplateColumns='repeat('+Math.min(4,picks.length)+',minmax(0,1fr))';
+ // Prefer actual published subcategories. A lone root must not produce a huge tile.
+ const children=roots.flatMap(root=>typeof activeChildren==='function'?activeChildren(root.id).map(c=>({name:c.name,match:c.slug,slug:root.slug+'/'+c.slug,parent:root.slug})):[]);
+ const picks=(children.length?children:roots.length>1?roots.map(c=>({name:c.name,match:c.slug,slug:c.slug})):cats).slice(0,8);
+ host.style.removeProperty('grid-template-columns');
  host.replaceChildren();
  picks.forEach(c=>{
-  const a=el('a','sh-mega-card'),photo=el('div','sh-photo'),p=list().find(x=>String(x.cat||'').toLowerCase().includes(c.match)||String(x.catName||'').toLowerCase().includes(c.match));
-  a.href='#shop/'+encodeURIComponent(c.slug||p?.cat||c.match);if(p&&image(p)){const img=el('img');img.src=image(p);img.alt=c.name;img.loading='lazy';photo.append(img)}else photo.textContent=c.name;
+  const a=el('a','sh-mega-card'),photo=el('div','sh-photo');
+  const needle=String(c.match||'').toLowerCase(),parent=String(c.parent||'').toLowerCase();
+  const p=list().find(x=>String(x.subcat||'').toLowerCase()===needle)||list().find(x=>
+    String(x.cat||'').toLowerCase()===needle||
+    String(x.catName||'').toLowerCase().includes(needle)||
+    (parent&&String(x.cat||'').toLowerCase()===parent&&String(x.name||'').toLowerCase().includes(needle))
+  );
+  a.href='#shop/'+(c.slug||p?.cat||c.match).split('/').map(encodeURIComponent).join('/');
+  if(p&&image(p)){const img=el('img');img.src=image(p);img.alt=c.name;img.loading='lazy';img.onerror=()=>{img.remove();photo.textContent=c.name};photo.append(img)}
+  else photo.textContent=c.name;
   a.append(photo,el('span','',c.name));host.append(a);
  });
 }
