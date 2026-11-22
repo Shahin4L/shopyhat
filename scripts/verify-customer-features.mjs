@@ -9,7 +9,7 @@ const checkout=read('supabase/functions/shopyhat-checkout/index.ts');
 const build=read('scripts/build.mjs'),reset=read('reset-password.html'),confirm=read('account-confirmed.html');
 new Function(account.replace(/^import .*?;\s*$/gm,''));
 new Function(partner.replace(/^import .*?;\s*$/gm,''));
-new Function(resellers.replace(/^export /gm,''));
+new Function(resellers.replace(/^import[^\n]*\n/gm,'').replace(/^export /gm,''));
 assert(html.includes('customer-account.js'),'Customer account missing from storefront');
 assert(html.includes('customer-account.css'),'Customer styles missing');
 assert(account.includes("storageKey:'sh_customer_auth_v1'"),'Customer Auth must use separate session');
