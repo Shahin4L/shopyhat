@@ -178,3 +178,16 @@ html,body{max-width:100%;overflow-x:clip}
 #p-home .sh-cinematic .wrap{position:relative;z-index:2}
 @media(max-width:650px){#p-home .sh-slider-backdrop{object-position:65% center}#p-home .sh-slider-stage:after{background:linear-gradient(90deg,#130704df 3%,#1508089c 55%,#17080542)}}
 @media(prefers-reduced-motion:reduce){#p-home .sh-slider-backdrop{transition:none}}
+
+
+/* Responsive secure promo application on checkout, no layout overflow */
+.sh-checkout-promo{margin:17px 0 8px;border-top:1px solid #e4d9ce;padding-top:14px}
+.sh-checkout-promo label{display:block;font-size:13px;font-weight:750;color:#39271b;margin-bottom:7px}
+.sh-checkout-promo-row{display:flex;gap:7px;max-width:100%;min-width:0}
+.sh-checkout-promo-row input{flex:1 1 120px;min-width:0;width:0;border:1px solid #d5c6b7;border-radius:9px;background:#fff;color:#23170e;padding:9px 11px;outline-offset:2px;font-size:13px}
+.sh-checkout-promo-row input:focus{border-color:#f47721}
+.sh-checkout-promo-row button{flex:0 0 auto;background:#f47721;color:#fff;border-radius:9px;padding:8px 13px;font-size:13px;font-weight:700}
+.sh-checkout-promo-row #kPromoClear{background:#e6dad1;color:#492d18;min-width:36px}
+.sh-checkout-promo-row button:disabled{opacity:.55;cursor:wait}
+.sh-checkout-promo-message{min-height:19px;font-size:12px;margin:7px 0;color:#75533d;overflow-wrap:anywhere}
+@media(max-width:420px){.sh-checkout-promo-row{gap:5px}.sh-checkout-promo-row button{padding:8px 10px}}
