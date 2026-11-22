@@ -1482,7 +1482,7 @@ let cart=LS.get("sh_cart",[]), wish=LS.get("sh_wish",[]), lastCoupon=LS.get("sh_
 const byId=id=>PRODUCTS.find(p=>p.id===+id);
 const catalogLabel=c=>window.SHOPYHAT_I18N?.getLanguage?.()==='bn'&&c?.name_bn?c.name_bn:c?.name||'';
 const catName=id=>{const c=CATS.find(c=>c.id===id);return c?catalogLabel(c):id};
-const isSale=p=>p.old&&p.old>p.price;
+const isSale=p=>p.old&&p.old>productDisplayPrice(p);
 function toast(msg){const t=$("#toast");t.innerHTML=msg;t.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("show"),2600)}
 
 /* ---------- actual photo first; no illustrated/fake product photos ---------- */
@@ -1561,7 +1561,7 @@ function buildHero(){
       <circle cx="${ax}" cy="${ay}" r="4.5" fill="#fff"/>
       <g filter="url(#hsh)"><rect x="${ax-74}" y="${ay+50}" width="148" height="206" fill="#fff"/></g>
       ${a}
-      <text x="${ax}" y="${ay+242}" text-anchor="middle" font-family="Bodoni Moda,Georgia,serif" font-size="15" font-weight="600" fill="#0b0b0a">${money(p.price)}</text></g>`;
+      <text x="${ax}" y="${ay+242}" text-anchor="middle" font-family="Bodoni Moda,Georgia,serif" font-size="15" font-weight="600" fill="#0b0b0a">${money(productDisplayPrice(p))}</text></g>`;
   });
   svg.insertAdjacentHTML("beforeend",html);
 }
@@ -1576,6 +1576,27 @@ const SH_DB_KEY="sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP";
 const SH_CHECKOUT_URL=SH_DB_URL+"/functions/v1/shopyhat-checkout";
 const VARIANT_FEED_URL="";
 let VARIANT_MAP={};
+const SH_REFERRAL_SLUG=(new URLSearchParams(location.search).get('ref')||'').trim().toLowerCase();
+let SH_REFERRAL_PRICES={},SH_REFERRAL_PRICES_OK=!SH_REFERRAL_SLUG;
+async function loadReferralPrices(){
+ if(!SH_REFERRAL_SLUG){SH_REFERRAL_PRICES={};SH_REFERRAL_PRICES_OK=true;return}
+ if(!/^[a-z0-9][a-z0-9-]{2,39}$/.test(SH_REFERRAL_SLUG))throw Error('Invalid reseller shop link');
+ SH_REFERRAL_PRICES_OK=false;
+ const res=await fetch(SH_DB_URL+'/rest/v1/rpc/sh_referral_public_prices',{
+  method:'POST',headers:{'Content-Type':'application/json',apikey:SH_DB_KEY},
+  body:JSON.stringify({p_slug:SH_REFERRAL_SLUG}),cache:'no-store'
+ });
+ if(!res.ok)throw Error('Reseller prices unavailable');
+ const obj=await res.json();
+ if(!obj||typeof obj!=='object'||Array.isArray(obj))throw Error('Invalid reseller price information');
+ const safe={};
+ for(const [id,value] of Object.entries(obj)){
+  if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(id))continue;
+  const price=Number(value);if(Number.isFinite(price)&&price>0)safe[id]=price;
+ }
+ SH_REFERRAL_PRICES=safe;SH_REFERRAL_PRICES_OK=true;
+}
+
 const slug=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const catKey=s=>slug(s).replace(/-/g,"").replace(/s$/,"");
 const CNAME={"dark green":"#14532d","darkgreen":"#14532d","deep green":"#135c35","forest green":"#228b22","olive green":"#657b2c","light green":"#90c98b","apple green":"#78b944","bottle green":"#0b5d3b","royal blue":"#1f4e8c","sky blue":"#79b7e0","light blue":"#add8e6","dark blue":"#163f75","deep blue":"#173f71","baby blue":"#b8d9ef","ash":"#a6a6a6","ash grey":"#a6a6a6","ash gray":"#a6a6a6","charcoal":"#34383d","coffee":"#6c4e37","chocolate":"#6d4033","dark purple":"#4a2a72","light purple":"#b39bd8","deep maroon":"#651c34","lemon":"#e5dc54","lemon yellow":"#e5dc54","golden":"#d1a13b","golden yellow":"#d3a329","dark brown":"#533d2d","light pink":"#f6bdd1","hot pink":"#e2488a","navy blue":"#243758","offwhite":"#e9e1d0","sea blue":"#2b8ba5","teal green":"#14857c","dusty pink":"#c890a1","deep red":"#a5222c","light yellow":"#f4e394","cream white":"#f0e6d8","কালো":"#1d1d1d","সাদা":"#f3efe6","নীল":"#215493","লাল":"#c0392b","সবুজ":"#21814d","হলুদ":"#e7bd32","বেগুনি":"#673590","গোলাপি":"#e58fb0",peacock:"#0f7d83",mustard:"#d9a521",wine:"#6e1423",rose:"#c75c7c",sky:"#7fb5d6","royal blue":"#1f4e8c",mint:"#7fc8a9",lilac:"#b79ad6",peach:"#f2a98f",indigo:"#2e3f7f",rust:"#b4532a",cream:"#efe5d0",burgundy:"#6d1a2c",emerald:"#0e6b4d",coral:"#e76f51",magenta:"#b0286b",lavender:"#c4b2e3",sage:"#9fb59a","dusty rose":"#d49a9f","off-white":"#e9e1d0","off white":"#e9e1d0","pearl white":"#f4efe6",blush:"#f1c9c9",tan:"#b5733c","antique gold":"#c79a3b",silver:"#9aa0a6",gold:"#c79a3b","bottle green":"#0b5d3b","sea green":"#2e8b57",white:"#f3efe6",black:"#1d1d1d",maroon:"#7b1e3a",purple:"#5b2a86",green:"#1e7a4c",blue:"#1f4e8c",red:"#c0392b",pink:"#e58fb0",yellow:"#e6b422",orange:"#e8772e",teal:"#1b7f86",navy:"#26365a",olive:"#6b7a3a",grey:"#8a8a8a",gray:"#8a8a8a",brown:"#7a4a2a",beige:"#d9c7a3"};
@@ -1645,7 +1666,7 @@ function applyProducts(list){
     const d=DEFAULT_CATS.find(c=>catKey(c.id)===catKey(p.cat));cats.push({id:p.cat,name:p.catName,note:d?d.note:""})}});
   const published=activeRoots().map(top=>({id:top.slug,name:top.name,name_bn:top.name_bn||"",note:top.description||""}));
   CATS=[...published,...cats.filter(c=>!published.some(root=>root.id===c.id))];
-  maxPrice=Math.max(1000,...list.map(p=>p.price));F.max=0;F.sub='all';
+  maxPrice=Math.max(1000,...list.map(p=>productDisplayPrice(p)));F.max=0;F.sub='all';
 }
 const defaultList=()=>DEFAULT_PRODUCTS.map(p=>({...p,catName:(DEFAULT_CATS.find(c=>c.id===p.cat)||{}).name||p.cat,soldOut:false}));
 
@@ -1717,9 +1738,9 @@ function renderShop(){
   $("#shopTitle").textContent=F.cat==="all"?"All products":catName(F.cat);
   const pm=$("#pmax"); pm.min=0; pm.max=Math.ceil(maxPrice/100)*100; pm.step=50; if(!F.max)F.max=+pm.max; pm.value=F.max; $("#pmaxv").textContent=money(F.max);
   $("#onlySale").checked=F.sale; $("#sort").value=F.sort;
-  let a=PRODUCTS.filter(p=>(F.cat==="all"||p.cat===F.cat)&&(F.sub==="all"||p.subcat===F.sub)&&p.price<=F.max&&(!F.sale||isSale(p)));
+  let a=PRODUCTS.filter(p=>(F.cat==="all"||p.cat===F.cat)&&(F.sub==="all"||p.subcat===F.sub)&&productDisplayPrice(p)<=F.max&&(!F.sale||isSale(p)));
   if(F.q){const q=F.q.toLowerCase();a=a.filter(p=>productSearchText(p).includes(q))}
-  if(F.sort==="lh")a.sort((x,y)=>x.price-y.price);else if(F.sort==="hl")a.sort((x,y)=>y.price-x.price);else if(F.sort==="az")a.sort((x,y)=>x.name.localeCompare(y.name));else a.sort((x,y)=>Number(y.isNew)-Number(x.isNew)||y.id-x.id);
+  if(F.sort==="lh")a.sort((x,y)=>productDisplayPrice(x)-productDisplayPrice(y));else if(F.sort==="hl")a.sort((x,y)=>productDisplayPrice(y)-productDisplayPrice(x));else if(F.sort==="az")a.sort((x,y)=>x.name.localeCompare(y.name));else a.sort((x,y)=>Number(y.isNew)-Number(x.isNew)||y.id-x.id);
   $("#pcount").textContent=a.length+" product"+(a.length===1?"":"s")+(F.q?` for “${F.q}”`:"");
   $("#shopGrid").innerHTML=a.length?a.map(cardHTML).join(""):`<div class="empty" style="grid-column:1/-1"><b style="color:var(--ink)">Nothing matches these filters.</b><br>Try another category, a higher price or clear the filters.</div>`;
 }
@@ -1733,7 +1754,7 @@ function renderSearch(q){
   q=q.trim().toLowerCase(); const box=$("#sRes");
   if(!q){box.innerHTML=`<div style="margin-top:14px;color:var(--muted);font-size:14px">Popular searches</div><div class="sq">${["Tangail","Silk","Kurti","Hijab","Earrings"].map(t=>`<button class="chip" data-sq="${t}">${t}</button>`).join("")}</div>`;return}
   const a=PRODUCTS.filter(p=>productSearchText(p).includes(q));
-  box.innerHTML=a.length?a.slice(0,6).map(p=>`<button class="sr" data-open="${p.id}"><div class="art">${storefrontArt(p)}</div><div><b>${esc(p.name)}</b><small>${esc(catName(p.cat))} · ${money(p.price)}</small></div></button>`).join("")+`<div style="margin-top:14px"><button class="link" data-seeall="${esc(q)}">See all results</button></div>`:`<div class="empty" style="margin-top:14px">No results for “${esc(q)}”. Try a different word.</div>`;
+  box.innerHTML=a.length?a.slice(0,6).map(p=>`<button class="sr" data-open="${p.id}"><div class="art">${storefrontArt(p)}</div><div><b>${esc(p.name)}</b><small>${esc(catName(p.cat))} · ${money(productDisplayPrice(p))}</small></div></button>`).join("")+`<div style="margin-top:14px"><button class="link" data-seeall="${esc(q)}">See all results</button></div>`:`<div class="empty" style="margin-top:14px">No results for “${esc(q)}”. Try a different word.</div>`;
 }
 
 /* =====================================================================
@@ -1746,7 +1767,15 @@ function storefrontCover(p){return shImgCandidates(p,p.colors&&p.colors[0]&&p.co
 function storefrontArt(p){return shPhotoMarkup(p,p.colors&&p.colors[0]&&p.colors[0].n,'width:100%;height:100%;object-fit:cover')}
 function variantsFor(p){return Array.isArray(p.variants)?p.variants:[]}
 function chosenVariant(p,color){return variantsFor(p).find(v=>String(v.color).toLowerCase()===String(color).toLowerCase())||null}
-function variantPrice(p,color){const v=chosenVariant(p,color);return v&&Number(v.price)>0?Number(v.price):p.price}
+function variantPrice(p,color){
+ const v=chosenVariant(p,color);
+ if(v){
+  const own=Number(SH_REFERRAL_PRICES[v.id]);
+  if(Number.isFinite(own)&&own>0)return own;
+ }
+ return v&&Number(v.price)>0?Number(v.price):p.price;
+}
+function productDisplayPrice(p){return variantPrice(p,p.colors?.[0]?.n||'')}
 function variantStock(p,color){const v=chosenVariant(p,color);return v&&v.stock!==null&&v.stock!==''&&Number.isFinite(Number(v.stock))?Number(v.stock):null}
 function variantImage(p,color){return shImgCandidates(p,color)[0]||''}
 function variantArt(p,color){return shPhotoMarkup(p,color,'width:100%;height:100%;object-fit:cover')}
@@ -1873,7 +1902,7 @@ function renderCart(){
     <div class="n">${esc(i.p.name)}</div><div class="m">${esc(i.color)}${i.size?", size "+esc(i.size):""} · ${money(i.unitPrice)}</div>
     <div class="row"><div class="qty"><button data-cq="${esc(i.k)}" data-d="-1" aria-label="Decrease">−</button><span>${i.qty}</span><button data-cq="${esc(i.k)}" data-d="1" aria-label="Increase">+</button></div><b>${money(i.unitPrice*i.qty)}</b></div>
     <button class="rm" data-rm="${esc(i.k)}">Remove</button></div></div>`).join("")+
-    (more.length?`<div class="up"><div class="lbl">Add something else</div><div class="row2">${more.map(p=>`<div class="u" data-open="${p.id}"><div class="art">${storefrontArt(p)}</div><b>${esc(p.name)}</b><small>${money(p.price)}</small></div>`).join("")}</div></div>`:"");
+    (more.length?`<div class="up"><div class="lbl">Add something else</div><div class="row2">${more.map(p=>`<div class="u" data-open="${p.id}"><div class="art">${storefrontArt(p)}</div><b>${esc(p.name)}</b><small>${money(productDisplayPrice(p))}</small></div>`).join("")}</div></div>`:"");
   const sub=subtotal(), cp=couponInfo(sub), fd=CONFIG.freeDeliveryOver;
   const free=fd>0?`<div style="margin-bottom:12px;font-size:13.5px">${sub>=fd?"You have free delivery.":`Add ${money(fd-sub)} more for free delivery.`}<div class="ship-bar"><i style="width:${Math.min(100,sub/fd*100)}%"></i></div></div>`:"";
   foot.innerHTML=`${free}<div class="coupon"><input id="cpIn" placeholder="Coupon code" value="${esc(lastCoupon)}" aria-label="Coupon code"><button id="cpBtn">Apply</button></div>
@@ -1896,7 +1925,7 @@ function toggleWish(id){
 }
 function renderWish(){
   const L=wish.map(byId).filter(Boolean);
-  $("#wishBody").innerHTML=L.length?L.map(p=>`<div class="ci"><div class="art" data-open="${p.id}" style="cursor:pointer">${storefrontArt(p)}</div><div><div class="n">${esc(p.name)}</div><div class="m">${money(p.price)}</div><div class="row"><button class="btn ink" style="padding:8px 16px;font-size:13px" data-open="${p.id}">View</button><button class="rm" data-wish="${p.id}">Remove</button></div></div></div>`).join(""):`<div class="empty" style="margin-top:20px"><b style="color:var(--ink)">Nothing saved yet.</b><br>Tap the heart on any product to keep it here.</div>`;
+  $("#wishBody").innerHTML=L.length?L.map(p=>`<div class="ci"><div class="art" data-open="${p.id}" style="cursor:pointer">${storefrontArt(p)}</div><div><div class="n">${esc(p.name)}</div><div class="m">${money(productDisplayPrice(p))}</div><div class="row"><button class="btn ink" style="padding:8px 16px;font-size:13px" data-open="${p.id}">View</button><button class="rm" data-wish="${p.id}">Remove</button></div></div></div>`).join(""):`<div class="empty" style="margin-top:20px"><b style="color:var(--ink)">Nothing saved yet.</b><br>Tap the heart on any product to keep it here.</div>`;
 }
 
 /* =====================================================================
@@ -1990,6 +2019,19 @@ function orderText(o){
   `\n\nSubtotal: ${money(o.sub)}${o.disc?`\nCoupon ${o.coupon}: −${money(o.disc)}`:""}\nDelivery: ${o.ship?money(o.ship):"Free"}\nTOTAL: ${money(o.total)}\nPayment: ${o.pay.toUpperCase()}${o.trx?` (TrxID: ${o.trx})`:""}${o.senderLast4?` | Sender last 4: ${o.senderLast4}`:""}\nPayment status: ${o.paymentStatus||'Not verified'}${o.note?`\nNote: ${o.note}`:""}`;
 }
 async function submitOrder(e){
+ e.preventDefault();
+ if(SH_REFERRAL_SLUG){
+  if(!SH_REFERRAL_PRICES_OK){e.preventDefault();$("#kErr").textContent='Reseller pricing unavailable. Please refresh the page.';return}
+  const before=cartLines().map(x=>x.unitPrice);
+  try{await loadReferralPrices()}catch(err){e.preventDefault();$("#kErr").textContent='Unable to verify reseller prices. Retry later.';return}
+  const after=cartLines().map(x=>x.unitPrice);
+  if(before.some((amount,i)=>amount!==after[i])){
+   e.preventDefault();renderCart();renderSummary();
+   $("#kErr").textContent='Your reseller updated a selling price. Please review the new total and place your order again.';
+   return;
+  }
+ }
+
  if(new URLSearchParams(location.search).has("studio_preview")){e?.preventDefault?.();return;}
  e.preventDefault();
  const name=$("#kName").value.trim(),phone=normPhone($("#kPhone").value.trim()),addr=$("#kAddr").value.trim(),err=$("#kErr");
@@ -2339,8 +2381,9 @@ async function fetchShopyhatCatalog(){
  return rows;
 }
 async function boot(){
+ try{await loadReferralPrices()}catch(e){SH_REFERRAL_PRICES_OK=false;console.warn('Referral prices could not load:',e.message);toast('Reseller pricing temporarily unavailable. Please refresh before checkout.')}
  const cached=LS.get("sh_products_v2",null);
- if(cached?.length){applyProducts(cached.map(parseProduct).filter(Boolean));renderAll()}
+ if(cached?.length&&!SH_REFERRAL_SLUG){applyProducts(cached.map(parseProduct).filter(Boolean));renderAll()}
  else{renderAll();showLoading()}
  try{
   const raw=await fetchShopyhatCatalog();
