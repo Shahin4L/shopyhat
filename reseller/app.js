@@ -28,7 +28,7 @@ async function restore(){
  }catch(err){showLogin();message(err.message||'Unable to load account',true)}
 }
 function tab(which){
- for(const t of ['catalog','requests','links']){
+ for(const t of ['catalog','requests','links','security']){
   $(t+'Tab').hidden=which!==t;
   document.querySelector('[data-tab="'+t+'"]')?.classList.toggle('selected',which===t);
  }
@@ -124,6 +124,20 @@ $('passwordForm').onsubmit=async event=>{
   // Password-change trigger on auth.users clears the first-login gate server-side.
   form.reset();await restore();message('Password updated. Welcome to your reseller dashboard.');
  }catch(err){message(err.message,true)}finally{btn.disabled=false}
+};
+$('selfPasswordForm').onsubmit=async event=>{
+ event.preventDefault();
+ const form=event.currentTarget,values=new FormData(form);
+ const pass=String(values.get('new_password')||''),again=String(values.get('confirm_password')||'');
+ if(pass.length<10||pass!==again)return message('New passwords must match and contain at least 10 characters.',true);
+ const button=form.querySelector('[type=submit]');button.disabled=true;
+ try{
+  const {error}=await db.auth.updateUser({password:pass});
+  if(error)throw error;
+  form.reset();
+  message('Password updated successfully. Use your new password the next time you sign in.');
+ }catch(err){message(err.message||'Password update failed',true)}
+ finally{button.disabled=false}
 };
 $('logout').onclick=logout;$('logoutFirst').onclick=logout;$('closeRequest').onclick=()=>$('requestDialog').close();
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
