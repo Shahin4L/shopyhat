@@ -90,6 +90,14 @@ export function setupResellerOperations({db,roleCan,notify}){
   `;document.head.append(css);
   $('dashboard').append(panel);
   $('resellerRefresh').onclick=reload;
+  $('resellerPriceSearch').addEventListener('input',()=>{pricePage=0;loadPrices()});
+  $('resellerPriceMode').addEventListener('change',()=>{pricePage=0;loadPrices()});
+  $('resellerPricePrev').onclick=()=>{pricePage=Math.max(0,pricePage-1);loadPrices()};
+  $('resellerPriceNext').onclick=()=>{pricePage++;loadPrices()};
+  $('courierStatusButton').onclick=()=>courierStatus(false);
+  $('courierTestButton').onclick=()=>courierStatus(true);
+  $('courierBookButton').onclick=courierBook;
+
   $('resellerCredentialsClose').onclick=hideCredentials;
   $('resellerCredentialsCopy').onclick=async()=>{
    const text='SHOPYHAT Reseller Login\nURL: '+location.origin+'/reseller/\nLogin ID: '+$('resellerCreatedUsername').textContent+'\nTemporary Password: '+$('resellerCreatedPassword').textContent+'\nChange password on first login.';
@@ -239,24 +247,81 @@ export function setupResellerOperations({db,roleCan,notify}){
     <td>${esc(x.order_id)}</td><td>${money(x.retail_net)}</td><td>${money(x.wholesale_total)}</td><td><b>${money(x.margin_total)}</b></td>
     <td>${dropdown('ref-status',referralStatuses,x.status)}</td><td><button class="btn small" type="button" data-reseller-action="referral" data-id="${esc(x.id)}">Save</button></td></tr>`).join('')||'<tr><td colspan="7">No referral-linked orders yet.</td></tr>';
  }
+ async function loadPrices(){
+  const search=$('resellerPriceSearch')?.value.trim()||'',mode=$('resellerPriceMode')?.value||'all';
+  try{
+   let query=db.from('sh_reseller_admin_catalog').select('id,name,base_price,reseller_enabled,wholesale_price',{count:'exact'})
+    .eq('status','active').order('name',{ascending:true});
+   if(search)query=query.ilike('name','%'+search.replaceAll('%','\\%').replaceAll('_','\\_')+'%');
+   if(mode==='enabled')query=query.eq('reseller_enabled',true);
+   if(mode==='disabled')query=query.eq('reseller_enabled',false);
+   const from=pricePage*pricingPageSize;
+   const {data,error,count}=await query.range(from,from+pricingPageSize-1);
+   if(error)throw error;
+   priceTotal=count||0;
+   if(!data?.length&&pricePage>0){pricePage=0;return loadPrices()}
+   const body=$('resellerPrices');
+   body.innerHTML=(data||[]).map(product=>{
+    const retail=Number(product.base_price||0),price=Number(product.wholesale_price??retail);
+    return `<tr>
+      <td><strong>${esc(product.name)}</strong><small class="muted" style="display:block">Product ID: ${esc(product.id.slice(0,8))}</small></td>
+      <td>${money(retail)}</td><td><div class="reseller-price-editor"><input type="number" data-price-value step="0.01" min="0" max="${retail}" value="${price}" aria-label="Wholesale price for ${esc(product.name)}"></div></td>
+      <td><label style="display:flex;align-items:center;gap:8px;margin:0"><input type="checkbox" data-price-active style="width:auto" ${product.reseller_enabled?'checked':''}> <span>Enable for Resellers</span></label></td>
+      <td><button type="button" class="btn primary small" data-reseller-action="price" data-id="${esc(product.id)}" data-public-price="${retail}">Save</button></td>
+    </tr>`;
+   }).join('')||'<tr><td colspan="5">No products match the selected filter.</td></tr>';
+   const max=Math.max(1,Math.ceil(priceTotal/pricingPageSize));
+   $('resellerPricePageLabel').textContent='Page '+(pricePage+1)+' of '+max;
+   $('resellerPriceCount').textContent=priceTotal+' active products · showing '+(data?.length||0)+' on this page';
+   $('resellerPricePrev').disabled=pricePage===0;
+   $('resellerPriceNext').disabled=pricePage>=max-1;
+  }catch(err){notify('resellerMsg','Unable to load reseller products: '+err.message,true)}
+ }
+ async function courierAction(action,order_id){
+  const {data:{session},error}=await db.auth.getSession();
+  if(error||!session?.access_token)throw Error('Admin session expired.');
+  const res=await fetch('https://xwfqgmgiunlxzvzoermn.supabase.co/functions/v1/shopyhat-courier',{
+   method:'POST',headers:{'Content-Type':'application/json','apikey':'sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP','Authorization':'Bearer '+session.access_token},
+   body:JSON.stringify({action,order_id}),cache:'no-store'
+  });
+  const data=await res.json().catch(()=>({error:'Courier response unavailable'}));
+  if(!res.ok||!data?.ok)throw Error(data.error||'Courier operation failed');
+  return data;
+ }
+ async function courierStatus(test){
+  const btn=$(test?'courierTestButton':'courierStatusButton');if(btn)btn.disabled=true;
+  try{
+   const data=await courierAction(test?'test':'status');
+   $('courierConnectionStatus').textContent=data.configured?'Configured':'Not configured';
+   notify('courierMessage',test?'Connection tested successfully. No parcel created.':data.configured?'Courier credentials found. Use Test Connection.':'Add both API credentials in Supabase Edge Function Secrets.');
+  }catch(err){notify('courierMessage',err.message,true)}
+  finally{if(btn)btn.disabled=false}
+ }
+ async function courierBook(){
+  const id=$('courierOrderId').value.trim(),btn=$('courierBookButton');
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+    return notify('courierMessage','Enter a valid order UUID from SHOPYHAT Order Management.',true);
+  if(!confirm('Book this confirmed order with Steadfast? A live courier consignment may be created and cannot be automatically undone.'))return;
+  btn.disabled=true;
+  try{
+   const result=await courierAction('book',id);
+   notify('courierMessage','Booking successful. Tracking: '+(result.tracking_code||'Pending')+(result.warning?' · '+result.warning:'')); 
+  }catch(err){notify('courierMessage',err.message,true)}
+  finally{btn.disabled=false}
+ }
  async function reload(){
   if(!allowed())return;
   try{
-   const [a,p,r,o,rf,apps]=await Promise.all([
+   const [a,o,rf,apps]=await Promise.all([
     db.from('sh_reseller_accounts').select('*').order('created_at',{ascending:false}).limit(200),
-    db.from('sh_products').select('id,name,base_price,status').eq('status','active').limit(250),
-    db.from('sh_reseller_prices').select('*').limit(250),
     db.from('sh_reseller_fulfillment_requests').select('*').order('created_at',{ascending:false}).limit(100),
     db.from('sh_reseller_referrals').select('*').order('created_at',{ascending:false}).limit(100),
     db.from('sh_reseller_applications').select('*').order('created_at',{ascending:false}).limit(100)
    ]);
-   for(const q of [a,p,r,o,rf,apps])if(q.error)throw q.error;
-   accounts=a.data||[];products=p.data||[];prices=r.data||[];orders=o.data||[];referrals=rf.data||[];applications=apps.data||[];
+   for(const q of [a,o,rf,apps])if(q.error)throw q.error;
+   accounts=a.data||[];orders=o.data||[];referrals=rf.data||[];applications=apps.data||[];
    renderFiltered();
-   $('resellerPrices').innerHTML=products.map(x=>{
-    const p=prices.find(p=>p.product_id===x.id),retail=Number(x.base_price);
-    return `<tr><td>${esc(x.name)}</td><td>${money(retail)}</td><td><input data-price-value type="number" step="0.01" min="0" max="${retail}" value="${p?Number(p.wholesale_price):retail}" aria-label="Wholesale price for ${esc(x.name)}"></td><td><input data-price-active type="checkbox" ${p?.active?'checked':''} style="width:auto"></td><td><button type="button" class="btn small" data-reseller-action="price" data-id="${esc(x.id)}" data-public-price="${retail}">Save</button></td></tr>`;
-   }).join('')||'<tr><td colspan="5">No active products.</td></tr>';
+   if(activeSubpage==='pricing')await loadPrices();
    notify('resellerMsg',accounts.length+' resellers, '+orders.length+' fulfillment requests, '+referrals.length+' referral orders loaded.');
   }catch(e){notify('resellerMsg',e.message,true)}
  }
