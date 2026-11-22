@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const configDefault={cinematic:true,video_url:'',hero_image_url:'',headline:'Your choice, our gift.',subtitle:'Sarees, three-piece sets, hijab and accessories, chosen with care.',show_ribbon:true,show_floating_cards:true,show_new_arrivals:true,show_categories:true,show_campaigns:true,announcement:'Free delivery on orders above ৳1500',campaign_text:'Discover our new arrivals'};
-let cfg={...configDefault},lastNames='';
+let cfg={...configDefault},lastNames='',featuredId='';
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text)n.textContent=text;return n};
 const safeMedia=(v)=>{try{const u=new URL(v,location.href);return u.protocol==='https:'?u.href:''}catch{return ''}};
 const list=()=>typeof PRODUCTS!=='undefined'?PRODUCTS:[];
@@ -59,13 +59,26 @@ function decorate(){
  const imageURL=safeMedia(cfg.hero_image_url);hero.classList.toggle('sh-has-image',!!imageURL);if(imageURL)hero.style.setProperty('--sh-hero-image','url("'+imageURL.replaceAll('"','%22')+'")');else hero.style.removeProperty('--sh-hero-image');
  hero.classList.toggle('sh-no-ribbon',!cfg.show_ribbon);hero.classList.toggle('sh-no-cards',!cfg.show_floating_cards);
  let video=hero.querySelector('.sh-hero-video');const videoURL=safeMedia(cfg.video_url);
- if(videoURL&&cfg.cinematic!==false){if(!video){video=el('video','sh-hero-video');video.muted=true;video.autoplay=true;video.loop=true;video.playsInline=true;hero.prepend(video)}if(video.src!==videoURL)video.src=videoURL}else video?.remove();
+ if(videoURL&&cfg.cinematic!==false&&!(window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {if(!video){video=el('video','sh-hero-video');video.muted=true;video.autoplay=true;video.loop=true;video.playsInline=true;hero.prepend(video)}if(video.src!==videoURL)video.src=videoURL}else video?.remove();
  const h=hero.querySelector('h1');if(h&&cfg.headline){const words=String(cfg.headline).split(',');h.innerHTML='';h.setAttribute('aria-label',cfg.headline);words.forEach((w,i)=>{const sp=el('span'),em=el('i','',w.trim()+(i<words.length-1?',':''));sp.append(em);h.append(sp)})}
  const desc=hero.querySelector('.wrap p');if(desc&&cfg.subtitle)desc.textContent=cfg.subtitle;
  if(!hero.querySelector('.sh-eyebrow')){const eyebrow=el('div','sh-eyebrow','PREMIUM FASHION COLLECTION');hero.querySelector('.wrap>div')?.prepend(eyebrow)}
- let float=hero.querySelector('.sh-cards');if(!float){float=el('div','sh-cards');hero.append(float)}
- const found=list().filter(p=>image(p)).slice(0,3),signature=found.map(p=>p.id).join(',');
- if(signature!==lastNames){float.replaceChildren();found.forEach((p,i)=>{const img=el('img');img.src=image(p);img.alt='';img.style.setProperty('--tilt',[-8,7,-6][i]+'deg');float.append(img)});lastNames=signature}
+ const candidate=list().find(p=>p.isNew&&image(p))||list().find(p=>image(p));
+ let feature=hero.querySelector('.sh-featured');
+ if(candidate&&cfg.show_floating_cards!==false){
+  if(!feature){feature=el('button','sh-featured');feature.type='button';feature.setAttribute('aria-label','View featured product');hero.append(feature)}
+  if(featuredId!==String(candidate.id)){
+   feature.replaceChildren();
+   const photo=el('img');photo.src=image(candidate);photo.alt=candidate.name;photo.loading='eager';photo.onerror=()=>{feature.hidden=true};
+   const chip=el('span','sh-featured-badge',candidate.isNew?'New Arrival':'Featured');
+   const title=el('span','sh-featured-title',candidate.name);
+   const price=el('span','sh-featured-price',typeof money==='function'?money(candidate.price):'৳'+candidate.price);
+   const arrow=el('span','sh-featured-arrow','↗');feature.append(photo,chip,title,arrow,price);
+   feature.onclick=()=>typeof openProduct==='function'&&openProduct(candidate.id);
+   featuredId=String(candidate.id);
+  }
+  feature.hidden=false;
+ } else if(feature)feature.hidden=true;
  const arrivals=document.getElementById('newArrivals'),mosaic=document.getElementById('mosaic');
  if(arrivals)arrivals.classList.toggle('hidden',cfg.show_new_arrivals===false);
  if(mosaic?.closest('section'))mosaic.closest('section').classList.toggle('hidden',cfg.show_categories===false);
