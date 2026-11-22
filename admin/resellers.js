@@ -5,7 +5,8 @@ export function setupResellerOperations({db,roleCan,notify}){
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const money=n=>'৳'+Number(n||0).toLocaleString('en-BD',{maximumFractionDigits:2});
  const allowed=()=>roleCan('owner','manager');
- let accounts=[],orders=[],referrals=[],applications=[],pricePage=0,priceTotal=0,activeSubpage='applications';
+ let accounts=[],orders=[],referrals=[],applications=[],pricePage=0,priceTotal=0,priceQueryToken=0,activeSubpage='applications';
+ const statusBySection={applications:['pending','approved','rejected'],accounts:['pending','approved','suspended','rejected'],fulfillment:['pending','approved','rejected','fulfilled','cancelled'],referrals:['pending','approved','rejected','settled']};
  const pricingPageSize=20;
  const uniqueLogin=()=>('sh'+crypto.randomUUID().replace(/-/g,'').slice(0,9));
  function mount(){
