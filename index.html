@@ -2019,6 +2019,7 @@ function orderText(o){
   `\n\nSubtotal: ${money(o.sub)}${o.disc?`\nCoupon ${o.coupon}: −${money(o.disc)}`:""}\nDelivery: ${o.ship?money(o.ship):"Free"}\nTOTAL: ${money(o.total)}\nPayment: ${o.pay.toUpperCase()}${o.trx?` (TrxID: ${o.trx})`:""}${o.senderLast4?` | Sender last 4: ${o.senderLast4}`:""}\nPayment status: ${o.paymentStatus||'Not verified'}${o.note?`\nNote: ${o.note}`:""}`;
 }
 async function submitOrder(e){
+ e.preventDefault();
  if(SH_REFERRAL_SLUG){
   if(!SH_REFERRAL_PRICES_OK){e.preventDefault();$("#kErr").textContent='Reseller pricing unavailable. Please refresh the page.';return}
   const before=cartLines().map(x=>x.unitPrice);
