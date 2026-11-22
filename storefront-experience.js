@@ -56,7 +56,7 @@ function suggest(q,host){q=q.trim().toLowerCase();host.replaceChildren();
 function decorate(){
  const hero=document.querySelector('#p-home .hero');if(!hero)return;
  hero.classList.toggle('sh-cinematic',cfg.cinematic!==false);
- const imageURL=safeMedia(cfg.hero_image_url);hero.classList.toggle('sh-has-image',!!imageURL);if(imageURL)hero.style.setProperty('--sh-hero-image','url("'+imageURL.replaceAll('"','%22')+'")');else hero.style.removeProperty('--sh-hero-image');
+ const imageURL=safeMedia(cfg.hero_image_url||'./assets/shopyhat-cinematic-art.svg');hero.classList.toggle('sh-has-image',!!imageURL);if(imageURL)hero.style.setProperty('--sh-hero-image','url("'+imageURL.replaceAll('"','%22')+'")');else hero.style.removeProperty('--sh-hero-image');
  hero.classList.toggle('sh-no-ribbon',!cfg.show_ribbon);hero.classList.toggle('sh-no-cards',!cfg.show_floating_cards);
  let video=hero.querySelector('.sh-hero-video');const videoURL=safeMedia(cfg.video_url);
  if(videoURL&&cfg.cinematic!==false&&!(window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {if(!video){video=el('video','sh-hero-video');video.muted=true;video.autoplay=true;video.loop=true;video.playsInline=true;hero.prepend(video)}if(video.src!==videoURL)video.src=videoURL}else video?.remove();
