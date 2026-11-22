@@ -12,7 +12,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   const b=document.createElement('button');b.type='button';b.className='btn';b.id='experienceTab';b.dataset.page='experience';b.textContent='Storefront Studio';
   const brand=$('brandTab');nav.insertBefore(b,brand||nav.firstChild);
   const panel=document.createElement('div');panel.className='panel hidden';panel.id='page-experience';
-  panel.innerHTML='<div class="topline"><div><h2>Storefront Experience Studio</h2><p class="muted">Control homepage visuals, campaigns and sections without changing order workflows.</p></div><a class="btn" target="_blank" rel="noopener" href="/">↗ Preview Storefront</a></div><form id="shExperienceForm" class="sh-experience-form"><div class="sh-experience-fields">'+fields.map(([key,title,type])=>'<label>'+esc(title)+(type==='textarea'?'<textarea name="'+key+'" rows="3"></textarea>':'<input type="'+type+'" name="'+key+'" placeholder="'+(type==='url'?'https://...':'')+'">')+'</label>').join('')+'</div><h3>Homepage visibility</h3><div class="sh-experience-switches">'+switches.map(([key,title])=>'<label><input type="checkbox" name="'+key+'"> '+esc(title)+'</label>').join('')+'</div><p class="muted">Tip: Hero video is optional. For performance, use an optimized, muted looping video and an image fallback. Product images in Mega Menu and Live Search come from your existing catalog.</p><div class="editor-actions"><button class="btn primary" type="submit">Save & Publish Experience</button><button class="btn" type="button" id="shExperienceReload">Reload</button></div><p id="shExperienceMsg" class="msg" role="status"></p></form>';
+  panel.innerHTML='<div class="topline"><div><h2>Storefront Experience Studio</h2><p class="muted">Control homepage visuals, campaigns and sections without changing order workflows.</p></div><a class="btn" target="_blank" rel="noopener" href="/">↗ Preview Storefront</a></div><div class="media-section" style="margin:18px 0;padding:18px"><h3>Cinematic Hero Photo</h3><p class="muted">Upload JPG, PNG or WebP up to 3 MB. The website will use the new photo immediately after publishing the settings.</p><input type="file" id="shHeroUpload" accept="image/png,image/jpeg,image/webp"><div class="editor-actions"><button type="button" class="btn primary" id="shHeroUploadButton">Upload Hero Image</button></div><img id="shHeroPreview" alt="Current hero preview" style="width:100%;max-width:550px;aspect-ratio:16/9;object-fit:cover;display:none;border-radius:12px;margin-top:12px"><p id="shHeroUploadMsg" class="msg" role="status"></p></div><form id="shExperienceForm" class="sh-experience-form"><div class="sh-experience-fields">'+fields.map(([key,title,type])=>'<label>'+esc(title)+(type==='textarea'?'<textarea name="'+key+'" rows="3"></textarea>':'<input type="'+type+'" name="'+key+'" placeholder="'+(type==='url'?'https://...':'')+'">')+'</label>').join('')+'</div><h3>Homepage visibility</h3><div class="sh-experience-switches">'+switches.map(([key,title])=>'<label><input type="checkbox" name="'+key+'"> '+esc(title)+'</label>').join('')+'</div><p class="muted">Tip: Hero video is optional. For performance, use an optimized, muted looping video and an image fallback. Product images in Mega Menu and Live Search come from your existing catalog.</p><div class="editor-actions"><button class="btn primary" type="submit">Save & Publish Experience</button><button class="btn" type="button" id="shExperienceReload">Reload</button></div><p id="shExperienceMsg" class="msg" role="status"></p></form>';
   nav.after(panel);
   const style=document.createElement('style');style.textContent=`
  #dashboard{position:relative;padding-left:215px}#dashboard>.nav{position:fixed;left:0;top:68px;bottom:0;width:205px;z-index:45;overflow-y:auto;margin:0;padding:15px 10px;background:#191310;border-right:1px solid #3c302a;display:flex;flex-direction:column;flex-wrap:nowrap;gap:4px}
@@ -41,6 +41,24 @@ export function setupExperienceStudio({db,roleCan,notify}){
  $('experienceTab').onclick=()=>window.SHOPYHAT_SHOW_PAGE?.('experience');
  $('shExperienceReload').onclick=reload;
  $('shExperienceForm').onsubmit=save;
+ $('shHeroUploadButton').onclick=uploadHero;
+ $('shHeroUpload').onchange=()=>{const file=$('shHeroUpload').files?.[0];if(!file)return;const u=URL.createObjectURL(file);const img=$('shHeroPreview');img.onload=()=>URL.revokeObjectURL(u);img.src=u;img.style.display='block'};
+ }
+ async function uploadHero(){
+  if(!roleCan('owner','manager'))return;
+  const file=$('shHeroUpload')?.files?.[0];
+  if(!file)return notify('shHeroUploadMsg','Choose an image file first.',true);
+  if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>3*1024*1024)return notify('shHeroUploadMsg','Use PNG, JPG or WebP, maximum 3 MB.',true);
+  const btn=$('shHeroUploadButton');btn.disabled=true;
+  try{
+   const ext=file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg';
+   const name='hero/cinematic-'+crypto.randomUUID()+'.'+ext;
+   const response=await db.storage.from('shopyhat-branding').upload(name,file,{contentType:file.type,cacheControl:'3600',upsert:false});
+   if(response.error)throw response.error;
+   const url=db.storage.from('shopyhat-branding').getPublicUrl(name).data.publicUrl;
+   $('shExperienceForm').elements.hero_image_url.value=url;
+   notify('shHeroUploadMsg','Image uploaded. Click Save & Publish Experience to make it live.');
+  }catch(e){notify('shHeroUploadMsg',e.message,true)}finally{btn.disabled=false}
  }
  async function reload(){
   if(!roleCan('owner','manager'))return;
@@ -49,6 +67,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
    if(error)throw error;const v={...defaults,...(data?.config||{})},form=$('shExperienceForm');
    for(const [key] of fields)form.elements[key].value=v[key]||'';
    for(const [key] of switches)form.elements[key].checked=v[key]!==false;
+   const preview=$('shHeroPreview');if(v.hero_image_url){preview.src=v.hero_image_url;preview.style.display='block'}
    notify('shExperienceMsg','Experience settings loaded.');
   }catch(e){notify('shExperienceMsg',e.message,true)}
  }
