@@ -1,3 +1,4 @@
+import {mountApiHub} from './api-hub.js';
 /* SHOPYHAT Reseller Operations — staff-only approvals, wholesale pricing and fulfillment queue. */
 export function setupResellerOperations({db,roleCan,notify}){
  const $=id=>document.getElementById(id);
@@ -47,15 +48,11 @@ export function setupResellerOperations({db,roleCan,notify}){
   });
   const commonMessage=panel.querySelector('#resellerMsg');commonMessage?.remove();
   const courier=document.createElement('section');courier.className='reseller-subpanel';courier.dataset.resellerPanel='courier';
-  courier.innerHTML='<h3>Courier API Connections</h3><p class="muted">Connect SHOPYHAT to a courier without exposing private API credentials in a browser. Manual booking means you decide exactly which order is sent.</p>'+
-   '<div class="courier-setup"><div><h4>Steadfast Courier <span id="courierConnectionStatus" class="pill">Not checked</span></h4><p>API credentials are configured securely in Supabase Edge Function Secrets. Do not paste them into product forms or public pages.</p>'+
-   '<div class="tools"><button id="courierStatusButton" type="button" class="btn">Check Configuration</button><button id="courierTestButton" type="button" class="btn">Test Connection</button></div><p id="courierMessage" class="msg" role="status"></p></div>'+
-   '<div><h4>Setup Guide</h4><ol><li>Create or sign in to your <a target="_blank" rel="noopener" href="https://steadfast.com.bd/">Steadfast Merchant account</a>.</li><li>Request API credentials from the merchant panel/support.</li><li>Open <a target="_blank" rel="noopener" href="https://supabase.com/dashboard/project/xwfqgmgiunlxzvzoermn/settings/functions">Supabase Edge Function Secrets</a>.</li><li>Add <code>SHOPYHAT_STEADFAST_API_KEY</code> and <code>SHOPYHAT_STEADFAST_SECRET_KEY</code>.</li><li>Use Test Connection before booking orders. Shipping is never automatic.</li></ol><p class="muted">Credential setup is free from SHOPYHAT, but your courier account and delivery services may have costs.</p></div></div>'+
-   '<h4>Book an Existing Confirmed Order</h4><p>Select a confirmed SHOPYHAT order. Booking sends the parcel to Steadfast only when you click Book and confirm.</p><div class="courier-book-controls"><select id="courierOrderId" aria-label="Select SHOPYHAT order"><option value="">Loading eligible orders…</option></select><button id="courierBookButton" class="btn primary" type="button">Book with Steadfast</button></div><p class="muted">Courier booking changes real logistics records. Confirm carefully; there is no automatic retry after an uncertain response.</p>';
+  courier.innerHTML='<h3>API Connections</h3>';
   panel.append(courier);
   if(commonMessage)panel.append(commonMessage);
   const subnav=document.createElement('nav');subnav.className='reseller-subnav';subnav.setAttribute('aria-label','Reseller management');
-  for(const [key,label] of [...labels,['courier','Courier API']]){
+  for(const [key,label] of [...labels,['courier','API Connections']]){
    const btn=document.createElement('button');btn.type='button';btn.className='btn small';btn.dataset.resellerGoto=key;btn.textContent=label;
    btn.onclick=()=>subpage(key);subnav.append(btn);
   }
@@ -67,8 +64,9 @@ export function setupResellerOperations({db,roleCan,notify}){
    panel.querySelectorAll('[data-reseller-goto]').forEach(btn=>{btn.classList.toggle('active',btn.dataset.resellerGoto===key);btn.setAttribute('aria-pressed',String(btn.dataset.resellerGoto===key))});
    const filter=panel.querySelector('.ops-filters');if(filter)filter.classList.toggle('hidden',['pricing','courier'].includes(key));
    if(key==='pricing')loadPrices();
-   if(key==='courier'){courierStatus(false);loadCourierOrders()}
+   if(key==='courier')apiHub.refresh()
   }
+  const apiHub=mountApiHub({panel,db,notify});
   subpage('applications');
   const css=document.createElement('style');css.textContent=`
   .reseller-subnav{display:flex;align-items:center;gap:8px;padding:11px 0 15px;margin:10px 0 14px;overflow-x:auto;border-bottom:1px solid #e8ddd1;scrollbar-width:thin}
@@ -94,9 +92,6 @@ export function setupResellerOperations({db,roleCan,notify}){
   $('resellerPriceMode').addEventListener('change',()=>{pricePage=0;loadPrices()});
   $('resellerPricePrev').onclick=()=>{pricePage=Math.max(0,pricePage-1);loadPrices()};
   $('resellerPriceNext').onclick=()=>{pricePage++;loadPrices()};
-  $('courierStatusButton').onclick=()=>courierStatus(false);
-  $('courierTestButton').onclick=()=>courierStatus(true);
-  $('courierBookButton').onclick=courierBook;
 
   $('resellerCredentialsClose').onclick=hideCredentials;
   $('resellerCredentialsCopy').onclick=async()=>{
@@ -280,53 +275,6 @@ export function setupResellerOperations({db,roleCan,notify}){
    $('resellerPricePrev').disabled=pricePage===0;
    $('resellerPriceNext').disabled=pricePage>=max-1;
   }catch(err){notify('resellerMsg','Unable to load reseller products: '+err.message,true)}
- }
- async function courierAction(action,order_id){
-  const {data:{session},error}=await db.auth.getSession();
-  if(error||!session?.access_token)throw Error('Admin session expired.');
-  const res=await fetch('https://xwfqgmgiunlxzvzoermn.supabase.co/functions/v1/shopyhat-courier',{
-   method:'POST',headers:{'Content-Type':'application/json','apikey':'sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP','Authorization':'Bearer '+session.access_token},
-   body:JSON.stringify({action,order_id}),cache:'no-store'
-  });
-  const data=await res.json().catch(()=>({error:'Courier response unavailable'}));
-  if(!res.ok||!data?.ok)throw Error(data.error||'Courier operation failed');
-  return data;
- }
- async function courierStatus(test){
-  const btn=$(test?'courierTestButton':'courierStatusButton');if(btn)btn.disabled=true;
-  try{
-   const data=await courierAction(test?'test':'status');
-   $('courierConnectionStatus').textContent=data.configured?'Configured':'Not configured';
-   notify('courierMessage',test?'Connection tested successfully. No parcel created.':data.configured?'Courier credentials found. Use Test Connection.':'Add both API credentials in Supabase Edge Function Secrets.');
-  }catch(err){notify('courierMessage',err.message,true)}
-  finally{if(btn)btn.disabled=false}
- }
- async function loadCourierOrders(){
-  const field=$('courierOrderId');
-  field.innerHTML='<option value="">Loading eligible orders…</option>';
-  const {data,error}=await db.from('sh_orders').select('id,order_number,customer_name,status,tracking_id')
-   .in('status',['Confirmed','Processing','Ready to Ship']).is('tracking_id',null)
-   .order('created_at',{ascending:false}).limit(100);
-  if(error){field.innerHTML='<option value="">Unable to load orders</option>';return notify('courierMessage','Order list unavailable: '+error.message,true)}
-  field.innerHTML='<option value="">Select an order to book…</option>';
-  for(const order of data||[]){
-   const opt=document.createElement('option');opt.value=order.id;
-   opt.textContent=order.order_number+' · '+order.customer_name+' · '+order.status;
-   field.append(opt);
-  }
-  if(!data?.length)field.firstElementChild.textContent='No eligible orders awaiting courier';
- }
- async function courierBook(){
-  const id=$('courierOrderId').value.trim(),btn=$('courierBookButton');
-  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
-    return notify('courierMessage','Enter a valid order UUID from SHOPYHAT Order Management.',true);
-  if(!confirm('Book this confirmed order with Steadfast? A live courier consignment may be created and cannot be automatically undone.'))return;
-  btn.disabled=true;
-  try{
-   const result=await courierAction('book',id);
-   notify('courierMessage','Booking successful. Tracking: '+(result.tracking_code||'Pending')+(result.warning?' · '+result.warning:''));await loadCourierOrders(); 
-  }catch(err){notify('courierMessage',err.message,true)}
-  finally{btn.disabled=false}
  }
  async function reload(){
   if(!allowed())return;
