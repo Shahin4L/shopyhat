@@ -13,14 +13,20 @@ const field=(name,label,type='text',more='')=>'<label>'+label+'<input name="'+na
 const formButton=text=>'<button class="sh-account-primary" type="submit">'+text+'</button>';
 function shell(){
  if($('shAccountModal'))return;
- const btn=document.createElement('button');btn.type='button';btn.className='ibtn sh-account-trigger';btn.id='shAccountTrigger';btn.title='Customer account';btn.setAttribute('aria-label','Open customer account');btn.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2"/></svg>';
- const icons=document.querySelector('#hdr .icons');icons?.append(btn);
- const dialog=document.createElement('dialog');dialog.id='shAccountModal';dialog.className='sh-account-dialog';
- dialog.innerHTML='<div class="sh-account-head"><div><small>SHOPYHAT</small><h2>My Account</h2></div><button type="button" id="shAccountClose" aria-label="Close account">×</button></div><div id="shAccountMessage" role="status"></div><div id="shAccountBody"></div>';
+ const btn=document.createElement('button');btn.type='button';btn.className='ibtn sh-account-trigger';btn.id='shAccountTrigger';btn.title='My Account';btn.setAttribute('aria-label','Open My Account');
+ btn.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2"/></svg>';
+ document.querySelector('#hdr .icons')?.append(btn);
+ const dialog=document.createElement('dialog');dialog.id='shAccountModal';dialog.className='sh-account-dialog';dialog.setAttribute('aria-labelledby','shAccountHeading');
+ dialog.innerHTML='<div class="sh-account-head"><div class="sh-account-brand"><span class="sh-account-logo" aria-hidden="true">S</span><div><small>SHOPYHAT · SINCE 2020</small><h2 id="shAccountHeading">My Account</h2></div></div><button type="button" id="shAccountClose" aria-label="Close account window">×</button></div><div id="shAccountMessage" role="status" aria-live="polite"></div><div id="shAccountBody"></div><div class="sh-account-bottom"><span>Secure shopping, simple checkout.</span><a href="#shop" id="shAccountGuest">Continue as guest →</a></div>';
  document.body.append(dialog);btn.onclick=open;$('shAccountClose').onclick=()=>dialog.close();
+ $('shAccountGuest').onclick=()=>dialog.close();
  dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
 }
-function open(){shell();$('shAccountModal').showModal();render()}
+function open(){shell();const dialog=$('shAccountModal');if(!dialog.open)dialog.showModal();render()}
+const authIntro=(title,desc,active,step='')=>'<div class="sh-auth-intro"><div class="sh-auth-eyebrow">YOUR CHOICE, OUR GIFT.</div><h3>'+title+'</h3><p>'+desc+'</p></div><nav class="sh-auth-nav" aria-label="Customer account access"><button type="button" id="shAuthLogin" class="'+(active==='login'?'active':'')+'">Sign in</button><button type="button" id="shAuthSignup" class="'+(active==='signup'?'active':'')+'">Create account</button></nav>'+(step?'<div class="sh-auth-progress">'+step+'<div class="sh-progress-bars"><i class="on"></i><i class="'+(step.includes('2')?'on':'')+'"></i></div></div>':'');
+const bindTabs=()=>{$('shAuthLogin').onclick=loginView;$('shAuthSignup').onclick=signupStep1};
+const passInput=(name,label,mode)=>'<label class="sh-auth-field"><span>'+label+'</span><span class="sh-password-input"><input name="'+name+'" type="password" minlength="8" autocomplete="'+mode+'" required><button class="sh-eye" type="button" data-toggle-password aria-label="Show password">Show</button></span></label>';
+const bindPassword=()=>document.querySelectorAll('#shAccountBody [data-toggle-password]').forEach(b=>b.onclick=()=>{const i=b.parentNode.querySelector('input');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'Show':'Hide';b.setAttribute('aria-label',i.type==='password'?'Show password':'Hide password')});
 function signupStep1(){
  view('<h3>Create an account</h3><p>Step 1 of 2 — name and mobile number. Delivery address is requested only when ordering.</p><form id="shSignup1">'+field('name','Full name','text','minlength="2" maxlength="100" autocomplete="name"')+field('phone','Bangladesh mobile','tel','placeholder="01XXXXXXXXX" inputmode="tel" autocomplete="tel"')+formButton('Continue')+'</form><p>Already registered? <button class="sh-text-button" id="shGoLogin">Sign in</button></p>');
  $('shGoLogin').onclick=loginView;
@@ -80,19 +86,19 @@ function forgotView(){
  };
 }
 async function loadAccount(){
- const {data:{user}}=await db.auth.getUser();signedUser=user?.email_confirmed_at?user:null;profile=null;
+ const {data:{user}}=await db.auth.getUser();signedUser=user||null;profile=null;
  if(!signedUser){window.dispatchEvent(new Event('sh:account'));return}
  const result=await db.from('sh_customer_profiles').select('*').eq('user_id',user.id).maybeSingle();
  if(!result.error&&result.data)profile=result.data;
- else if(!result.error&&user.email_confirmed_at&&user.email){
+ else if(!result.error&&user.email){
   const fullName=pendingName||String(user.user_metadata?.name||'Customer').slice(0,100);
   const {data}=await db.from('sh_customer_profiles').insert({user_id:user.id,full_name:fullName,phone:'+88'+normalPhone(user.user_metadata?.mobile||pendingPhone||''),email:user.email.toLowerCase()}).select().maybeSingle();
   if(data)profile=data;
  }
- if(!profile&&user.email_confirmed_at){profile={user_id:user.id,full_name:pendingName||user.user_metadata?.name||'Customer',phone:'+88'+(normalPhone(user.user_metadata?.mobile||'')||''),email:user.email,preferred_address:''}}
+ if(!profile){profile={user_id:user.id,full_name:pendingName||user.user_metadata?.name||'Customer',phone:'+88'+(normalPhone(user.user_metadata?.mobile||'')||''),email:user.email,preferred_address:''}}
  pendingName='';
  window.dispatchEvent(new Event('sh:account'));
- if(signedUser?.email_confirmed_at)scheduleWatchSync();
+ if(signedUser)scheduleWatchSync();
  if(inboxTimer)clearInterval(inboxTimer);
  checkInbox(true).catch(()=>{});
  inboxTimer=setInterval(()=>{if(!document.hidden&&signedUser)checkInbox(true)},45000);
@@ -172,7 +178,7 @@ async function watchSaved(){
 let watchSyncTimer=null;
 const localArray=key=>{try{const x=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(x)?x:[]}catch{return []}};
 async function syncSavedWatches(){
- if(!signedUser?.email_confirmed_at)return -1;
+ if(!signedUser)return -1;
  const wishIDs=new Set(localArray('sh_wish').map(String));
  const cartItems=localArray('sh_cart');
  const allIDs=[...new Set([...wishIDs,...cartItems.map(c=>String(c.id||''))].filter(x=>/^\d+$/.test(x)))].slice(0,70);
@@ -219,7 +225,7 @@ db.auth.onAuthStateChange((_event,session)=>{if(session?.user?.id!==signedUser?.
 /* Existing checkout/support forms remain usable for guests. Only populate blank fields of verified customers. */
 function prefillCustomerForms(){
  const p=window.SHOPYHAT_CUSTOMER?.getProfile?.();
- if(!p||!signedUser?.email_confirmed_at)return;
+ if(!p||!signedUser)return;
  const short=normalPhone(p.phone);const name=p.full_name||'';
  const fill=(selector,value)=>{const field=document.querySelector(selector);if(field&&!field.value&&value)field.value=value};
  fill('#kName',name);fill('#kPhone',short);fill('#kAddr',p.preferred_address);
