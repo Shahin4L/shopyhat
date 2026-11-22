@@ -53,3 +53,12 @@
 .media-tile small{color:#79675a;min-height:20px}.media-tile button{min-height:39px;margin-top:auto}
 @media(max-width:520px){.product .actions{grid-template-columns:1fr}.product .actions button:last-child{grid-column:auto}.reseller-price-actions{grid-template-columns:1fr 1fr}.reseller-price-actions button{font-size:10px}.media-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.media-preview{height:120px}}
 @media(max-width:350px){.media-gallery{grid-template-columns:1fr}}
+
+.share-store{display:flex;align-items:center;justify-content:space-between;gap:16px;background:#fff;border:1px solid #e6d7c8;border-radius:13px;padding:17px;margin:12px 0 26px;flex-wrap:wrap}
+.share-store>div:first-child{min-width:0;flex:1 1 220px}
+.share-store small{display:block;color:#876d5a;margin-bottom:6px}
+.share-store strong{font-size:13px;overflow-wrap:anywhere;font-weight:650;color:#4f321d}
+.share-store-actions{display:flex;gap:8px;flex-wrap:wrap}
+.share-store-actions .primary{margin:0;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.share-store-actions button{min-height:41px}
+@media(max-width:520px){.share-store-actions{width:100%}.share-store-actions button,.share-store-actions a{flex:1}}
