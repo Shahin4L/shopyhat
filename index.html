@@ -962,7 +962,7 @@ main{overflow:clip}
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./about-enhanced.css?v=20261122b">
-<link rel="stylesheet" href="./storefront-experience.css?v=20261122promo">
+<link rel="stylesheet" href="./storefront-experience.css?v=20261122studio">
 <link rel="stylesheet" href="./customer-account.css?v=20261122a">
 </head>
 <body>
@@ -1990,6 +1990,7 @@ function orderText(o){
   `\n\nSubtotal: ${money(o.sub)}${o.disc?`\nCoupon ${o.coupon}: −${money(o.disc)}`:""}\nDelivery: ${o.ship?money(o.ship):"Free"}\nTOTAL: ${money(o.total)}\nPayment: ${o.pay.toUpperCase()}${o.trx?` (TrxID: ${o.trx})`:""}${o.senderLast4?` | Sender last 4: ${o.senderLast4}`:""}\nPayment status: ${o.paymentStatus||'Not verified'}${o.note?`\nNote: ${o.note}`:""}`;
 }
 async function submitOrder(e){
+ if(new URLSearchParams(location.search).has("studio_preview")){e?.preventDefault?.();return;}
  e.preventDefault();
  const name=$("#kName").value.trim(),phone=normPhone($("#kPhone").value.trim()),addr=$("#kAddr").value.trim(),err=$("#kErr");
  const pay=document.querySelector('input[name="pay"]:checked')?.value||"cod";
@@ -2135,7 +2136,7 @@ function closeAll(){$("#ov").classList.remove("show");$("#sov").classList.remove
 const PAGES=["home","shop","track","contact","policies","care","about"];
 function route(keep){
   const h=(location.hash||"#home").slice(1), [pg,arg,subarg]=h.split("/");
-  const page=PAGES.includes(pg)?pg:"home";
+  const page=pg==="arrivals"?"home":PAGES.includes(pg)?pg:"home";
   PAGES.forEach(p=>$("#p-"+p).classList.toggle("hidden",p!==page));
   $$("nav.main a").forEach(a=>{const d=a.dataset.p;
     const isS=catKey(arg||"")==="saree";
@@ -2150,6 +2151,7 @@ function route(keep){
   }
   if(page==="track")renderMyOrders();
   if(page==="home")renderRV();
+  if(pg==="arrivals")setTimeout(()=>document.getElementById("newArrivals")?.scrollIntoView({behavior:"smooth",block:"start"}),60);
   $("#mainNav").classList.remove("open");
   if(!keep)window.scrollTo({top:0,behavior:"instant"});
   if(pg==="p"&&byId(arg)&&!keep)openProduct(arg);
@@ -2359,7 +2361,7 @@ boot();
 <script src="./customer-care.js" defer></script>
 <script src="./visitor-analytics.js" defer></script>
 <script src="./brand-about.js?v=20261122b" defer></script>
-<script src="./storefront-experience.js?v=20261122promo" defer></script>
+<script src="./storefront-experience.js?v=20261122studio" defer></script>
 <script type="module" src="./customer-account.js?v=20261122a"></script>
 </body>
 </html>

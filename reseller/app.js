@@ -28,7 +28,7 @@ async function restore(){
  }catch(err){showLogin();message(err.message||'Unable to load account',true)}
 }
 function tab(which){
- for(const t of ['catalog','requests','links']){
+ for(const t of ['catalog','requests','links','security']){
   $(t+'Tab').hidden=which!==t;
   document.querySelector('[data-tab="'+t+'"]')?.classList.toggle('selected',which===t);
  }
@@ -85,8 +85,9 @@ function openRequest(p){selection=p;$('requestProduct').textContent=p.name+' —
  f.elements.retail.min=p.wholesale;f.elements.retail.max=Math.max(p.public_price*5,p.wholesale);
  $('requestDialog').showModal();
 }
-$('openApply').onclick=()=>{$('loginPanel').hidden=true;$('applyPanel').hidden=false;message('')};
-$('backLogin').onclick=()=>{$('loginPanel').hidden=false;$('applyPanel').hidden=true;message('')};
+$('openApply').onclick=()=>{$('loginPanel').hidden=true;$('applyPanel').hidden=false;$('applySuccess').hidden=true;message('')};
+$('backLogin').onclick=()=>{$('loginPanel').hidden=false;$('applyPanel').hidden=true;$('applySuccess').hidden=true;message('')};
+$('successLogin').onclick=()=>{$('applySuccess').hidden=true;$('loginPanel').hidden=false;message('')};
 $('loginForm').onsubmit=async event=>{
  event.preventDefault();const form=event.currentTarget,login=$('loginName').value.trim().toLowerCase();
  if(!/^[a-z][a-z0-9_]{3,23}$/.test(login))return message('Enter your valid reseller ID.',true);
@@ -100,26 +101,43 @@ $('loginForm').onsubmit=async event=>{
 $('applyForm').onsubmit=async event=>{
  event.preventDefault();const f=new FormData(event.currentTarget),phone=mobile(f.get('phone'));
  if(!phone)return message('Enter a valid Bangladesh mobile number.',true);
- const button=event.currentTarget.querySelector('[type=submit]');button.disabled=true;
+ const form=event.currentTarget;const applicantName=String(f.get('full_name')||'').trim();
+ const button=form.querySelector('[type=submit]');button.disabled=true;
  try{
   const {data,error}=await db.rpc('sh_apply_reseller',{
    p_name:String(f.get('full_name')||'').trim(),p_business:String(f.get('business_name')||'').trim(),
    p_phone:phone,p_email:String(f.get('email')||'').trim()||null
   });
   if(error)throw error;
-  message(data?.message||'Request submitted',!data?.ok);
-  if(data?.ok){event.currentTarget.reset();$('applyPanel').hidden=true;$('loginPanel').hidden=false}
+  if(!data?.ok){message(data?.message||'Unable to submit request.',true);return}
+  form.reset();$('applyPanel').hidden=true;$('loginPanel').hidden=true;
+  $('applySuccess').hidden=false;$('applicationName').textContent=applicantName;
+  message('Application submitted successfully. No SMS was sent; this is your on-screen confirmation.');
  }catch(err){message(err.message,true)}finally{button.disabled=false}
 };
 $('passwordForm').onsubmit=async event=>{
  event.preventDefault();const f=new FormData(event.currentTarget),pass=String(f.get('password')||'');
  if(pass.length<10||pass!==String(f.get('confirm')))return message('Passwords must match and have at least 10 characters.',true);
- const btn=event.currentTarget.querySelector('[type=submit]');btn.disabled=true;
+ const form=event.currentTarget;const btn=form.querySelector('[type=submit]');btn.disabled=true;
  try{
   const result=await db.auth.updateUser({password:pass});if(result.error)throw result.error;
   // Password-change trigger on auth.users clears the first-login gate server-side.
-  event.currentTarget.reset();await restore();message('Password updated. Welcome to your reseller dashboard.');
+  form.reset();await restore();message('Password updated. Welcome to your reseller dashboard.');
  }catch(err){message(err.message,true)}finally{btn.disabled=false}
+};
+$('selfPasswordForm').onsubmit=async event=>{
+ event.preventDefault();
+ const form=event.currentTarget,values=new FormData(form);
+ const pass=String(values.get('new_password')||''),again=String(values.get('confirm_password')||'');
+ if(pass.length<10||pass!==again)return message('New passwords must match and contain at least 10 characters.',true);
+ const button=form.querySelector('[type=submit]');button.disabled=true;
+ try{
+  const {error}=await db.auth.updateUser({password:pass});
+  if(error)throw error;
+  form.reset();
+  message('Password updated successfully. Use your new password the next time you sign in.');
+ }catch(err){message(err.message||'Password update failed',true)}
+ finally{button.disabled=false}
 };
 $('logout').onclick=logout;$('logoutFirst').onclick=logout;$('closeRequest').onclick=()=>$('requestDialog').close();
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));

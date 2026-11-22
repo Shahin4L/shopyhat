@@ -21,9 +21,10 @@ function nav(){
  document.addEventListener('click',e=>{if(!host.contains(e.target))open(false)});
  window.addEventListener('hashchange',()=>open(false));
  }
- const arrival=el('a','','New Arrivals');arrival.href='#home';arrival.setAttribute('data-sh-arrivals','');
- arrival.addEventListener('click',()=>setTimeout(()=>document.getElementById('newArrivals')?.scrollIntoView({behavior:'smooth'}),40));
- main.append(arrival);
+ const arrival=el('a','','New Arrivals');arrival.href='#arrivals';arrival.setAttribute('data-sh-arrivals','');
+ const sarees=main.querySelector('a[data-p="saree"]');
+ if(sarees)sarees.after(arrival);else main.append(arrival);
+ arrival.addEventListener('click',()=>setTimeout(()=>document.getElementById('newArrivals')?.scrollIntoView({behavior:'smooth',block:'start'}),80));
  const search=el('div','sh-header-search'),inp=el('input'),results=el('div','sh-suggestions');
  inp.type='search';inp.placeholder=cfg.search_placeholder||'Search for sarees...';inp.setAttribute('aria-label','Search SHOPYHAT products');inp.setAttribute('autocomplete','off');results.hidden=true;
  search.append(inp,results);header.insertBefore(search,header.querySelector('.icons'));
@@ -257,7 +258,20 @@ function decorate(){
  ann.textContent=cfg.announcement||'';ann.hidden=!cfg.announcement;
  syncSlider();
 }
-async function load(){try{const r=await fetch(SH_DB_URL+'/rest/v1/sh_storefront_experience?id=eq.1&select=config',{headers:{apikey:SH_DB_KEY}});if(!r.ok)throw Error('settings unavailable');const rows=await r.json();if(rows[0]?.config)cfg={...cfg,...rows[0].config}}catch(e){console.info('Using default SHOPYHAT experience:',e.message)}decorate()}
+async function load(){if(new URLSearchParams(location.search).get('studio_preview')==='1'){decorate();return}try{const r=await fetch(SH_DB_URL+'/rest/v1/sh_storefront_experience?id=eq.1&select=config',{headers:{apikey:SH_DB_KEY}});if(!r.ok)throw Error('settings unavailable');const rows=await r.json();if(rows[0]?.config)cfg={...cfg,...rows[0].config}}catch(e){console.info('Using default SHOPYHAT experience:',e.message)}decorate()}
+// Preview messages run only when this storefront is framed by its same-origin Admin Studio.
+// Never persist preview settings, alter backend records, or accept cross-origin messages.
+if(new URLSearchParams(location.search).get('studio_preview')==='1'){
+ window.addEventListener('message',event=>{
+  if(event.origin!==location.origin||event.source!==window.parent)return;
+  if(event.data?.type!=='shopyhat:studio-preview'||!event.data.config||typeof event.data.config!=='object')return;
+  const preview=event.data.config;
+  const allowed=['announcement','headline','subtitle','hero_image_url','video_url','campaign_text','hero_eyebrow','primary_cta','secondary_cta','search_placeholder','categories_title','arrivals_title','offers_title','story_title','cinematic','show_ribbon','show_floating_cards','show_new_arrivals','show_categories','show_campaigns','ui_font','heading_font','hero_alignment','hero_vertical','hero_image_position','product_card_side','body_font_size','heading_scale','content_width','section_spacing','hero_height','category_columns','accent_color','section_order','hero_slides','hero_autoplay','hero_interval'];
+  for(const key of allowed){if(Object.prototype.hasOwnProperty.call(preview,key))cfg[key]=preview[key]}
+  decorate();
+ });
+}
+
 nav();decorate();load();
 const watched=document.getElementById('homeGrid');
 if(watched){let pending=false;const observer=new MutationObserver(()=>{if(!pending){pending=true;requestAnimationFrame(()=>{pending=false;populateMega();decorate()})}});observer.observe(watched,{childList:true})}

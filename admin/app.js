@@ -167,6 +167,7 @@ function cover(product){const base=images.find(i=>i.product_id===product.id&&!i.
 function render(){
  if(!rangeValid()){notice('appMsg','From date must be on or before To date.',true);return;}
  const search=$('productSearch').value.toLowerCase().trim(),oq=$('orderSearch').value.toLowerCase().trim(),filter=$('statusFilter').value;
+ const paymentMethodFilter=$('orderPaymentFilter')?.value||'',paymentStateFilter=$('orderPaymentState')?.value||'';
  const productCategoryFilter=$('productCategoryFilter').value,productSubcategoryFilter=$('productSubcategoryFilter').value;
  const filteredProducts=dateFiltered(products),filteredOrders=dateFiltered(orders);
  $('kProducts').textContent=filteredProducts.length;
@@ -176,7 +177,7 @@ function render(){
  $('rangeSummary').textContent=($('dateFrom').value||'All dates')+' → '+($('dateTo').value||'Today / future')+' · '+($('dateBasis').value==='updated'?'Updated Date':'Created Date');
  $('productRows').innerHTML=dateFiltered(products).filter(p=>(!productCategoryFilter||p.category_id===productCategoryFilter)&&(!productSubcategoryFilter||p.subcategory_id===productSubcategoryFilter)&&(p.name+' '+p.legacy_id+' '+p.category).toLowerCase().includes(search)).map(p=>
  '<tr><td><div class="row" style="justify-content:flex-start">'+imgTag(cover(p),p.name)+'<div><b>'+esc(p.name)+'</b><div class="muted">#'+esc(p.legacy_id||p.id.slice(0,7))+' · '+esc(p.category)+(p.subcategory_id?' · '+esc(catalog.getCategories().find(c=>c.id===p.subcategory_id)?.name||'Subcategory'):'')+'</div></div></div></td><td>'+money(p.base_price)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+variants.filter(v=>v.product_id===p.id).length+'</td><td>'+metaLabel('sh_products',p)+'</td><td><div class="tools"><button class="btn small" data-edit-product="'+p.id+'">Edit / Photos</button>'+(roleCan("owner","manager")?'<button type="button" class="btn small danger" data-delete-product="'+p.id+'">Delete</button>':'')+'</div></td></tr>').join('')||'<tr><td colspan="6">No products found</td></tr>';
- $('orderRows').innerHTML=dateFiltered(orders).filter(o=>(!filter||o.status===filter)&&(!oq||[o.order_number,o.customer_name,o.customer_phone].some(v=>String(v||'').toLowerCase().includes(oq)))).map(o=>
+ $('orderRows').innerHTML=dateFiltered(orders).filter(o=>(!filter||o.status===filter)&&(!paymentMethodFilter||String(o.payment_method||'').toLowerCase()===paymentMethodFilter)&&(!paymentStateFilter||String(o.payment_status||'').toLowerCase()===paymentStateFilter)&&(!oq||[o.order_number,o.customer_name,o.customer_phone].some(v=>String(v||'').toLowerCase().includes(oq)))).map(o=>
  '<tr><td>'+orderThumb(o)+'</td><td><b>'+esc(o.order_number)+'</b><div class="muted">'+fmtDate(o.created_at)+'</div></td><td>'+esc(o.customer_name)+'<div class="muted">'+esc(o.customer_phone)+'</div></td><td>'+money(o.total)+'</td><td><span class="pill">'+esc(o.status)+'</span></td><td>'+esc(o.payment_status)+'</td><td>'+metaLabel('sh_orders',o)+'</td><td><button class="btn small" data-edit-order="'+o.id+'">Process / Invoice</button></td></tr>').join('')||'<tr><td colspan="8">No matching orders</td></tr>';
  $('paymentRows').innerHTML=dateFiltered(payments).map(p=>'<tr><td>'+esc(orders.find(o=>o.id===p.order_id)?.order_number||'—')+'</td><td>'+esc(p.method)+'</td><td>'+esc(p.transaction_id)+'</td><td>'+money(p.amount)+'</td><td><span class="pill">'+esc(p.status)+'</span></td><td>'+metaLabel('sh_payments',p)+'</td><td>'+ (roleCan('owner','manager')?'<button class="btn small" data-review="'+p.id+'">Review</button>':'Read only')+'</td></tr>').join('')||'<tr><td colspan="7">No payment reviews</td></tr>';
  $('staffRows').innerHTML=dateFiltered(staff).map(x=>'<tr><td>'+esc(x.email)+'</td><td>'+esc(x.display_name)+'</td><td>'+esc(x.role)+'</td><td>'+ (x.active?'Active':'Disabled')+'</td><td>'+metaLabel('sh_staff',x,x.email)+'</td><td>'+(x.role==='owner'?'Protected':'<button class="btn small" data-edit-staff="'+esc(x.email)+'">Edit</button>')+'</td></tr>').join('')||'<tr><td colspan="6">No staff</td></tr>';
@@ -664,7 +665,11 @@ function addOrder(){if(!roleCan('owner','manager','operator'))return;
 }
 
 function exportOrders(){
- const exportRows=dateFiltered(orders);if(!exportRows.length)return notice('appMsg','No orders match the selected date range.',true);
+ const exportRows=dateFiltered(orders).filter(o=>{
+ const q=($('orderSearch')?.value||'').toLowerCase().trim(),status=$('statusFilter')?.value||'',pay=$('orderPaymentFilter')?.value||'',payStatus=$('orderPaymentState')?.value||'';
+ return (!status||o.status===status)&&(!pay||String(o.payment_method||'').toLowerCase()===pay)&&(!payStatus||String(o.payment_status||'').toLowerCase()===payStatus)
+  &&(!q||[o.order_number,o.customer_name,o.customer_phone].some(v=>String(v||'').toLowerCase().includes(q)));
+ });if(!exportRows.length)return notice('appMsg','No orders match the selected date range.',true);
  const columns=['order_number','created_at','customer_name','customer_phone','address','zone','status','payment_method','payment_status','subtotal','discount','shipping','total','courier','tracking_id'];
  const cell=v=>'"'+String(v??'').replace(/^[=+\-@\t\r]/,"'$&").replace(/"/g,'""')+'"';
  const csv=[columns.join(','),...exportRows.map(o=>columns.map(k=>cell(o[k])).join(','))].join('\r\n');
@@ -686,7 +691,7 @@ $('logout').onclick=async()=>{await db.auth.signOut();location.reload()};
 $('refresh').onclick=refresh;$('closeDrawer').onclick=closeDrawer;
 $('productSearch').oninput=render;
 $('productCategoryFilter').onchange=()=>{catalog.refreshProductFilterOptions();render()};
-$('productSubcategoryFilter').onchange=render;$('orderSearch').oninput=render;$('statusFilter').onchange=render;
+$('productSubcategoryFilter').onchange=render;$('orderSearch').oninput=render;$('statusFilter').onchange=render;$('orderPaymentFilter').onchange=render;$('orderPaymentState').onchange=render;
 $('bulkProducts').onclick=bulkProductEditor;$('newProduct').onclick=()=>editProduct(null);$('addStaff').onclick=()=>editStaff(null);$('newOrder').onclick=addOrder;
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 document.addEventListener('keydown',e=>{
