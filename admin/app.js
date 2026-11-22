@@ -45,7 +45,16 @@ function setupLocalPhotoPreview(fileInputId,previewId){
    }).join('');
  };
 }
-async function query(table,selection='*',limit=1000){const q=await db.from(table).select(selection).limit(limit);if(q.error)throw q.error;return q.data||[]}
+async function query(table,selection='*',limit=30000){
+ const out=[],batch=500,key=table==='sh_staff'?'email':'id';
+ for(let offset=0;offset<limit;offset+=batch){
+  const q=await db.from(table).select(selection).order(key,{ascending:true}).range(offset,offset+batch-1);
+  if(q.error)throw q.error;
+  out.push(...(q.data||[]));
+  if(!q.data||q.data.length<batch)return out;
+ }
+ throw Error('Data limit reached for '+table+'. Use server-side reporting to export beyond '+limit+' records.');
+}
 async function queryTraffic(){
  const out=[],batch=1000;
  for(let offset=0;offset<12000;offset+=batch){
@@ -285,7 +294,7 @@ function getInsights(){
  const visitors=site.reduce((n,r)=>n+Number(r.visitors||0),0);
  const views=site.reduce((n,r)=>n+Number(r.views||0),0);
  const total=os.reduce((n,o)=>n+Number(o.total||0),0);
- const paid=os.filter(o=>String(o.payment_status||'').toLowerCase().includes('paid')||String(o.payment_status||'').toLowerCase()==='verified').reduce((n,o)=>n+Number(o.total||0),0);
+ const paid=os.filter(o=>['verified - paid','verified','paid','payment received'].includes(String(o.payment_status||'').trim().toLowerCase())).reduce((n,o)=>n+Number(o.total||0),0);
  const activeReviews=dateFiltered(reviews),approved=activeReviews.filter(r=>r.status==='Approved');
  const activeCases=dateFiltered(cases),resolved=activeCases.filter(c=>['Resolved','Closed'].includes(c.status));
  const pendingPayments=dateFiltered(payments).filter(p=>!['Verified','Verified - Paid','Paid'].includes(String(p.status||''))&&p.status!=='Rejected');
@@ -619,7 +628,8 @@ async function editOrder(id){
  <button class="btn" id="printInvoice" type="button">Print Invoice</button></form>
  <div class="divider"></div><h3>Activity History</h3><p class="muted">${(history.data||[]).map(h=>esc(h.action)+' · '+esc(h.actor||'system')+' · '+fmtDate(h.created_at)).join('<br>')||'No history yet'}</p>`;
  $('orderForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('orderForm');
- const changes={status:f.status,courier:f.courier,tracking_id:f.tracking_id,internal_note:f.internal_note,updated_at:new Date().toISOString()};
+ if(f.status==='Cancelled'&&['Shipped','Delivered','Returned'].includes(o.status))return notice('drawerMsg','Shipped/delivered orders require a return/refund review rather than direct cancellation.',true);
+  const changes={status:f.status,courier:f.courier,tracking_id:f.tracking_id,internal_note:f.internal_note,updated_at:new Date().toISOString()};
  const r=await db.from('sh_orders').update(changes).eq('id',id);if(r.error)return notice('drawerMsg',r.error.message,true);
  await refresh();editOrder(id);notice('drawerMsg','Order saved.')};
  $('printInvoice').onclick=()=>printInvoice(o,items.data);
