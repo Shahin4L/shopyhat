@@ -25,7 +25,7 @@ function nav(){
  arrival.addEventListener('click',()=>setTimeout(()=>document.getElementById('newArrivals')?.scrollIntoView({behavior:'smooth'}),40));
  main.append(arrival);
  const search=el('div','sh-header-search'),inp=el('input'),results=el('div','sh-suggestions');
- inp.type='search';inp.placeholder='Search for sarees...';inp.setAttribute('aria-label','Search SHOPYHAT products');inp.setAttribute('autocomplete','off');results.hidden=true;
+ inp.type='search';inp.placeholder=cfg.search_placeholder||'Search for sarees...';inp.setAttribute('aria-label','Search SHOPYHAT products');inp.setAttribute('autocomplete','off');results.hidden=true;
  search.append(inp,results);header.insertBefore(search,header.querySelector('.icons'));
  inp.addEventListener('input',()=>suggest(inp.value,results));
  inp.addEventListener('focus',()=>suggest(inp.value,results));
@@ -135,7 +135,16 @@ function decorate(){
  if(videoURL&&cfg.cinematic!==false&&!(window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {if(!video){video=el('video','sh-hero-video');video.muted=true;video.autoplay=true;video.loop=true;video.playsInline=true;hero.prepend(video)}if(video.src!==videoURL)video.src=videoURL}else video?.remove();
  const h=hero.querySelector('h1');if(h&&cfg.headline){const words=String(cfg.headline).split(',');h.innerHTML='';h.setAttribute('aria-label',cfg.headline);words.forEach((w,i)=>{const sp=el('span'),em=el('i','',w.trim()+(i<words.length-1?',':''));sp.append(em);h.append(sp)})}
  const desc=hero.querySelector('.wrap p');if(desc&&cfg.subtitle)desc.textContent=cfg.subtitle;
+ const buttons=hero.querySelectorAll('.btns a');if(buttons[0]&&cfg.primary_cta)buttons[0].textContent=cfg.primary_cta;
+ if(buttons[1]&&cfg.secondary_cta)buttons[1].textContent=cfg.secondary_cta;
+ const searchField=document.querySelector('.sh-header-search input');if(searchField)searchField.placeholder=cfg.search_placeholder||'Search for sarees...';
+ const replaceTitle=(selector,value)=>{const node=document.querySelector(selector);if(node&&typeof value==='string'&&value.trim())node.textContent=value.trim()};
+ replaceTitle('#p-home .collection-section h2',cfg.categories_title);
+ replaceTitle('#newArrivals h2',cfg.arrivals_title);
+ replaceTitle('#saleSec h2',cfg.offers_title);
+ replaceTitle('#p-home .band h2',cfg.story_title);
  if(!hero.querySelector('.sh-eyebrow')){const eyebrow=el('div','sh-eyebrow','PREMIUM FASHION COLLECTION');hero.querySelector('.wrap>div')?.prepend(eyebrow)}
+ const eyebrow=hero.querySelector('.sh-eyebrow');if(eyebrow&&cfg.hero_eyebrow)eyebrow.textContent=cfg.hero_eyebrow;
  const candidate=list().find(p=>p.isNew&&image(p))||list().find(p=>image(p));
  let feature=hero.querySelector('.sh-featured');
  if(candidate&&cfg.show_floating_cards!==false){
