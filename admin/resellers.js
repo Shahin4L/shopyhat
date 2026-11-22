@@ -51,7 +51,7 @@ export function setupResellerOperations({db,roleCan,notify}){
    '<div class="courier-setup"><div><h4>Steadfast Courier <span id="courierConnectionStatus" class="pill">Not checked</span></h4><p>API credentials are configured securely in Supabase Edge Function Secrets. Do not paste them into product forms or public pages.</p>'+
    '<div class="tools"><button id="courierStatusButton" type="button" class="btn">Check Configuration</button><button id="courierTestButton" type="button" class="btn">Test Connection</button></div><p id="courierMessage" class="msg" role="status"></p></div>'+
    '<div><h4>Setup Guide</h4><ol><li>Create or sign in to your <a target="_blank" rel="noopener" href="https://steadfast.com.bd/">Steadfast Merchant account</a>.</li><li>Request API credentials from the merchant panel/support.</li><li>Open <a target="_blank" rel="noopener" href="https://supabase.com/dashboard/project/xwfqgmgiunlxzvzoermn/settings/functions">Supabase Edge Function Secrets</a>.</li><li>Add <code>SHOPYHAT_STEADFAST_API_KEY</code> and <code>SHOPYHAT_STEADFAST_SECRET_KEY</code>.</li><li>Use Test Connection before booking orders. Shipping is never automatic.</li></ol><p class="muted">Credential setup is free from SHOPYHAT, but your courier account and delivery services may have costs.</p></div></div>'+
-   '<h4>Book an Existing Confirmed Order</h4><p>Enter a SHOPYHAT order UUID. Verify customer address, payment method and order status first. A duplicate booking is blocked.</p><div class="courier-book-controls"><input id="courierOrderId" placeholder="Order UUID from Order Management" aria-label="SHOPYHAT order UUID"><button id="courierBookButton" class="btn primary" type="button">Book with Steadfast</button></div><p class="muted">Courier booking changes real logistics records. Confirm carefully; there is no automatic retry after an uncertain response.</p>';
+   '<h4>Book an Existing Confirmed Order</h4><p>Select a confirmed SHOPYHAT order. Booking sends the parcel to Steadfast only when you click Book and confirm.</p><div class="courier-book-controls"><select id="courierOrderId" aria-label="Select SHOPYHAT order"><option value="">Loading eligible orders…</option></select><button id="courierBookButton" class="btn primary" type="button">Book with Steadfast</button></div><p class="muted">Courier booking changes real logistics records. Confirm carefully; there is no automatic retry after an uncertain response.</p>';
   panel.append(courier);
   if(commonMessage)panel.append(commonMessage);
   const subnav=document.createElement('nav');subnav.className='reseller-subnav';subnav.setAttribute('aria-label','Reseller management');
@@ -67,7 +67,7 @@ export function setupResellerOperations({db,roleCan,notify}){
    panel.querySelectorAll('[data-reseller-goto]').forEach(btn=>{btn.classList.toggle('active',btn.dataset.resellerGoto===key);btn.setAttribute('aria-pressed',String(btn.dataset.resellerGoto===key))});
    const filter=panel.querySelector('.ops-filters');if(filter)filter.classList.toggle('hidden',['pricing','courier'].includes(key));
    if(key==='pricing')loadPrices();
-   if(key==='courier')courierStatus(false);
+   if(key==='courier'){courierStatus(false);loadCourierOrders()}
   }
   subpage('applications');
   const css=document.createElement('style');css.textContent=`
@@ -301,6 +301,21 @@ export function setupResellerOperations({db,roleCan,notify}){
   }catch(err){notify('courierMessage',err.message,true)}
   finally{if(btn)btn.disabled=false}
  }
+ async function loadCourierOrders(){
+  const field=$('courierOrderId');
+  field.innerHTML='<option value="">Loading eligible orders…</option>';
+  const {data,error}=await db.from('sh_orders').select('id,order_number,customer_name,status,tracking_id')
+   .in('status',['Confirmed','Processing','Ready to Ship']).is('tracking_id',null)
+   .order('created_at',{ascending:false}).limit(100);
+  if(error){field.innerHTML='<option value="">Unable to load orders</option>';return notify('courierMessage','Order list unavailable: '+error.message,true)}
+  field.innerHTML='<option value="">Select an order to book…</option>';
+  for(const order of data||[]){
+   const opt=document.createElement('option');opt.value=order.id;
+   opt.textContent=order.order_number+' · '+order.customer_name+' · '+order.status;
+   field.append(opt);
+  }
+  if(!data?.length)field.firstElementChild.textContent='No eligible orders awaiting courier';
+ }
  async function courierBook(){
   const id=$('courierOrderId').value.trim(),btn=$('courierBookButton');
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
@@ -309,7 +324,7 @@ export function setupResellerOperations({db,roleCan,notify}){
   btn.disabled=true;
   try{
    const result=await courierAction('book',id);
-   notify('courierMessage','Booking successful. Tracking: '+(result.tracking_code||'Pending')+(result.warning?' · '+result.warning:'')); 
+   notify('courierMessage','Booking successful. Tracking: '+(result.tracking_code||'Pending')+(result.warning?' · '+result.warning:''));await loadCourierOrders(); 
   }catch(err){notify('courierMessage',err.message,true)}
   finally{btn.disabled=false}
  }
