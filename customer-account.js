@@ -91,6 +91,7 @@ async function loadAccount(){
  if(!profile&&user.phone_confirmed_at){profile={user_id:user.id,full_name:pendingName||user.user_metadata?.name||'Customer',phone:user.phone,preferred_address:''}}
  pendingName='';
  window.dispatchEvent(new Event('sh:account'));
+ if(signedUser?.phone_confirmed_at)scheduleWatchSync();
  if(inboxTimer)clearInterval(inboxTimer);
  inboxTimer=setInterval(()=>{if(!document.hidden&&signedUser)checkInbox(true)},45000);
 }
@@ -145,18 +146,50 @@ async function notificationsView(){
  $('shWatchSaved').onclick=watchSaved;
 }
 async function watchSaved(){
- const raw=(()=>{try{return JSON.parse(localStorage.getItem('sh_wish')||'[]')}catch{return []}})();
- if(!raw.length)return message('Save a product to your wishlist first.',true);
- const r=await db.from('sh_products').select('id,legacy_id').in('legacy_id',raw.map(String).slice(0,30));
- if(r.error)return message(r.error.message,true);
- const ids=(r.data||[]).map(x=>x.id);if(!ids.length)return message('No saved active products matched.',true);
- const v=await db.from('sh_variants').select('id').in('product_id',ids).limit(70);
- if(v.error)return message(v.error.message,true);
- const payload=(v.data||[]).map(x=>({user_id:signedUser.id,variant_id:x.id}));
- if(!payload.length)return message('No product variants found.',true);
- const {error}=await db.from('sh_customer_watches').upsert(payload,{onConflict:'user_id,variant_id'});
- message(error?error.message:'Saved items are now watched for restock alerts.',!!error);
+ const count=await syncSavedWatches();
+ message(count<0?'Unable to update saved product alerts.':count+' saved product variants are watched for restock alerts.',count<0);
 }
+let watchSyncTimer=null;
+const localArray=key=>{try{const x=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(x)?x:[]}catch{return []}};
+async function syncSavedWatches(){
+ if(!signedUser?.phone_confirmed_at)return -1;
+ const wishIDs=new Set(localArray('sh_wish').map(String));
+ const cartItems=localArray('sh_cart');
+ const allIDs=[...new Set([...wishIDs,...cartItems.map(c=>String(c.id||''))].filter(x=>/^\\d+$/.test(x)))].slice(0,70);
+ if(!allIDs.length){
+  const {error}=await db.from('sh_customer_watches').delete().eq('user_id',signedUser.id);
+  return error?-1:0;
+ }
+ const productResult=await db.from('sh_products').select('id,legacy_id').in('legacy_id',allIDs);
+ if(productResult.error)return -1;
+ const matched=productResult.data||[];
+ const variantsResult=matched.length?await db.from('sh_variants').select('id,product_id,color').in('product_id',matched.map(p=>p.id)).limit(250):{data:[],error:null};
+ if(variantsResult.error)return -1;
+ const wanted=new Set();
+ for(const product of matched){
+  const vs=(variantsResult.data||[]).filter(v=>v.product_id===product.id);
+  if(wishIDs.has(String(product.legacy_id)))vs.forEach(v=>wanted.add(v.id));
+  for(const item of cartItems){
+   if(String(item.id)!==String(product.legacy_id))continue;
+   const choice=vs.find(v=>String(v.color||'').toLowerCase()===String(item.color||'').toLowerCase());
+   if(choice)wanted.add(choice.id);
+   else vs.forEach(v=>wanted.add(v.id));
+  }
+ }
+ const {data:previous,error:readErr}=await db.from('sh_customer_watches').select('variant_id').eq('user_id',signedUser.id).limit(250);
+ if(readErr)return -1;
+ const oldSet=new Set((previous||[]).map(x=>x.variant_id));
+ const additions=[...wanted].filter(id=>!oldSet.has(id)).map(variant_id=>({user_id:signedUser.id,variant_id}));
+ const removals=[...oldSet].filter(id=>!wanted.has(id));
+ if(additions.length){const {error}=await db.from('sh_customer_watches').upsert(additions,{onConflict:'user_id,variant_id'});if(error)return -1}
+ if(removals.length){const {error}=await db.from('sh_customer_watches').delete().eq('user_id',signedUser.id).in('variant_id',removals);if(error)return -1}
+ return wanted.size;
+}
+function scheduleWatchSync(){
+ if(watchSyncTimer)clearTimeout(watchSyncTimer);
+ watchSyncTimer=setTimeout(()=>{syncSavedWatches().catch(e=>console.warn('Saved watches unavailable',e))},350);
+}
+window.addEventListener('sh:saved-items',scheduleWatchSync);
 function profileView(){
  panel('<h3>Profile</h3><p>Delivery address remains optional until checkout.</p><form id="shProfileForm">'+field('full_name','Full name','text','maxlength="120" value="'+esc(profile?.full_name||'')+'"')+'<label>Preferred delivery address<textarea name="preferred_address" maxlength="400">'+esc(profile?.preferred_address||'')+'</textarea></label>'+formButton('Save profile')+'</form><details><summary>Change password</summary><form id="shPasswordForm">'+field('password','New password','password','minlength="8"')+formButton('Update password')+'</form></details>');
  $('shProfileForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const {data,error}=await db.from('sh_customer_profiles').update({full_name:String(f.get('full_name')).trim(),preferred_address:String(f.get('preferred_address')||'').trim(),updated_at:new Date().toISOString()}).eq('user_id',signedUser.id).select().maybeSingle();if(data)profile=data;message(error?error.message:'Profile saved.',!!error)};
