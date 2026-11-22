@@ -84,6 +84,8 @@ function applyDesign(){
  const display=validatedChoice(cfg.heading_font,Object.keys(FONT_DISPLAY),'Bodoni Moda');
  root.setProperty('--sh-ui-font',FONT_UI[ui]);
  root.setProperty('--sh-display-font',FONT_DISPLAY[display]);
+ root.setProperty('--sans',FONT_UI[ui]);
+ root.setProperty('--serif',FONT_DISPLAY[display]);
  root.setProperty('--sh-base-font-size',clampNum(cfg.body_font_size,13,19,15)+'px');
  root.setProperty('--sh-headline-size',String(clampNum(cfg.heading_scale,0.7,1.3,1)));
  root.setProperty('--sh-section-space',String(clampNum(cfg.section_spacing,0.65,1.6,1)));
@@ -93,6 +95,9 @@ function applyDesign(){
  document.body.classList.toggle('sh-custom-category-cols',cfg.category_columns!=null);
  const accent=/^#[0-9a-f]{6}$/i.test(cfg.accent_color||'')?cfg.accent_color:'#f47721';
  root.setProperty('--sh-accent',accent);
+ root.setProperty('--ribbon',accent);
+ const shade='#'+[1,3,5].map(i=>Math.round(parseInt(accent.slice(i,i+2),16)*.82).toString(16).padStart(2,'0')).join('');
+ root.setProperty('--ribbon-d',shade);
  root.setProperty('--sh-hero-position',validatedChoice(cfg.hero_image_position,['center top','center center','center bottom','left center','right center'],'center center'));
  const hero=document.querySelector('#p-home .hero');
  if(hero){
