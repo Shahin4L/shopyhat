@@ -147,7 +147,6 @@ function setSlide(index,manual=false){
  slideIndex=(index+slides.length)%slides.length;
  const slide=slides[slideIndex],url=safeMedia(slide.image_url);
  hero.classList.add('sh-has-image');
- hero.style.setProperty('--sh-hero-image','url("'+url.replaceAll('"','%22')+'")');
  const stage=hero.querySelector('.sh-slider-stage');
  if(stage){
   const pictures=[...stage.querySelectorAll('img')],prev=pictures[stageActive],nextIndex=1-stageActive,next=pictures[nextIndex];
