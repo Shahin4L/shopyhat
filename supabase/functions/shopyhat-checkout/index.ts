@@ -38,7 +38,7 @@ Deno.serve(async req=>{
     if(!verified.error && email){
       const staff=await db.from('sh_staff').select('role,active').eq('email',email).maybeSingle();
       authorizedStaff=!!staff.data?.active && ['owner','manager','operator'].includes(staff.data.role);
-      if(!authorizedStaff&&verified.data.user?.email_confirmed_at&&verified.data.user?.app_metadata?.account_type!=='reseller')signedCustomerId=verified.data.user.id;
+      if(!authorizedStaff&&verified.data.user?.app_metadata?.account_type!=='reseller')signedCustomerId=verified.data.user.id;
     }
   }
   if(!authorizedStaff){
