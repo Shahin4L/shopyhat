@@ -139,7 +139,7 @@ body h1,body h2,body h3{font-family:var(--sh-display-font)}
 #p-home .sh-cinematic.sh-vertical-bottom .wrap{align-items:end}
 #p-home .sh-cinematic.sh-card-left .sh-featured{right:auto;left:3%}
 #p-home .sh-cinematic.sh-card-hidden .sh-featured{display:none}
-#p-home .collection-section .mosaic{grid-template-columns:repeat(var(--sh-category-columns),minmax(0,1fr))}
+body.sh-custom-category-cols #p-home .collection-section .mosaic{grid-template-columns:repeat(var(--sh-category-columns),minmax(0,1fr))}
 #p-home .sh-campaign{border-color:var(--sh-accent)}
 #p-home .sh-cinematic .btn:not(.ghost){background:var(--sh-accent)}
 @media(max-width:820px){
