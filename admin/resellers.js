@@ -297,14 +297,22 @@ export function setupResellerOperations({db,roleCan,notify}){
  async function reload(){
   if(!allowed())return;
   try{
-   const [a,o,rf,apps]=await Promise.all([
-    db.from('sh_reseller_accounts').select('*').order('created_at',{ascending:false}).limit(200),
-    db.from('sh_reseller_fulfillment_requests').select('*').order('created_at',{ascending:false}).limit(100),
-    db.from('sh_reseller_referrals').select('*').order('created_at',{ascending:false}).limit(100),
-    db.from('sh_reseller_applications').select('*').order('created_at',{ascending:false}).limit(100)
+   const fetchSection=async table=>{
+    const items=[],page=200;
+    for(let offset=0;offset<10000;offset+=page){
+     const query=await db.from(table).select('*').order('created_at',{ascending:false}).range(offset,offset+page-1);
+     if(query.error)throw query.error;
+     items.push(...(query.data||[]));
+     if((query.data||[]).length<page)return items;
+    }
+    throw Error(table+' exceeded the 10,000-row view limit; use date-scoped server reporting.');
+   };
+   [accounts,orders,referrals,applications]=await Promise.all([
+    fetchSection('sh_reseller_accounts'),
+    fetchSection('sh_reseller_fulfillment_requests'),
+    fetchSection('sh_reseller_referrals'),
+    fetchSection('sh_reseller_applications')
    ]);
-   for(const q of [a,o,rf,apps])if(q.error)throw q.error;
-   accounts=a.data||[];orders=o.data||[];referrals=rf.data||[];applications=apps.data||[];
    renderFiltered();
    if(activeSubpage==='pricing')await loadPrices();
    notify('resellerMsg',accounts.length+' resellers, '+orders.length+' fulfillment requests, '+referrals.length+' referral orders loaded.');
