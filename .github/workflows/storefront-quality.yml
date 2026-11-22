@@ -10,6 +10,9 @@ on:
       - 'scripts/**'
       - 'package.json'
       - 'customer-account.*'
+      - 'reseller/**'
+      - 'account-confirmed.html'
+      - 'reset-password.html'
       - 'supabase/functions/shopyhat-checkout/**'
   push:
     branches: [main]
@@ -29,6 +32,7 @@ jobs:
           node --check admin/promotions.js
           node --check admin/resellers.js
           node --check customer-account.js
+          node --check reseller/app.js
           node --check scripts/verify-customer-features.mjs
           node scripts/verify-customer-features.mjs
           node --check scripts/verify-storefront.mjs
