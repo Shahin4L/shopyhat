@@ -13,7 +13,7 @@ const field=(name,label,type='text',more='')=>'<label>'+label+'<input name="'+na
 const formButton=text=>'<button class="sh-account-primary" type="submit">'+text+'</button>';
 function shell(){
  if($('shAccountModal'))return;
- const btn=document.createElement('button');btn.type='button';btn.className='ibtn sh-account-trigger';btn.id='shAccountTrigger';btn.title='Customer account';btn.setAttribute('aria-label','Open customer account');btn.textContent='◉';
+ const btn=document.createElement('button');btn.type='button';btn.className='ibtn sh-account-trigger';btn.id='shAccountTrigger';btn.title='Customer account';btn.setAttribute('aria-label','Open customer account');btn.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 21v-2a7.5 7.5 0 0 1 15 0v2"/></svg>';
  const icons=document.querySelector('#hdr .icons');icons?.append(btn);
  const dialog=document.createElement('dialog');dialog.id='shAccountModal';dialog.className='sh-account-dialog';
  dialog.innerHTML='<div class="sh-account-head"><div><small>SHOPYHAT</small><h2>My Account</h2></div><button type="button" id="shAccountClose" aria-label="Close account">×</button></div><div id="shAccountMessage" role="status"></div><div id="shAccountBody"></div>';
@@ -248,11 +248,12 @@ async function resellerView(){
 }
 function resellerOrder(item){
  if(!item)return;
- panel('<h3>Send customer order</h3><p>'+esc(item.name)+' — '+esc(item.color)+'</p><p>Public '+money(item.retail)+' · Wholesale '+money(item.wholesale)+' · Stock '+esc(item.stock??'Check availability')+'</p><form id="shResellerOrder">'+field('name','Customer full name','text','minlength="2" maxlength="120"')+field('phone','Customer mobile','tel','placeholder="01XXXXXXXXX"')+'<label>Customer delivery address<textarea name="address" required minlength="10" maxlength="400"></textarea></label>'+field('qty','Quantity','number','min="1" max="20" value="1"')+field('price','Selling price per piece (৳)','number','min="'+item.wholesale+'" step="0.01" value="'+item.retail+'"')+formButton('Submit fulfillment request')+'</form><p><button class="sh-text-button" id="shResellerBack">Back to catalog</button></p>');
+ panel('<h3>Send customer order</h3><p>'+esc(item.name)+' — '+esc(item.color)+'</p><p>Public '+money(item.retail)+' · Wholesale '+money(item.wholesale)+' · Stock '+esc(item.stock??'Check availability')+'</p><form id="shResellerOrder">'+field('name','Customer full name','text','minlength="2" maxlength="120"')+field('phone','Customer mobile','tel','placeholder="01XXXXXXXXX"')+'<label>Customer delivery address<textarea name="address" required minlength="10" maxlength="400"></textarea></label>'+field('qty','Quantity','number','min="1" max="20" value="1"')+field('price','Selling price per piece (৳)','number','min="'+item.wholesale+'" step="0.01" value="'+item.retail+'"')+'<label class="sh-account-check"><input type="checkbox" name="consent" required> Customer authorized me to share their delivery information with SHOPYHAT.</label>'+formButton('Submit fulfillment request')+'</form><p><button class="sh-text-button" id="shResellerBack">Back to catalog</button></p>');
  $('shResellerBack').onclick=resellerView;
  $('shResellerOrder').onsubmit=async e=>{
   e.preventDefault();const f=new FormData(e.currentTarget),phone=normalPhone(f.get('phone'));
   if(!phone)return message('Invalid customer mobile.',true);
+  if(!f.has('consent'))return message('Customer delivery consent is required.',true);
   const {error}=await db.rpc('sh_reseller_request',{p_variant:item.id,p_qty:Number(f.get('qty')),p_customer:String(f.get('name')),p_phone:phone,p_address:String(f.get('address')),p_retail:Number(f.get('price'))});
   message(error?error.message:'Request created. SHOPYHAT will review and arrange fulfillment.',!!error);if(!error)resellerView();
  };
