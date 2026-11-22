@@ -1521,7 +1521,7 @@ function shImgCandidates(p,color){
 function shPhotoMarkup(p,color,css=''){
   const urls=shImgCandidates(p,color);
   if(!urls.length)return art(p);
-  return `<img class="sh-real-photo" ${css?`style="${css}"`:''} src="${esc(urls[0])}" data-sh-images="${esc(JSON.stringify(urls))}" data-sh-index="0" alt="${esc(p.name)}" loading="lazy" onerror="shImageFallback(this)">`;
+  return `<img class="sh-real-photo" ${css?`style="${css}"`:''} src="${esc(urls[0])}" data-sh-images="${esc(JSON.stringify(urls))}" data-sh-index="0" alt="${esc(p.name)}" loading="lazy" decoding="async" onerror="shImageFallback(this)">`;
 }
 function shImageFallback(el){
   let urls=[];try{urls=JSON.parse(el.dataset.shImages||'[]')}catch(e){}
@@ -2375,14 +2375,25 @@ async function fetchShopyhatCatalog(){
  }));
  const [prods,vs,imgs]=data;
  await fetchPublishedCatalogStructure().catch(e=>console.warn("Catalog taxonomy unavailable",e));
+ const variantsByProduct=new Map(),imagesByVariant=new Map(),imagesByProduct=new Map();
+ for(const v of vs){
+  if(!v.active)continue;
+  if(!variantsByProduct.has(v.product_id))variantsByProduct.set(v.product_id,[]);
+  variantsByProduct.get(v.product_id).push(v);
+ }
+ for(const i of imgs){
+  const key=i.variant_id||i.product_id,group=i.variant_id?imagesByVariant:imagesByProduct;
+  if(!group.has(key))group.set(key,[]);
+  group.get(key).push(i.image_url);
+ }
  VARIANT_MAP={};
  const rows=prods.map(p=>{
-  const pv=vs.filter(v=>v.product_id===p.id&&v.active);
+  const pv=variantsByProduct.get(p.id)||[];
   VARIANT_MAP[String(p.legacy_id)]=pv.map(v=>({
     id:v.id,color:v.color,hex:v.hex||"",sku:v.sku||"",price:v.price,stock:v.stock,
-    images:imgs.filter(i=>i.variant_id===v.id).map(i=>i.image_url)
+    images:imagesByVariant.get(v.id)||[]
   }));
-  const photos=imgs.filter(i=>i.product_id===p.id&&!i.variant_id).map(i=>i.image_url);
+  const photos=imagesByProduct.get(p.id)||[];
   const root=activeRoots().find(c=>c.id===p.category_id);
   const child=root?activeChildren(root.id).find(c=>c.id===p.subcategory_id):null;
   return {id:p.legacy_id,name:p.name,name_bn:p.name_bn||"",
