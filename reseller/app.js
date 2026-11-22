@@ -5,7 +5,7 @@ const $=id=>document.getElementById(id),escape=s=>String(s??'').replace(/[&<>"']
 const money=n=>'৳'+Number(n||0).toLocaleString('en-BD',{maximumFractionDigits:2});
 const mobile=s=>{let v=String(s||'').trim().replace(/[\s-]/g,'');if(v.startsWith('+88'))v=v.slice(3);else if(v.startsWith('88'))v=v.slice(2);return /^01[3-9][0-9]{8}$/.test(v)?v:null};
 const message=(text,bad=false)=>{const el=$('alert');el.textContent=text;el.classList.toggle('error',bad);if(text)el.scrollIntoView({behavior:'smooth',block:'nearest'})};
-let user=null,account=null,selection=null,catalog=[],catalogPage=1,catalogTotal=0;
+let user=null,account=null,selection=null,catalog=[],catalogPage=1,catalogTotal=0,catalogQueryToken=0,catalogSearchTimer=null;
 const CATALOG_PAGE_SIZE=12;
 const mediaURL=raw=>{const url=String(raw||'').trim();const match=url.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||url.match(/[?&]id=([\w-]+)/);if(match&&url.includes('google.com'))return 'https://drive.google.com/thumbnail?id='+encodeURIComponent(match[1])+'&sz=w800';try{const u=new URL(url);return u.protocol==='https:'?u.href:''}catch{return ''}};
 function productFallback(){const el=document.createElement('div');el.className='product-placeholder';el.innerHTML='<span aria-hidden="true">▧</span><strong>SHOPYHAT</strong><small>Image unavailable</small>';return el}
@@ -58,9 +58,9 @@ async function loadDashboard(){
  list('referralList',referrals.data||[],r=>'<span><b>'+escape(r.status)+'</b><small>'+new Date(r.created_at).toLocaleDateString('en-BD')+'</small></span><span>'+money(r.margin_total)+' provisional</span>');
 }
 async function loadCatalog(){
- const query=String($('catalogSearch')?.value||'').trim(),stock=$('catalogStock')?.value||'all',sort=$('catalogSort')?.value||'name';
+ const query=String($('catalogSearch')?.value||'').trim(),stock=$('catalogStock')?.value||'all',sort=$('catalogSort')?.value||'name',requestToken=++catalogQueryToken;
  let q=db.from('sh_reseller_catalog').select('variant_id,product_id,legacy_id,name,color,stock,public_price,wholesale,resale_price,customized,image_url,created_at',{count:'exact'});
- if(query)q=q.or('name.ilike.%'+query.replace(/[%,()]/g,'')+'%,color.ilike.%'+query.replace(/[%,()]/g,'')+'%');
+ if(query){const search=query.replace(/[%,()]/g,'').trim();if(search)q=q.or('name.ilike.%'+search+'%,color.ilike.%'+search+'%');}
  if(stock==='available')q=q.gt('stock',0);
  if(stock==='out')q=q.eq('stock',0);
  if(sort==='margin')q=q.order('gross_margin',{ascending:false});
@@ -69,7 +69,8 @@ async function loadCatalog(){
  else q=q.order('name',{ascending:true});
  const from=(catalogPage-1)*CATALOG_PAGE_SIZE;
  const {data,error,count}=await q.range(from,from+CATALOG_PAGE_SIZE-1);
- if(error){message('Cannot load product catalog: '+error.message,true);return}
+ if(error){if(requestToken===catalogQueryToken)message('Cannot load product catalog: '+error.message,true);return}
+ if(requestToken!==catalogQueryToken)return;
  catalogTotal=count||0;
  if(!data?.length&&catalogPage>1){catalogPage=1;return loadCatalog()}
  catalog=(data||[]).map(x=>({...x,public_price:Number(x.public_price||0),wholesale:Number(x.wholesale||0),resale_price:Number((x.resale_price??x.public_price)||0),customized:!!x.customized,image:x.image_url||''}));
@@ -239,7 +240,7 @@ $('selfPasswordForm').onsubmit=async event=>{
  finally{button.disabled=false}
 };
 for(const id of ['catalogSearch','catalogStock','catalogSort']){
- const el=$(id);if(el)el.addEventListener(id==='catalogSearch'?'input':'change',()=>{catalogPage=1;loadCatalog()});
+ const el=$(id);if(el)el.addEventListener(id==='catalogSearch'?'input':'change',()=>{catalogPage=1;if(catalogSearchTimer)clearTimeout(catalogSearchTimer);if(id==='catalogSearch')catalogSearchTimer=setTimeout(loadCatalog,250);else loadCatalog()});
 }
 $('catalogPrev').onclick=()=>{catalogPage--;loadCatalog()};
 $('catalogNext').onclick=()=>{catalogPage++;loadCatalog()};

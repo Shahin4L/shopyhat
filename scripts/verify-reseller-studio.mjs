@@ -5,7 +5,7 @@ const partner=read('reseller/app.js'),partnerCSS=read('reseller/styles.css'),par
 const admin=read('admin/resellers.js'),courier=read('supabase/functions/shopyhat-courier/index.ts');
 const builder=read('scripts/build.mjs');
 new Function(partner.replace(/^import .*?;\s*$/gm,''));
-new Function(admin.replace(/^export /gm,''));
+new Function(admin.replace(/^import[^\n]*\n/gm,'').replace(/^export /gm,''));
 assert(partner.includes("drive.google.com/thumbnail"),'Google Drive images must use actual thumbnails');
 assert(partner.includes('image.onerror=()=>visual.replaceChildren(productFallback())'),'Broken image fallback missing');
 assert(partner.includes("db.from('sh_reseller_catalog')"),'Reseller catalog must use paginated RLS view');
@@ -15,13 +15,13 @@ assert(partner.includes('for(const p of results){'),'Server paged results must n
 assert(partnerHTML.includes('catalogSearch')&&partnerHTML.includes('catalogStock'),'Reseller search filters missing');
 assert(partnerCSS.includes('@media(max-width:520px)'),'Responsive product card layout missing');
 assert(admin.includes("['applications','Requests']")&&admin.includes("['pricing','Product Pricing']"),'Admin reseller submenus missing');
-assert(admin.includes("['courier','Courier API']"),'Courier subnavigation missing');
+assert(admin.includes("['courier','API Connections']"),'Generic integration subnavigation missing');
 assert(admin.includes('uniqueLogin()'),'Unique ID suggestion missing');
 assert(admin.includes("db.from('sh_reseller_admin_catalog')"),'Admin pricing pagination missing');
 assert(admin.includes('data-price-active'),'Product wholesale publish toggle missing');
 assert(admin.includes('resellerPricePrev')&&admin.includes('resellerPriceNext'),'Catalog page controls missing');
 assert(admin.includes("credentialRequest('reset'"),'Existing Admin password reset missing');
-assert(admin.includes('courierOrderId'),'Order booking selector missing');
+assert(admin.includes('mountApiHub('),'Generic API Hub must be mounted');
 assert(courier.includes("['owner','manager'].includes(staff.role)"),'Courier backend must verify staff role');
 assert(courier.includes('SHOPYHAT_STEADFAST_API_KEY')&&courier.includes('SHOPYHAT_STEADFAST_SECRET_KEY'),'Secrets must be kept server side');
 assert(courier.includes("order.tracking_id"),'Courier booking must avoid existing tracking IDs');

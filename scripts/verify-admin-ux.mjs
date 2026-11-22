@@ -28,7 +28,7 @@ assert(adminHTML.includes('id="orderPaymentFilter"'),'Order payment method filte
 assert(adminHTML.includes('id="orderPaymentState"'),'Order payment status filter missing');
 assert(workflow.includes("await cp('reseller'"),'Production build omits reseller portal');
 new Function(reseller.replace(/^import .*?;\s*$/gm,''));
-new Function(admin.replace(/^export /gm,''));
+new Function(admin.replace(/^import[^\n]*\n/gm,'').replace(/^export /gm,''));
 new Function(studio.replace(/^export /gm,''));
 new Function(storefront);
 console.log('SHOPYHAT reseller credentials, registration, admin filters, storefront preview and New Arrivals integration checks passed.');
