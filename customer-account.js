@@ -204,19 +204,27 @@ async function resellerView(){
   return;
  }
  if(account.status!=='approved')return panel('<h3>Reseller application</h3><p>Status: <b>'+esc(account.status)+'</b>. Approval is required before wholesale prices are available.</p>');
- const [p,v,prices,requests]=await Promise.all([
-  db.from('sh_products').select('id,name,base_price,status').eq('status','active').limit(250),
+ const [p,v,prices,requests,referrals]=await Promise.all([
+  db.from('sh_products').select('id,legacy_id,name,base_price,status').eq('status','active').limit(250),
   db.from('sh_variants').select('id,product_id,color,price,stock,active').eq('active',true).limit(800),
   db.from('sh_reseller_prices').select('product_id,wholesale_price,active').eq('active',true).limit(250),
-  db.from('sh_reseller_fulfillment_requests').select('id,status,quantity,margin_total,created_at').order('created_at',{ascending:false}).limit(30)]);
- if([p,v,prices,requests].some(x=>x.error))return panel('<p>Reseller catalog is temporarily unavailable.</p>');
+  db.from('sh_reseller_fulfillment_requests').select('id,status,quantity,margin_total,created_at').order('created_at',{ascending:false}).limit(30),
+  db.from('sh_reseller_referrals').select('id,status,margin_total,created_at').order('created_at',{ascending:false}).limit(30)]);
+ if([p,v,prices,requests,referrals].some(x=>x.error))return panel('<p>Reseller catalog is temporarily unavailable.</p>');
  const products=(p.data||[]).filter(x=>(prices.data||[]).some(z=>z.product_id===x.id));
  const optionRows=(v.data||[]).filter(x=>products.some(p=>p.id===x.product_id));
  const options=optionRows.map(x=>{const item=products.find(p=>p.id===x.product_id),wh=prices.data.find(z=>z.product_id===item.id);return{variant:x,item,wholesale:Number(wh.wholesale_price),retail:Number(x.price??item.base_price)}});
- const optionData=options.map(o=>({id:o.variant.id,name:o.item.name,color:o.variant.color,stock:o.variant.stock,retail:o.retail,wholesale:o.wholesale}));
+ const optionData=options.map(o=>({id:o.variant.id,name:o.item.name,color:o.variant.color,stock:o.variant.stock,retail:o.retail,wholesale:o.wholesale,legacyId:o.item.legacy_id}));
  window.__shResellerCatalog=optionData;
- panel('<h3>Reseller Catalog</h3><p class="sh-account-note">Stock is live when refreshed. Listed margin is a gross estimate; fulfillment must be approved before shipping.</p><div class="sh-reseller-list">'+options.slice(0,60).map(o=>'<div class="sh-reseller-product"><div><b>'+esc(o.item.name)+'</b><small>'+esc(o.variant.color)+' · Stock: '+(o.variant.stock==null?'Ask availability':o.variant.stock)+'</small><small>Public: '+money(o.retail)+' · Your price: '+money(o.wholesale)+' · Margin: '+money(o.retail-o.wholesale)+'</small></div><button class="sh-account-secondary" data-resell="'+esc(o.variant.id)+'">Create order</button></div>').join('')+'</div><h3>My Fulfillment Requests</h3>'+(requests.data||[]).map(o=>'<div class="sh-account-line"><div><b>'+esc(o.status)+'</b><small>'+new Date(o.created_at).toLocaleDateString()+'</small></div><span>'+money(o.margin_total)+'</span></div>').join(''));
+ panel('<h3>Reseller Catalog</h3><p class="sh-account-note">Stock is live when refreshed. Listed margin is a gross estimate; fulfillment must be approved before shipping.</p><div class="sh-reseller-list">'+options.slice(0,60).map(o=>'<div class="sh-reseller-product"><div><b>'+esc(o.item.name)+'</b><small>'+esc(o.variant.color)+' · Stock: '+(o.variant.stock==null?'Ask availability':o.variant.stock)+'</small><small>Public: '+money(o.retail)+' · Your price: '+money(o.wholesale)+' · Margin: '+money(o.retail-o.wholesale)+'</small></div><div class="sh-account-actions"><button class="sh-account-secondary" data-share-reseller="'+esc(o.item.legacy_id)+'">Copy share link</button><button class="sh-account-secondary" data-resell="'+esc(o.variant.id)+'">Create order</button></div></div>').join('')+'</div><h3>My Fulfillment Requests</h3>'+(requests.data||[]).map(o=>'<div class="sh-account-line"><div><b>'+esc(o.status)+'</b><small>'+new Date(o.created_at).toLocaleDateString()+'</small></div><span>'+money(o.margin_total)+'</span></div>').join('')+'<h3>Referral Link Orders</h3><p>Margins shown here are provisional until orders are paid, delivered and settlements approved.</p>'+(referrals.data||[]).map(x=>'<div class="sh-account-line"><div><b>'+esc(x.status)+'</b><small>'+new Date(x.created_at).toLocaleDateString('en-BD')+'</small></div><span>'+money(x.margin_total)+'</span></div>').join(''));
  document.querySelectorAll('[data-resell]').forEach(b=>b.onclick=()=>resellerOrder(optionData.find(o=>o.id===b.dataset.resell)));
+ document.querySelectorAll('[data-share-reseller]').forEach(button=>button.onclick=async()=>{
+  const id=String(button.dataset.shareReseller||'');
+  if(!/^\\d+$/.test(id))return message('Product sharing unavailable for this item.',true);
+  const url=location.origin+location.pathname+'?ref='+encodeURIComponent(signedUser.id)+'#p/'+encodeURIComponent(id);
+  try{await navigator.clipboard.writeText(url);message('Share link copied. Linked orders will appear under Referral Link Orders.')}
+  catch(e){message('Copy this link: '+url)}
+ });
 }
 function resellerOrder(item){
  if(!item)return;
