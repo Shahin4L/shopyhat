@@ -18,7 +18,7 @@ export function setupPromotions({db,roleCan,notify}){
     <section id="promoEditor" class="media-section hidden" style="padding:18px;margin-top:18px;border:1px solid #ecdfd3;border-radius:14px;background:#fffaf6">
     <div class="topline"><h3 id="promoEditorTitle">New Promotion</h3><button class="btn small" type="button" id="promoCancel">Close</button></div>
     <form id="promoForm">
-      <div class="fieldrow"><div><label>Promo Code *</label><input name="code" required minlength="3" maxlength="32" pattern="[A-Z0-9_-]{3,32}" placeholder="EID2026" autocapitalize="characters"></div>
+      <div class="fieldrow"><div><label>Promo Code *</label><input name="code" required minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]{3,32}" placeholder="EID2026" autocapitalize="characters"></div>
       <div><label>Campaign label</label><input name="title" maxlength="120" placeholder="Festive offer"></div></div>
       <div class="fieldrow"><div><label>Discount type</label><select name="discount_type"><option value="percent">Percentage (%)</option><option value="fixed">Fixed BDT (৳)</option></select></div>
       <div><label>Discount value *</label><input type="number" name="discount_value" step="0.01" min="0.01" required value="10"></div></div>
