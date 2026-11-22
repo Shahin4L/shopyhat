@@ -5,7 +5,7 @@ export function mountApiHub({panel,db,notify}){
  root.innerHTML=`<div class="api-hub">
  <div class="topline"><div><h3>API Connections</h3><p class="muted">Connect to any supported external service or give an authorized partner access to SHOPYHAT. No fixed courier provider and no automatic shipment booking.</p></div><button type="button" class="btn small" id="apiHubRefresh">Refresh</button></div>
  <div class="api-hub-tabs" role="group" aria-label="Integration directions"><button type="button" data-api-tab="out" class="active">Outbound · Connect to others</button><button type="button" data-api-tab="in">Inbound · Partners connect to SHOPYHAT</button><button type="button" data-api-tab="guide">Setup Guide</button></div>
- <section id="apiHubOut"><div class="api-hub-grid"><form class="api-hub-card" id="apiConnectionForm"><h4>Create an API Connection</h4><p class="muted">Add details from your provider's API documentation. Saved secrets are encrypted and never shown again.</p>
+ <section id="apiHubOut"><div class="api-hub-grid"><form class="api-hub-card" id="apiConnectionForm"><input type="hidden" name="id"><h4>Create or Edit an API Connection</h4><p class="muted">Add details from your provider's API documentation. Saved secrets are encrypted and never shown again.</p>
  <label>Connection name<input name="display_name" required minlength="2" maxlength="100" placeholder="My courier or business service"></label>
  <label>Provider API Base URL<input name="base_url" required inputmode="url" placeholder="https://api.provider.com" maxlength="300"></label>
  <label>Connection test endpoint (GET)<input name="test_path" required value="/health" placeholder="/health" maxlength="180"></label>
@@ -55,7 +55,18 @@ export function mountApiHub({panel,db,notify}){
    };
    const disable=document.createElement('button');disable.className='btn small';disable.type='button';disable.textContent='Disable';disable.disabled=!item.active;
    disable.onclick=async()=>{if(!confirm('Disable this connection?'))return;try{await request('disable_connection',{id:item.id});message('Connection disabled.');await refresh()}catch(e){message(e.message,true)}};
-   actions.append(test,disable);row.append(top,actions);host.append(row);
+   const edit=document.createElement('button');edit.className='btn small';edit.type='button';edit.textContent='Edit Settings';
+   edit.onclick=()=>{
+    show('out');
+    const form=$('apiConnectionForm');
+    for(const field of ['id','display_name','base_url','test_path','auth_mode','key_header','secret_header']){
+     if(form.elements[field])form.elements[field].value=item[field]??'';
+    }
+    form.elements.token.value='';form.elements.secret.value='';
+    form.scrollIntoView({behavior:'smooth',block:'start'});
+    message('Editing '+item.display_name+'. Leave secret fields empty to keep existing credentials.');
+   };
+   actions.prepend(edit);actions.append(test,disable);row.append(top,actions);host.append(row);
   }
  }
  function renderClients(items){
