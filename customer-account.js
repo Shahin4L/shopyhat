@@ -1,4 +1,4 @@
-/* SHOPYHAT Account Hub — verified mobile/password sign-in, guest checkout remains optional. */
+/* SHOPYHAT customer account, password-based login without SMS OTP. Guest checkout stays optional. */
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
 const URL='https://xwfqgmgiunlxzvzoermn.supabase.co',KEY='sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP';
 const db=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'sh_customer_auth_v1'},global:{headers:{'X-Client-Info':'shopyhat-customer-v1'}}});
@@ -114,10 +114,10 @@ async function loadAccount(){
  if(!result.error&&result.data)profile=result.data;
  else if(!result.error&&user.email){
   const fullName=pendingName||String(user.user_metadata?.name||'Customer').slice(0,100);
-  const {data}=await db.from('sh_customer_profiles').insert({user_id:user.id,full_name:fullName,phone:'+88'+normalPhone(user.user_metadata?.mobile||pendingPhone||''),email:user.email.toLowerCase()}).select().maybeSingle();
+  const {data}=await db.from('sh_customer_profiles').insert({user_id:user.id,full_name:fullName,phone:normalPhone(user.user_metadata?.mobile||pendingPhone||'')?'+88'+normalPhone(user.user_metadata?.mobile||pendingPhone||''):null,email:user.email.toLowerCase()}).select().maybeSingle();
   if(data)profile=data;
  }
- if(!profile){profile={user_id:user.id,full_name:pendingName||user.user_metadata?.name||'Customer',phone:'+88'+(normalPhone(user.user_metadata?.mobile||'')||''),email:user.email,preferred_address:''}}
+ if(!profile){profile={user_id:user.id,full_name:pendingName||user.user_metadata?.name||'Customer',phone:normalPhone(user.user_metadata?.mobile||'')?'+88'+normalPhone(user.user_metadata?.mobile||''):null,email:user.email,preferred_address:''}}
  pendingName='';
  window.dispatchEvent(new Event('sh:account'));
  if(signedUser)scheduleWatchSync();
