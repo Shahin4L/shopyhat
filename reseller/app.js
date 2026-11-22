@@ -134,6 +134,45 @@ function renderCatalog(){
  $('catalogPageLabel').textContent='Page '+catalogPage+' of '+totalPages;
  $('catalogPrev').disabled=catalogPage<=1;$('catalogNext').disabled=catalogPage>=totalPages;
 }
+async function openMediaLibrary(product){
+ const modal=$('mediaDialog'),host=$('mediaList');
+ $('mediaProductTitle').textContent=product.name+' · '+product.color;
+ host.textContent='Loading approved product photos…';modal.showModal();
+ const {data,error}=await db.from('sh_product_images').select('id,image_url,alt_text,variant_id,sort_order')
+  .eq('product_id',product.product_id).order('sort_order',{ascending:true}).limit(24);
+ if(error){host.textContent='Unable to load product images: '+error.message;return}
+ host.replaceChildren();
+ if(!data?.length){host.textContent='No product images available yet. Ask SHOPYHAT Admin to add them.';return}
+ for(const photo of data){
+  const tile=document.createElement('div');tile.className='media-tile';
+  const visual=document.createElement('div');visual.className='media-preview';
+  const imageURL=mediaURL(photo.image_url);
+  if(imageURL){const image=document.createElement('img');image.src=imageURL;image.alt=photo.alt_text||product.name;image.loading='lazy';image.onerror=()=>visual.replaceChildren(productFallback());visual.append(image)}
+  else visual.append(productFallback());
+  const label=document.createElement('small');label.textContent=photo.variant_id===product.variant_id?'Selected variant':'Other product image';
+  const button=document.createElement('button');button.type='button';button.className='outline';button.textContent='Download Photo';
+  button.onclick=()=>downloadMedia(photo,button);
+  tile.append(visual,label,button);host.append(tile);
+ }
+}
+async function downloadMedia(photo,button){
+ const initial=button.textContent;button.disabled=true;button.textContent='Preparing…';
+ try{
+  const {data:{session},error}=await db.auth.getSession();
+  if(error||!session?.access_token)throw Error('Please sign in again to download.');
+  const response=await fetch(url+'/functions/v1/shopyhat-reseller-media',{
+   method:'POST',headers:{apikey:key,authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},
+   body:JSON.stringify({image_id:photo.id}),cache:'no-store'
+  });
+  if(!response.ok){const payload=await response.json().catch(()=>({}));throw Error(payload.error||'Image not available')}
+  const blob=await response.blob();
+  const ext=blob.type==='image/png'?'png':blob.type==='image/webp'?'webp':'jpg';
+  const href=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=href;link.download='SHOPYHAT-product-'+photo.id.slice(0,8)+'.'+ext;document.body.append(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(href),5000);message('Photo download started.');
+ }catch(error){message(error.message||'Photo could not be downloaded',true)}
+ finally{button.disabled=false;button.textContent=initial}
+}
 function openRequest(p){selection=p;$('requestProduct').textContent=p.name+' — '+p.color+' · Wholesale '+money(p.wholesale)+' · Selling '+money(p.resale_price);
  const f=$('requestForm');f.reset();f.elements.retail.value=p.resale_price;
  f.elements.retail.min=p.wholesale;f.elements.retail.max=Math.max(p.public_price*5,p.wholesale);
@@ -199,6 +238,7 @@ for(const id of ['catalogSearch','catalogStock','catalogSort']){
 $('catalogPrev').onclick=()=>{catalogPage--;loadCatalog()};
 $('catalogNext').onclick=()=>{catalogPage++;loadCatalog()};
 $('resellerRefresh').onclick=()=>loadDashboard();
+$('mediaClose').onclick=()=>$('mediaDialog').close();
 $('logout').onclick=logout;$('logoutFirst').onclick=logout;$('closeRequest').onclick=()=>$('requestDialog').close();
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 $('requestForm').onsubmit=async event=>{
