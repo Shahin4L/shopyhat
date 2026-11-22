@@ -20,7 +20,7 @@ Deno.serve(async req=>{
   // The fingerprint never contains reversible customer information in storage.
   const source=req.headers.get('cf-connecting-ip')||req.headers.get('x-real-ip')||'unknown';
   const hash=await fingerprint(source+'|'+phone);
-  const {data,error}=await db.rpc('track_order_secure',{p_order:id,p_phone:phone,p_fingerprint:hash});
+  const {data,error}=await db.rpc('sh_track_order_rpc',{p_order:id,p_phone:phone,p_fingerprint:hash});
   if(error){console.error('Tracking RPC error:',error.code);return respond(origin,{ok:false,error:'Tracking temporarily unavailable. Try again later.'},503)}
   return respond(origin,data||{ok:false,error:'Order not found.'},data?.ok?200:404);
  }catch(e){console.error('Tracking request error:',e instanceof Error?e.name:'unknown');return respond(origin,{ok:false,error:'Unable to search for the order right now.'},400)}
