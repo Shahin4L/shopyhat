@@ -220,7 +220,7 @@ async function resellerView(){
  document.querySelectorAll('[data-resell]').forEach(b=>b.onclick=()=>resellerOrder(optionData.find(o=>o.id===b.dataset.resell)));
  document.querySelectorAll('[data-share-reseller]').forEach(button=>button.onclick=async()=>{
   const id=String(button.dataset.shareReseller||'');
-  if(!/^\\d+$/.test(id))return message('Product sharing unavailable for this item.',true);
+  if(!/^\d+$/.test(id))return message('Product sharing unavailable for this item.',true);
   const url=location.origin+location.pathname+'?ref='+encodeURIComponent(signedUser.id)+'#p/'+encodeURIComponent(id);
   try{await navigator.clipboard.writeText(url);message('Share link copied. Linked orders will appear under Referral Link Orders.')}
   catch(e){message('Copy this link: '+url)}
