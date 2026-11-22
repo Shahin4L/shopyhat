@@ -28,6 +28,11 @@ async function restore(){
   showPanel('dashboard');
   $('welcome').textContent=account.business_name||'SHOPYHAT Partner';
   $('resellerMeta').textContent='Reseller ID: '+account.login_name+' · Shop URL: '+(account.shop_slug||'Not configured');
+  const partnerURL=location.origin+'/?ref='+encodeURIComponent(account.shop_slug||'');
+  $('resellerShareURL').textContent=account.shop_slug?partnerURL:'Ask Admin to assign your shop URL';
+  $('openStoreLink').href=account.shop_slug?partnerURL:location.origin;
+  $('copyStoreLink').disabled=!account.shop_slug;
+
   await loadDashboard();
  }catch(err){showLogin();message(err.message||'Unable to load account',true)}
 }
@@ -90,7 +95,7 @@ function renderCatalog(){
   const title=document.createElement('div');title.className='product-title';title.textContent=p.name;
   const meta=document.createElement('div');meta.className='product-meta';meta.textContent='Color: '+p.color+' · '+(p.stock===null?'Stock: Ask Admin':p.stock>0?'Available: '+p.stock:'Out of stock');
   const prices=document.createElement('div');prices.className='pricebar';
-  prices.innerHTML='<span>Store price<b>'+money(p.public_price)+'</b></span><span>Wholesale cost<b>'+money(p.wholesale)+'</b></span><span>Your margin<b>'+money(Math.max(0,p.resale_price-p.wholesale))+'</b></span>';
+  prices.innerHTML='<span>Store price<b>'+money(p.public_price)+'</b></span><span>Wholesale cost<b>'+money(p.wholesale)+'</b></span><span>Gross margin<b>'+money(Math.max(0,p.resale_price-p.wholesale))+'</b></span>';
   const editor=document.createElement('div');editor.className='reseller-price-editor';
   const label=document.createElement('label');label.textContent='Your customer selling price (৳)';
   const input=document.createElement('input');input.type='number';input.min=String(p.wholesale);input.max=String(Math.max(p.public_price*5,p.wholesale));input.step='0.01';input.value=String(p.resale_price);input.setAttribute('aria-label','Your selling price for '+p.name+' '+p.color);
@@ -121,6 +126,7 @@ function renderCatalog(){
   const share=document.createElement('button');share.type='button';share.textContent='Copy Link';
   share.disabled=!p.legacy_id||!account?.shop_slug;
   share.onclick=async()=>{
+   if(Number(input.value)!==p.resale_price)return message('Save your new selling price before sharing this product link.',true);
    const url=location.origin+'/?ref='+encodeURIComponent(account.shop_slug)+'#p/'+encodeURIComponent(p.legacy_id);
    try{await navigator.clipboard.writeText(url);message('Reseller product link copied.')}catch{message('Copy this link: '+url)}
   };
@@ -238,6 +244,11 @@ for(const id of ['catalogSearch','catalogStock','catalogSort']){
 $('catalogPrev').onclick=()=>{catalogPage--;loadCatalog()};
 $('catalogNext').onclick=()=>{catalogPage++;loadCatalog()};
 $('resellerRefresh').onclick=()=>loadDashboard();
+$('copyStoreLink').onclick=async()=>{
+ if(!account?.shop_slug)return message('No shop URL has been assigned.',true);
+ const url=location.origin+'/?ref='+encodeURIComponent(account.shop_slug);
+ try{await navigator.clipboard.writeText(url);message('Your reseller storefront link was copied.')}catch{message('Copy this link: '+url)}
+};
 $('mediaClose').onclick=()=>$('mediaDialog').close();
 $('logout').onclick=logout;$('logoutFirst').onclick=logout;$('closeRequest').onclick=()=>$('requestDialog').close();
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
