@@ -1,0 +1,30 @@
+name: SHOPYHAT Cinematic Storefront Quality Check
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'admin/**'
+      - 'storefront-experience.*'
+      - 'assets/**'
+      - 'scripts/**'
+      - 'package.json'
+  push:
+    branches: [main]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate JavaScript syntax
+        run: |
+          node --check storefront-experience.js
+          node --check admin/experience.js
+          node --check admin/app.js
+      - name: Validate vector illustration
+        run: python3 -c "import xml.etree.ElementTree as ET; ET.parse('assets/shopyhat-cinematic-art.svg')"
+      - name: Verify site build
+        run: npm test
