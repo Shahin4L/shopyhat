@@ -5,7 +5,11 @@ const $=id=>document.getElementById(id),escape=s=>String(s??'').replace(/[&<>"']
 const money=n=>'৳'+Number(n||0).toLocaleString('en-BD',{maximumFractionDigits:2});
 const mobile=s=>{let v=String(s||'').trim().replace(/[\s-]/g,'');if(v.startsWith('+88'))v=v.slice(3);else if(v.startsWith('88'))v=v.slice(2);return /^01[3-9][0-9]{8}$/.test(v)?v:null};
 const message=(text,bad=false)=>{const el=$('alert');el.textContent=text;el.classList.toggle('error',bad);if(text)el.scrollIntoView({behavior:'smooth',block:'nearest'})};
-let user=null,account=null,selection=null,catalog=[];
+let user=null,account=null,selection=null,catalog=[],catalogPage=1;
+const CATALOG_PAGE_SIZE=12;
+const mediaURL=raw=>{const url=String(raw||'').trim();const match=url.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||url.match(/[?&]id=([\w-]+)/);if(match&&url.includes('google.com'))return 'https://drive.google.com/thumbnail?id='+encodeURIComponent(match[1])+'&sz=w800';try{const u=new URL(url);return u.protocol==='https:'?u.href:''}catch{return ''}};
+function productFallback(){const el=document.createElement('div');el.className='product-placeholder';el.innerHTML='<span aria-hidden="true">▧</span><strong>SHOPYHAT</strong><small>Image unavailable</small>';return el}
+
 async function logout(){await db.auth.signOut();user=null;account=null;showLogin()}
 function showLogin(){ $('auth').hidden=false;$('passwordPanel').hidden=true;$('dashboard').hidden=true;}
 function showPanel(name){
@@ -54,24 +58,7 @@ async function loadDashboard(){
   return{variant_id:v.id,product_id:p.id,legacy_id:p.legacy_id,name:p.name,color:v.color||'Standard',
    stock:v.stock,public_price:Number(v.price??p.base_price),wholesale,image:image?.image_url||''};
  }).filter(Boolean);
- $('products').replaceChildren();
- for(const p of catalog){
-  const card=document.createElement('article');card.className='product';
-  if(p.image&&/^https:\/\//i.test(p.image)){const image=document.createElement('img');image.className='image';image.src=p.image;image.loading='lazy';image.alt=p.name;card.append(image)}
-  const body=document.createElement('div');body.className='body';
-  body.innerHTML='<strong>'+escape(p.name)+'</strong><small>Variant: '+escape(p.color)+' · Stock: '+(p.stock===null?'Confirm availability':p.stock)+'</small>'+
-  '<div class="pricebar"><span>Public <b>'+money(p.public_price)+'</b></span><span>Your Price <b>'+money(p.wholesale)+'</b></span><span>Gross Margin <b>'+money(p.public_price-p.wholesale)+'</b></span></div>';
-  const actions=document.createElement('div');actions.className='actions';
-  const share=document.createElement('button');share.type='button';share.textContent='Copy Share Link';
-  share.disabled=!p.legacy_id||!account?.shop_slug;
-  share.onclick=async()=>{
-   const path=location.origin+'/?ref='+encodeURIComponent(account.shop_slug)+'#p/'+encodeURIComponent(p.legacy_id);
-   try{await navigator.clipboard.writeText(path);message('Product share link copied.')}catch{message('Share this link: '+path)}
-  };
-  const order=document.createElement('button');order.type='button';order.textContent='Create Request';order.disabled=p.stock!==null&&p.stock<1;order.onclick=()=>openRequest(p);
-  actions.append(share,order);body.append(actions);card.append(body);$('products').append(card);
- }
- if(!catalog.length)$('products').textContent='No active reseller products available. Ask SHOPYHAT Admin to publish wholesale prices.';
+ renderCatalog();
  const list=(target,items,formatter)=>{
   $(target).replaceChildren();
   if(!items.length){$(''+target).textContent='No records yet.';return}
@@ -79,6 +66,48 @@ async function loadDashboard(){
  };
  list('requestList',requests.data||[],r=>'<span><b>'+escape(r.status)+'</b><small>'+new Date(r.created_at).toLocaleDateString('en-BD')+' · '+r.quantity+' piece(s)</small></span><span>'+money(r.margin_total)+' gross margin</span>');
  list('referralList',referrals.data||[],r=>'<span><b>'+escape(r.status)+'</b><small>'+new Date(r.created_at).toLocaleDateString('en-BD')+'</small></span><span>'+money(r.margin_total)+' provisional</span>');
+}
+function renderCatalog(){
+ const query=String($('catalogSearch')?.value||'').trim().toLowerCase(),stock=$('catalogStock')?.value||'all',sort=$('catalogSort')?.value||'name';
+ let results=catalog.filter(p=>{
+   if(stock==='available'&&p.stock!==null&&p.stock<=0)return false;
+   if(stock==='out'&&(p.stock===null||p.stock>0))return false;
+   return !query||(p.name+' '+p.color+' '+p.legacy_id).toLowerCase().includes(query);
+ });
+ results.sort((a,b)=>sort==='margin'?(b.public_price-b.wholesale)-(a.public_price-a.wholesale):sort==='price'?a.public_price-b.public_price:sort==='latest'?String(b.legacy_id||'').localeCompare(String(a.legacy_id||'')):a.name.localeCompare(b.name));
+ const totalPages=Math.max(1,Math.ceil(results.length/CATALOG_PAGE_SIZE));catalogPage=Math.max(1,Math.min(catalogPage,totalPages));
+ const host=$('products');host.replaceChildren();
+ for(const p of results.slice((catalogPage-1)*CATALOG_PAGE_SIZE,catalogPage*CATALOG_PAGE_SIZE)){
+  const card=document.createElement('article');card.className='product';
+  const visual=document.createElement('div');visual.className='product-image';
+  const url=mediaURL(p.image);
+  if(url){
+   const image=document.createElement('img');image.src=url;image.alt=p.name+' - '+p.color;image.loading='lazy';
+   image.referrerPolicy='no-referrer';
+   image.onerror=()=>visual.replaceChildren(productFallback());
+   visual.append(image);
+  }else visual.append(productFallback());
+  card.append(visual);
+  const body=document.createElement('div');body.className='body';
+  const title=document.createElement('div');title.className='product-title';title.textContent=p.name;
+  const meta=document.createElement('div');meta.className='product-meta';meta.textContent='Color: '+p.color+' · '+(p.stock===null?'Stock: Ask Admin':p.stock>0?'Available: '+p.stock:'Out of stock');
+  const prices=document.createElement('div');prices.className='pricebar';
+  prices.innerHTML='<span>Public<b>'+money(p.public_price)+'</b></span><span>Your price<b>'+money(p.wholesale)+'</b></span><span>Gross margin<b>'+money(Math.max(0,p.public_price-p.wholesale))+'</b></span>';
+  const actions=document.createElement('div');actions.className='actions';
+  const share=document.createElement('button');share.type='button';share.textContent='Copy Link';
+  share.disabled=!p.legacy_id||!account?.shop_slug;
+  share.onclick=async()=>{
+   const url=location.origin+'/?ref='+encodeURIComponent(account.shop_slug)+'#p/'+encodeURIComponent(p.legacy_id);
+   try{await navigator.clipboard.writeText(url);message('Reseller product link copied.')}catch{message('Copy this link: '+url)}
+  };
+  const order=document.createElement('button');order.type='button';order.textContent=p.stock!==null&&p.stock<=0?'Out of Stock':'Create Request';order.disabled=p.stock!==null&&p.stock<=0;
+  order.onclick=()=>openRequest(p);
+  actions.append(share,order);body.append(title,meta,prices,actions);card.append(body);host.append(card);
+ }
+ if(!results.length){const empty=document.createElement('div');empty.className='catalog-empty';empty.textContent=catalog.length?'No products match this filter. Try another search.':'No products enabled for reseller sales. SHOPYHAT Admin can select and publish items in the Reseller Product Pricing panel.';host.append(empty)}
+ $('catalogSummary').textContent=results.length+' available catalog entries · '+catalog.length+' published variants';
+ $('catalogPageLabel').textContent='Page '+catalogPage+' of '+totalPages;
+ $('catalogPrev').disabled=catalogPage<=1;$('catalogNext').disabled=catalogPage>=totalPages;
 }
 function openRequest(p){selection=p;$('requestProduct').textContent=p.name+' — '+p.color+' · Your price '+money(p.wholesale);
  const f=$('requestForm');f.reset();f.elements.retail.value=p.public_price;
@@ -139,6 +168,12 @@ $('selfPasswordForm').onsubmit=async event=>{
  }catch(err){message(err.message||'Password update failed',true)}
  finally{button.disabled=false}
 };
+for(const id of ['catalogSearch','catalogStock','catalogSort']){
+ const el=$(id);if(el)el.addEventListener(id==='catalogSearch'?'input':'change',()=>{catalogPage=1;renderCatalog()});
+}
+$('catalogPrev').onclick=()=>{catalogPage--;renderCatalog()};
+$('catalogNext').onclick=()=>{catalogPage++;renderCatalog()};
+$('resellerRefresh').onclick=()=>loadDashboard();
 $('logout').onclick=logout;$('logoutFirst').onclick=logout;$('closeRequest').onclick=()=>$('requestDialog').close();
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 $('requestForm').onsubmit=async event=>{
