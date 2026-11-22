@@ -118,6 +118,31 @@ export function setupExperienceStudio({db,roleCan,notify}){
   });
  }
 
+ function previewHTML(){
+  return '<section class="sh-design-editor sh-live-editor"><div class="topline"><div><h3>Live Storefront Preview</h3><p class="muted">View unsaved changes before publishing. Editing here does not affect the real website until Save & Publish.</p></div><div class="tools"><button type="button" class="btn small" id="shPreviewDesktop">Desktop</button><button type="button" class="btn small" id="shPreviewMobile">Mobile</button><button type="button" class="btn primary small" id="shPreviewUpdate">Preview Changes</button></div></div><div class="sh-preview-shell"><iframe title="SHOPYHAT storefront live design preview" id="shExperiencePreviewFrame" loading="lazy" referrerpolicy="same-origin" src="/?studio_preview=1#home"></iframe></div><p class="muted">For best results, preview Hero, menu and New Arrivals on desktop and mobile. The preview cannot place real orders.</p></section>';
+ }
+ function previewConfig(){
+  const f=$('shExperienceForm');if(!f)return {};
+  const c={...currentConfig};
+  for(const [key] of fields)c[key]=f.elements[key]?.value?.trim()||'';
+  for(const [key] of switches)c[key]=f.elements[key]?.checked!==false;
+  for(const [key] of designSelects)c[key]=f.elements[key]?.value;
+  for(const [key,,min,max,fallback] of designNumbers){
+   const n=Number(f.elements[key]?.value);c[key]=Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;
+  }
+  c.accent_color=f.elements.accent_color?.value||'#f47721';
+  c.section_order=[...sectionOrder];
+  c.hero_slides=heroSlides.filter(slide=>/^https:\/\//i.test(slide.image_url||'')).map(x=>({...x}));
+  c.hero_autoplay=false;
+  c.hero_interval=Math.max(3,Math.min(15,Number(f.elements.hero_interval?.value)||6));
+  return c;
+ }
+ function refreshPreview(){
+  const frame=$('shExperiencePreviewFrame');if(frame?.contentWindow){
+   frame.contentWindow.postMessage({type:'shopyhat:studio-preview',config:previewConfig()},location.origin);
+  }
+ }
+
  function mount(){
   if(ready)return;
   ready=true;
@@ -125,7 +150,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   const b=document.createElement('button');b.type='button';b.className='btn';b.id='experienceTab';b.dataset.page='experience';b.textContent='Storefront Studio';
   const brand=$('brandTab');nav.insertBefore(b,brand||nav.firstChild);
   const panel=document.createElement('div');panel.className='panel hidden';panel.id='page-experience';
-  panel.innerHTML='<div class="topline"><div><h2>Storefront Experience Studio</h2><p class="muted">Control homepage visuals, campaigns and sections without changing order workflows.</p></div><a class="btn" target="_blank" rel="noopener" href="/">↗ Preview Storefront</a></div><div class="media-section" style="margin:18px 0;padding:18px"><h3>Cinematic Hero Photo</h3><p class="muted">Upload JPG, PNG or WebP. Larger images are automatically compressed to fit the 2 MB storage limit. The website will use the new photo immediately after publishing the settings.</p><input type="file" id="shHeroUpload" accept="image/png,image/jpeg,image/webp"><div class="editor-actions"><button type="button" class="btn primary" id="shHeroUploadButton">Upload Hero Image</button></div><img id="shHeroPreview" alt="Current hero preview" style="width:100%;max-width:550px;aspect-ratio:16/9;object-fit:cover;display:none;border-radius:12px;margin-top:12px"><p id="shHeroUploadMsg" class="msg" role="status"></p></div><form id="shExperienceForm" class="sh-experience-form"><div class="sh-experience-fields">'+fields.map(([key,title,type])=>'<label>'+esc(title)+(type==='textarea'?'<textarea name="'+key+'" rows="3"></textarea>':'<input type="'+type+'" name="'+key+'" placeholder="'+(type==='url'?'https://...':'')+'">')+'</label>').join('')+'</div><h3>Homepage visibility</h3><div class="sh-experience-switches">'+switches.map(([key,title])=>'<label><input type="checkbox" name="'+key+'"> '+esc(title)+'</label>').join('')+'</div>'+carouselHTML()+designHTML()+'<p class="muted">Tip: Hero video is optional. For performance, use an optimized, muted looping video and an image fallback. Product images in Mega Menu and Live Search come from your existing catalog.</p><div class="editor-actions"><button class="btn primary" type="submit">Save & Publish Experience</button><button class="btn" type="button" id="shExperienceReload">Reload</button></div><p id="shExperienceMsg" class="msg" role="status"></p></form>';
+  panel.innerHTML='<div class="topline"><div><h2>Storefront Experience Studio</h2><p class="muted">Control homepage visuals, campaigns and sections without changing order workflows.</p></div><a class="btn" target="_blank" rel="noopener" href="/">↗ Preview Storefront</a></div><div class="media-section" style="margin:18px 0;padding:18px"><h3>Cinematic Hero Photo</h3><p class="muted">Upload JPG, PNG or WebP. Larger images are automatically compressed to fit the 2 MB storage limit. The website will use the new photo immediately after publishing the settings.</p><input type="file" id="shHeroUpload" accept="image/png,image/jpeg,image/webp"><div class="editor-actions"><button type="button" class="btn primary" id="shHeroUploadButton">Upload Hero Image</button></div><img id="shHeroPreview" alt="Current hero preview" style="width:100%;max-width:550px;aspect-ratio:16/9;object-fit:cover;display:none;border-radius:12px;margin-top:12px"><p id="shHeroUploadMsg" class="msg" role="status"></p></div><form id="shExperienceForm" class="sh-experience-form"><div class="sh-experience-fields">'+fields.map(([key,title,type])=>'<label>'+esc(title)+(type==='textarea'?'<textarea name="'+key+'" rows="3"></textarea>':'<input type="'+type+'" name="'+key+'" placeholder="'+(type==='url'?'https://...':'')+'">')+'</label>').join('')+'</div><h3>Homepage visibility</h3><div class="sh-experience-switches">'+switches.map(([key,title])=>'<label><input type="checkbox" name="'+key+'"> '+esc(title)+'</label>').join('')+'</div>'+previewHTML()+carouselHTML()+designHTML()+'<p class="muted">Tip: Hero video is optional. For performance, use an optimized, muted looping video and an image fallback. Product images in Mega Menu and Live Search come from your existing catalog.</p><div class="editor-actions"><button class="btn primary" type="submit">Save & Publish Experience</button><button class="btn" type="button" id="shExperienceReload">Reload</button></div><p id="shExperienceMsg" class="msg" role="status"></p></form>';
   nav.after(panel);
   const style=document.createElement('style');style.textContent=`
  #dashboard{position:relative;padding-left:0;display:flow-root}#dashboard>.nav{position:relative;float:left;left:auto;top:auto;bottom:auto;width:200px;height:auto;max-height:none;z-index:1;overflow:visible;margin:15px 0 20px;padding:15px 10px;background:#191310;border:1px solid #3c302a;border-radius:13px;display:flex;flex-direction:column;flex-wrap:nowrap;gap:4px}
@@ -136,6 +161,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
  .sh-side-group{display:flex;flex-direction:column;gap:3px}.sh-side-group[hidden]{display:none}
  .sh-side-toggle{display:flex;justify-content:space-between;align-items:center;cursor:pointer;border:0;background:transparent;color:#f7af77;padding:12px 8px;text-align:left;font-weight:700;border-bottom:1px solid #3b2a20}
  .sh-slide-rows{display:grid;gap:14px}.sh-slide-editor{background:#fff;border:1px solid #e9dace;border-radius:11px;padding:15px}.sh-slide-editor .fieldrow{gap:12px}
+ .sh-live-editor{max-width:100%;margin:18px 0}.sh-preview-shell{display:flex;justify-content:center;overflow:hidden;padding:12px;background:#eee7dd;border-radius:15px;margin-top:14px}.sh-preview-shell iframe{width:100%;height:500px;border:0;border-radius:9px;background:#fff;transition:width .18s ease;box-shadow:0 7px 25px #0002}.sh-preview-shell.mobile iframe{width:min(390px,100%);height:660px}
  .sh-design-editor{margin:22px 0;padding:20px;border:1px solid #e8d4c1;background:#fffaf5;border-radius:14px}
  .sh-design-editor summary{font-size:17px;font-weight:800;cursor:pointer;color:#b65c1b}
  .sh-design-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 18px;margin:17px 0}
@@ -162,6 +188,11 @@ export function setupExperienceStudio({db,roleCan,notify}){
  $('experienceTab').onclick=()=>window.SHOPYHAT_SHOW_PAGE?.('experience');
  $('shExperienceReload').onclick=reload;
  $('shExperienceForm').onsubmit=save;
+ const previewFrame=$('shExperiencePreviewFrame');previewFrame?.addEventListener('load',refreshPreview);
+ $('shPreviewUpdate').onclick=refreshPreview;
+ $('shPreviewDesktop').onclick=()=>{$('shPreviewDesktop').classList.add('active');$('shPreviewMobile').classList.remove('active');previewFrame.closest('.sh-preview-shell').classList.remove('mobile');refreshPreview()};
+ $('shPreviewMobile').onclick=()=>{$('shPreviewMobile').classList.add('active');$('shPreviewDesktop').classList.remove('active');previewFrame.closest('.sh-preview-shell').classList.add('mobile');refreshPreview()};
+ $('shExperienceForm').addEventListener('input',()=>{if(window.shPreviewDebounce)clearTimeout(window.shPreviewDebounce);window.shPreviewDebounce=setTimeout(refreshPreview,220)});
  setupSlides();
  $('shResetDesign').onclick=()=>{const form=$('shExperienceForm');for(const [key,,options,fallback] of designSelects)form.elements[key].value=fallback;for(const [key,,,,initial] of designNumbers)form.elements[key].value=initial;form.elements.accent_color.value='#f47721';sectionOrder=sectionDefs.map(x=>x[0]);renderOrder();notify('shExperienceMsg','Recommended design selected. Save & Publish to apply.');};
  renderOrder();
@@ -222,7 +253,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
    form.elements.hero_interval.value=Math.max(3,Math.min(15,Number(v.hero_interval)||6));
    renderSlides();
    const preview=$('shHeroPreview');if(v.hero_image_url){preview.src=v.hero_image_url;preview.style.display='block'}
-   notify('shExperienceMsg','Experience settings loaded.');
+   notify('shExperienceMsg','Experience settings loaded.');refreshPreview();
   }catch(e){notify('shExperienceMsg',e.message,true)}
  }
  async function save(e){
