@@ -19,6 +19,11 @@
 </script>
 <title>SHOPYHAT | Tangail Sarees, Women's Clothing & Accessories</title>
 <meta name="description" content="Shop Tangail sarees, three-piece sets, kurti, hijab and accessories at SHOPYHAT. Your Choice, Our Gift. Delivery across Bangladesh.">
+<link rel="canonical" href="https://shopyhat.pages.dev/">
+<meta property="og:url" content="https://shopyhat.pages.dev/">
+<meta property="og:site_name" content="SHOPYHAT">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#191817">
 <meta name="color-scheme" content="light">
 <link rel="dns-prefetch" href="//script.google.com">
@@ -1516,7 +1521,7 @@ function shImgCandidates(p,color){
 function shPhotoMarkup(p,color,css=''){
   const urls=shImgCandidates(p,color);
   if(!urls.length)return art(p);
-  return `<img class="sh-real-photo" ${css?`style="${css}"`:''} src="${esc(urls[0])}" data-sh-images="${esc(JSON.stringify(urls))}" data-sh-index="0" alt="${esc(p.name)}" loading="lazy" onerror="shImageFallback(this)">`;
+  return `<img class="sh-real-photo" ${css?`style="${css}"`:''} src="${esc(urls[0])}" data-sh-images="${esc(JSON.stringify(urls))}" data-sh-index="0" alt="${esc(p.name)}" loading="lazy" decoding="async" onerror="shImageFallback(this)">`;
 }
 function shImageFallback(el){
   let urls=[];try{urls=JSON.parse(el.dataset.shImages||'[]')}catch(e){}
@@ -1574,6 +1579,7 @@ const SHEET="";
 const SH_DB_URL="https://xwfqgmgiunlxzvzoermn.supabase.co";
 const SH_DB_KEY="sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP";
 const SH_CHECKOUT_URL=SH_DB_URL+"/functions/v1/shopyhat-checkout";
+const SH_TRACK_URL=SH_DB_URL+"/functions/v1/shopyhat-track-order";
 const VARIANT_FEED_URL="";
 let VARIANT_MAP={};
 const SH_REFERRAL_SLUG=(new URLSearchParams(location.search).get('ref')||'').trim().toLowerCase();
@@ -1941,7 +1947,7 @@ function openCheckout(){
    const pay=[{id:"cod",t:"Cash on delivery",s:"Pay after your parcel arrives",enabled:true,symbol:"COD"},
      {id:"bkash",t:"bKash — Send Money",s:CONFIG.bkash?"Send Money via bKash app · manual verification":"Payment account not configured yet",enabled:isConfiguredMFS(CONFIG.bkash),symbol:"bKash"},
      {id:"nagad",t:"Nagad — Send Money",s:CONFIG.nagad?"Send Money via Nagad app · manual verification":"Payment account not configured yet",enabled:isConfiguredMFS(CONFIG.nagad),symbol:"Nagad"}];
-   const loggedProfile=window.SHOPYHAT_CUSTOMER?.getUser?.()?.phone_confirmed_at?window.SHOPYHAT_CUSTOMER?.getProfile?.():null;
+   const loggedProfile=window.SHOPYHAT_CUSTOMER?.getUser?.()?window.SHOPYHAT_CUSTOMER?.getProfile?.():null;
    const saved=loggedProfile?{
      name:loggedProfile.full_name||'',
      phone:String(loggedProfile.phone||'').replace(/^\+?88/,''),
@@ -2078,7 +2084,7 @@ async function submitOrder(e){
    const authHeaders={"content-type":"application/json","apikey":SH_DB_KEY};
    const customerSession=await window.SHOPYHAT_CUSTOMER?.db?.auth.getSession();
    const token=customerSession?.data?.session?.access_token;
-   if(token&&window.SHOPYHAT_CUSTOMER?.getUser?.()?.email_confirmed_at)
+   if(token&&window.SHOPYHAT_CUSTOMER?.getUser?.())
      authHeaders.authorization="Bearer "+token;
    const response=await fetch(SH_CHECKOUT_URL,{
      method:"POST",headers:authHeaders,
@@ -2142,14 +2148,14 @@ function showSuccess(o){
 /* =====================================================================
    TRACK
    ===================================================================== */
-const STEPS=["Placed","Confirmed","Packed","Shipped","Delivered"];
-const STEP_TXT={Placed:"We have received your order. Our team will contact you to confirm it.",Confirmed:"Your order is confirmed. We are getting it ready.",Packed:"Your order is packed and will be handed to the courier soon.",Shipped:"Your order is on its way to you.",Delivered:"Your order was delivered. Thank you for shopping with SHOPYHAT. Need a return? Contact us within 3 days.",Cancelled:"This order was cancelled. Message us if you have any questions."};
+const STEPS=["Pending","Confirmed","Processing","Ready to Ship","Shipped","Delivered"];
+const STEP_TXT={Pending:"We have received your order request.",Confirmed:"Your order is confirmed.",Processing:"We are preparing your order.",'Ready to Ship':"Your parcel is ready to be handed to the courier.",Shipped:"Your parcel is on its way.",Delivered:"Your order was delivered. Thank you!",Cancelled:"This order was cancelled.",'Return Requested':"A return has been requested. Our team will review it.",Returned:"Your order has been marked returned."};
 function renderTrack(o,stale){
-  const st=String(o.status||"Placed"), cancelled=/^cancel/i.test(st);
-  const i=STEPS.findIndex(x=>x.toLowerCase()===st.toLowerCase()), idx=Math.max(0,i), label=cancelled?"Cancelled":STEPS[idx];
+  const st=String(o.status||"Pending"), cancelled=/^cancel/i.test(st), returned=/^return/i.test(st);
+  const i=STEPS.findIndex(x=>x.toLowerCase()===st.toLowerCase()), idx=Math.max(0,i), label=(cancelled||returned)?st:STEPS[idx];
   return `<div style="border-top:1px solid var(--line);padding-top:20px"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><b style="color:var(--ink)">${esc(o.id)}</b><span style="font-size:13.5px;color:var(--muted)">${new Date(o.date).toLocaleString("en-GB",{dateStyle:"medium",timeStyle:"short"})}</span></div>
-  ${cancelled?`<div class="note" style="margin:18px 0;border-color:var(--bad)"><b>Cancelled</b></div>`:`<div class="steps">${STEPS.map((s,k)=>`<div class="stp ${k<=idx?"done":""}"><i>${k<=idx?"✓":k+1}</i>${s}</div>`).join("")}</div>`}
-   <p style="font-size:14px;color:var(--muted);text-align:center;margin-bottom:14px">${STEP_TXT[label]}</p>
+  ${(cancelled||returned)?`<div class="note" style="margin:18px 0"><b>${esc(st)}</b></div>`:`<div class="steps">${STEPS.map((s,k)=>`<div class="stp ${k<=idx?"done":""}"><i>${k<=idx?"✓":k+1}</i>${s}</div>`).join("")}</div>`}
+   <p style="font-size:14px;color:var(--muted);text-align:center;margin-bottom:14px">${STEP_TXT[label]||"Please contact SHOPYHAT for further assistance."}</p>
    ${o.pay&&o.pay!=='cod'?`<div class="pay-status-info">Payment method: <b>${esc(o.pay.toUpperCase())}</b> · Payment claim status: <b>${esc(o.paymentStatus||'Pending verification')}</b>. Final confirmation comes from SHOPYHAT support after transfer verification.</div>`:''}
   ${o.message?`<div class="note" style="margin-bottom:14px"><b>Message from SHOPYHAT:</b> ${esc(o.message)}</div>`:""}
   ${stale?`<div class="note" style="margin-bottom:14px">We could not load the latest status right now. Try again in a minute, or message us on Facebook.</div>`:""}
@@ -2157,11 +2163,21 @@ function renderTrack(o,stale){
   <div class="line-r tot"><span>Total</span><span>${money(o.total)}</span></div></div>`;
 }
 async function doTrack(id,phone){
-  const out=$("#trackOut");out.innerHTML=`<p style="color:var(--muted)">Looking up your order…</p>`;
-  let o=null,failed=false;
-  if(SHEET){try{const r=await fetch(SHEET+"?action=track&id="+encodeURIComponent(id)+"&phone="+encodeURIComponent(phone));const j=await r.json();if(j&&j.ok)o=j.order}catch(e){failed=true}}
-  if(!o){const l=LS.get("sh_orders",[]).find(x=>x.id.toUpperCase()===id&&normPhone(x.phone)===phone);if(l){o=l;failed=!!SHEET}}
-  out.innerHTML=o?renderTrack(o,failed):`<div class="note">We can't find an order with these details. Check the order number and phone number, or message us on <a href="https://www.facebook.com/shopyhat/" target="_blank" rel="noopener noreferrer" class="link">Facebook</a>.</div>`;
+ const out=$("#trackOut");
+ out.innerHTML='<p style="color:var(--muted)" role="status">Looking up the latest order status…</p>';
+ const orderId=String(id||'').trim().toUpperCase(),mobile=normPhone(String(phone||'').trim());
+ if(!/^SH-[0-9]{6,8}-[A-Z0-9]{4,12}$/.test(orderId)||!PHONE_RE.test(mobile)){
+  out.innerHTML='<div class="note" role="alert">Enter a valid SHOPYHAT order number and mobile number.</div>';return;
+ }
+ try{
+  const response=await fetch(SH_TRACK_URL,{method:'POST',headers:{'Content-Type':'application/json',apikey:SH_DB_KEY},
+   body:JSON.stringify({order_id:orderId,phone:mobile}),cache:'no-store'});
+  const payload=await response.json();
+  if(!response.ok||!payload.ok||!payload.order)throw Error(payload.error||'Order not found. Check your order number and phone.');
+  out.innerHTML=renderTrack(payload.order,false);
+ }catch(error){
+  out.innerHTML='<div class="note" role="alert">'+esc(error?.message||'Tracking is currently unavailable. Please try again.')+'</div>';
+ }
 }
 function renderMyOrders(){
   const os=LS.get("sh_orders",[]);
@@ -2359,14 +2375,25 @@ async function fetchShopyhatCatalog(){
  }));
  const [prods,vs,imgs]=data;
  await fetchPublishedCatalogStructure().catch(e=>console.warn("Catalog taxonomy unavailable",e));
+ const variantsByProduct=new Map(),imagesByVariant=new Map(),imagesByProduct=new Map();
+ for(const v of vs){
+  if(!v.active)continue;
+  if(!variantsByProduct.has(v.product_id))variantsByProduct.set(v.product_id,[]);
+  variantsByProduct.get(v.product_id).push(v);
+ }
+ for(const i of imgs){
+  const key=i.variant_id||i.product_id,group=i.variant_id?imagesByVariant:imagesByProduct;
+  if(!group.has(key))group.set(key,[]);
+  group.get(key).push(i.image_url);
+ }
  VARIANT_MAP={};
  const rows=prods.map(p=>{
-  const pv=vs.filter(v=>v.product_id===p.id&&v.active);
+  const pv=variantsByProduct.get(p.id)||[];
   VARIANT_MAP[String(p.legacy_id)]=pv.map(v=>({
     id:v.id,color:v.color,hex:v.hex||"",sku:v.sku||"",price:v.price,stock:v.stock,
-    images:imgs.filter(i=>i.variant_id===v.id).map(i=>i.image_url)
+    images:imagesByVariant.get(v.id)||[]
   }));
-  const photos=imgs.filter(i=>i.product_id===p.id&&!i.variant_id).map(i=>i.image_url);
+  const photos=imagesByProduct.get(p.id)||[];
   const root=activeRoots().find(c=>c.id===p.category_id);
   const child=root?activeChildren(root.id).find(c=>c.id===p.subcategory_id):null;
   return {id:p.legacy_id,name:p.name,name_bn:p.name_bn||"",
