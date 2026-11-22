@@ -152,7 +152,7 @@ export function setupResellerOperations({db,roleCan,notify}){
      const {error}=await db.from('sh_reseller_fulfillment_requests').update({status,settlement_status,updated_at:new Date().toISOString()}).eq('id',id);
      if(error)throw error;
     }
-    await reload();notify('resellerMsg','Changes saved.');
+    await reload();notify('resellerMsg','Changes saved successfully.');
    }catch(err){notify('resellerMsg',err.message,true)}finally{target.disabled=false}
   });
  }
@@ -197,17 +197,21 @@ export function setupResellerOperations({db,roleCan,notify}){
    const active=a.status==='pending';
    return '<tr><td><b>'+esc(a.full_name)+'</b><div>'+esc(a.business_name)+'</div><small>'+esc(a.email||'No email supplied')+'</small></td>'+
     '<td>'+esc(a.phone)+'</td><td>'+esc(a.status)+'</td><td>'+
-    (active?'<form class="sh-provision-form" data-id="'+esc(a.id)+'" style="min-width:250px"><label>Reseller Login ID<input name="login" required pattern="[a-z][a-z0-9_]{3,23}" maxlength="24" placeholder="rahatshop"></label>'+
+    (active?'<details class="reseller-action-details"><summary>Create Reseller Login</summary><form class="sh-provision-form" data-id="'+esc(a.id)+'"><label>Unique Reseller ID<input name="login" required pattern="[a-z][a-z0-9_]{3,23}" maxlength="24" value="'+uniqueLogin()+'" placeholder="sh123abc"></label>'+
     '<label>Shop URL Alias<input name="slug" required pattern="[a-z0-9][a-z0-9-]{2,39}" maxlength="40" placeholder="rahat-shop"></label>'+
     
     '<small>Internal reseller identity: <b id="resellerAliasHint">[login]@reseller.shopyhat.com</b> when creating the Auth user.</small>'+
     '<div class="tools"><button type="submit" class="btn primary small">Create Reseller ID</button>'+
-    '<button type="button" class="btn small danger" data-reseller-action="application-reject" data-id="'+esc(a.id)+'">Reject</button></div></form>':
+    '<button type="button" class="btn small danger" data-reseller-action="application-reject" data-id="'+esc(a.id)+'">Reject</button></div></form></details>':
      '<small>'+(a.reseller_id?'Linked User: '+esc(a.reseller_id):'No linked account')+'</small>')+'</td></tr>';
   }).join('')||'<tr><td colspan="4">No reseller registration requests yet.</td></tr>';
   host.querySelectorAll('.sh-provision-form').forEach(form=>{
    const login=form.elements.namedItem('login'),hint=form.querySelector('#resellerAliasHint');
    login.addEventListener('input',()=>hint.textContent=(login.value.trim().toLowerCase()||'[login]')+'@reseller.shopyhat.com');
+   const slug=form.elements.namedItem('slug');if(!slug.value)slug.value=login.value.toLowerCase().replaceAll('_','-');
+   login.addEventListener('input',()=>{if(!slug.dataset.manual)slug.value=login.value.toLowerCase().replaceAll('_','-')});
+   slug.addEventListener('input',()=>{slug.dataset.manual='true'});
+
   });
  }
  async function provision(form){
@@ -231,12 +235,12 @@ export function setupResellerOperations({db,roleCan,notify}){
    $('resellerAccounts').innerHTML=filtered(accounts).map(x=>`<tr><td><b>${esc(x.business_name||'Reseller')}</b><div class="muted">Login: ${esc(x.login_name||'Not configured')}</div><small>${esc(x.user_id)}</small></td>
     <td><span>${esc(x.status)}</span>${x.must_change_password?'<small class="muted">Password change required</small>':''}</td>
     <td>${new Date(x.created_at).toLocaleDateString('en-BD')}</td>
-    <td><label>Shop URL <input data-edit-slug value="${esc(x.shop_slug||'')}" maxlength="40" placeholder="partner-shop"></label>
+    <td><details class="reseller-action-details"><summary>Manage Account</summary><label>Shop URL <input data-edit-slug value="${esc(x.shop_slug||'')}" maxlength="40" placeholder="partner-shop"></label>
     <div class="tools"><button type="button" class="btn small" data-reseller-action="slug" data-id="${esc(x.user_id)}">Save URL</button>
     <button type="button" class="btn small" data-reseller-action="account" data-status="approved" data-id="${esc(x.user_id)}">Approve</button>
     <button type="button" class="btn small" data-reseller-action="account" data-status="suspended" data-id="${esc(x.user_id)}">Suspend</button>
     <button type="button" class="btn small" data-reseller-action="reset-password" data-id="${esc(x.user_id)}">Reset Password</button>
-    <button type="button" class="btn small danger" data-reseller-action="account" data-status="rejected" data-id="${esc(x.user_id)}">Reject</button></div></td></tr>`).join('')||'<tr><td colspan="4">No reseller accounts created yet.</td></tr>';
+    <button type="button" class="btn small danger" data-reseller-action="account" data-status="rejected" data-id="${esc(x.user_id)}">Reject</button></div></details></td></tr>`).join('')||'<tr><td colspan="4">No reseller accounts created yet.</td></tr>';
  }
  function renderOrdersAndReferrals(){
    const statusOpts=['pending','approved','rejected','fulfilled','cancelled'],settlementOpts=['unsettled','pending','settled'];
