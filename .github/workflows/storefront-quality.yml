@@ -15,6 +15,7 @@ on:
       - 'reset-password.html'
       - 'supabase/functions/shopyhat-checkout/**'
       - 'supabase/functions/shopyhat-reseller-access/**'
+      - 'supabase/functions/shopyhat-courier/**'
   push:
     branches: [main]
 jobs:
@@ -38,6 +39,8 @@ jobs:
           node scripts/verify-customer-features.mjs
           node --check scripts/verify-admin-ux.mjs
           node scripts/verify-admin-ux.mjs
+          node --check scripts/verify-reseller-studio.mjs
+          node scripts/verify-reseller-studio.mjs
           node --check scripts/verify-storefront.mjs
           node scripts/verify-storefront.mjs
       - name: Validate vector illustration
