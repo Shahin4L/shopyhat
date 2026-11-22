@@ -9,6 +9,8 @@ on:
       - 'assets/**'
       - 'scripts/**'
       - 'package.json'
+      - 'robots.txt'
+      - 'sitemap.xml'
       - 'customer-account.*'
       - 'reseller/**'
       - 'account-confirmed.html'
@@ -19,6 +21,7 @@ on:
       - 'supabase/functions/shopyhat-reseller-media/**'
       - 'supabase/functions/shopyhat-api-hub/**'
       - 'supabase/functions/shopyhat-partner-api/**'
+      - 'supabase/functions/shopyhat-track-order/**'
   push:
     branches: [main]
 jobs:
@@ -51,6 +54,8 @@ jobs:
           node scripts/verify-reseller-selling-media.mjs
           node --check scripts/verify-storefront.mjs
           node scripts/verify-storefront.mjs
+          node --check scripts/verify-ops-hardening.mjs
+          node scripts/verify-ops-hardening.mjs
       - name: Validate vector illustration
         run: python3 -c "import xml.etree.ElementTree as ET; ET.parse('assets/shopyhat-cinematic-art.svg')"
       - name: Verify site build
