@@ -57,7 +57,7 @@ Deno.serve(async req=>{
    address:String(p.address||'').trim().slice(0,401),
    zone:String(p.zone||'').slice(0,20),payment_method:String(p.payment_method||'cod').slice(0,12),
    transaction_id:String(p.transaction_id||'').trim().slice(0,41),sender_last4:String(p.sender_last4||'').slice(0,8),
-   coupon:String(p.coupon||'').slice(0,40),note:String(p.note||'').slice(0,501),
+   coupon:String(p.coupon||'').slice(0,40),referrer_id:String(p.referrer_id||'').slice(0,40),note:String(p.note||'').slice(0,501),
    items:p.items.map(x=>({variant_id:String(x.variant_id||'').slice(0,40),qty:Number(x.qty),size:String(x.size||'').slice(0,80)}))
   };
   const {data,error}=await db.rpc('sh_checkout_api',{p:shaped});
