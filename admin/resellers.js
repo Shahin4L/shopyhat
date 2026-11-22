@@ -12,6 +12,12 @@ export function setupResellerOperations({db,roleCan,notify}){
   target?.after(tab);tab.onclick=()=>window.SHOPYHAT_SHOW_PAGE?.('resellers');
   const panel=document.createElement('section');panel.id='page-resellers';panel.className='panel hidden';
   panel.innerHTML=`<div class="topline"><div><h2>Reseller & Fulfillment Studio</h2><p class="muted">Approve reseller accounts, set wholesale prices and review customer fulfillment requests.</p></div><button id="resellerRefresh" type="button" class="btn">Refresh</button></div>
+  <div class="ops-filters" aria-label="Reseller date and status filters">
+  <div class="date-field"><label for="resellerFrom">From</label><input id="resellerFrom" type="date"></div>
+  <div class="date-field"><label for="resellerTo">To</label><input id="resellerTo" type="date"></div>
+  <div class="date-field"><label for="resellerState">Account / Request Status</label><select id="resellerState"><option value="">All Statuses</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="suspended">Suspended</option><option value="rejected">Rejected</option><option value="fulfilled">Fulfilled</option><option value="settled">Settled</option></select></div>
+  <div class="range-actions"><button type="button" class="btn small" data-reseller-range="7">7 Days</button><button type="button" class="btn small" data-reseller-range="30">30 Days</button><button type="button" class="btn small" data-reseller-range="90">90 Days</button><button type="button" class="btn small" data-reseller-range="all">All</button></div>
+  <p class="muted" style="width:100%;margin:0">Filters apply to applications, accounts, fulfillment and referral histories. Product wholesale pricing always shows the current catalog.</p></div>
   <h3>New Reseller Requests</h3><p class="muted">Security-first setup: create an Auth user in Supabase Dashboard using the private login email below, then paste its User UUID here. Set a temporary password in Supabase Auth. Passwords are never stored in the database or admin page.</p>
   <p><a class="btn" href="https://supabase.com/dashboard/project/xwfqgmgiunlxzvzoermn/auth/users" target="_blank" rel="noopener">Open Supabase Authentication Users</a></p>
   <div class="scroll"><table><thead><tr><th>Applicant</th><th>Mobile</th><th>Status</th><th>Admin action</th></tr></thead><tbody id="resellerApplications"></tbody></table></div>
@@ -24,6 +30,14 @@ export function setupResellerOperations({db,roleCan,notify}){
   <div class="scroll"><table><thead><tr><th>Reseller</th><th>Order ID</th><th>Net eligible sale</th><th>Wholesale</th><th>Margin</th><th>Referral status</th><th>Update</th></tr></thead><tbody id="resellerReferrals"></tbody></table></div><p id="resellerMsg" class="msg" role="status"></p>`;
   $('dashboard').append(panel);
   $('resellerRefresh').onclick=reload;
+  for(const name of ['resellerFrom','resellerTo','resellerState'])$(name).addEventListener('change',renderFiltered);
+  panel.querySelectorAll('[data-reseller-range]').forEach(b=>b.onclick=()=>{
+   const mode=b.dataset.resellerRange,to=new Date(),from=new Date();
+   from.setDate(from.getDate()-(Number(mode)||1)+1);
+   const day=d=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dhaka',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
+   $('resellerFrom').value=mode==='all'?'':day(from);$('resellerTo').value=mode==='all'?'':day(to);
+   renderFiltered();
+  });
   panel.addEventListener('submit',e=>{if(e.target.matches('.sh-provision-form')){e.preventDefault();provision(e.target)}});
   panel.addEventListener('click',async e=>{
    const target=e.target.closest('[data-reseller-action]');if(!target||!allowed())return;
@@ -68,9 +82,24 @@ export function setupResellerOperations({db,roleCan,notify}){
    }catch(err){notify('resellerMsg',err.message,true)}finally{target.disabled=false}
   });
  }
+ function filtered(items){
+  const from=$('resellerFrom')?.value||'',to=$('resellerTo')?.value||'',status=$('resellerState')?.value||'';
+  if(from&&to&&from>to){notify('resellerMsg','From date must be before To date.',true);return []}
+  return items.filter(x=>{
+   if(status&&x.status!==status)return false;
+   if(!from&&!to)return true;
+   const date=x.created_at?new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Dhaka',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(x.created_at)):'';
+   return date&&(!from||date>=from)&&(!to||date<=to);
+  });
+ }
+ function renderFiltered(){
+  renderApplications();
+  renderAccounts();
+  renderOrdersAndReferrals();
+ }
  function renderApplications(){
   const host=$('resellerApplications');if(!host)return;
-  host.innerHTML=applications.map(a=>{
+  host.innerHTML=filtered(applications).map(a=>{
    const active=a.status==='pending';
    return '<tr><td><b>'+esc(a.full_name)+'</b><div>'+esc(a.business_name)+'</div><small>'+esc(a.email||'No email supplied')+'</small></td>'+
     '<td>'+esc(a.phone)+'</td><td>'+esc(a.status)+'</td><td>'+
@@ -113,6 +142,26 @@ export function setupResellerOperations({db,roleCan,notify}){
    notify('resellerMsg','Reseller approved. Send the login ID and temporary password privately. They must change it on first sign-in.');
   }catch(err){notify('resellerMsg',err.message,true)}finally{submit.disabled=false}
  }
+ function renderAccounts(){
+   $('resellerAccounts').innerHTML=filtered(accounts).map(x=>`<tr><td><b>${esc(x.business_name||'Reseller')}</b><div class="muted">Login: ${esc(x.login_name||'Not configured')}</div><small>${esc(x.user_id)}</small></td>
+    <td><span>${esc(x.status)}</span>${x.must_change_password?'<small class="muted">Password change required</small>':''}</td>
+    <td>${new Date(x.created_at).toLocaleDateString('en-BD')}</td>
+    <td><label>Shop URL <input data-edit-slug value="${esc(x.shop_slug||'')}" maxlength="40" placeholder="partner-shop"></label>
+    <div class="tools"><button type="button" class="btn small" data-reseller-action="slug" data-id="${esc(x.user_id)}">Save URL</button>
+    <button type="button" class="btn small" data-reseller-action="account" data-status="approved" data-id="${esc(x.user_id)}">Approve</button>
+    <button type="button" class="btn small" data-reseller-action="account" data-status="suspended" data-id="${esc(x.user_id)}">Suspend</button>
+    <button type="button" class="btn small" data-reseller-action="force-password" data-id="${esc(x.user_id)}">Require Password Change</button>
+    <button type="button" class="btn small danger" data-reseller-action="account" data-status="rejected" data-id="${esc(x.user_id)}">Reject</button></div></td></tr>`).join('')||'<tr><td colspan="4">No reseller accounts created yet.</td></tr>';
+ }
+ function renderOrdersAndReferrals(){
+   const statusOpts=['pending','approved','rejected','fulfilled','cancelled'],settlementOpts=['unsettled','pending','settled'];
+   const dropdown=(key,values,current)=>'<select data-'+key+' aria-label="'+key+'">'+values.map(v=>'<option value="'+v+'" '+(current===v?'selected':'')+'>'+v+'</option>').join('')+'</select>';
+   $('resellerOrders').innerHTML=filtered(orders).map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td><td>${esc(x.customer_name)}<small class="muted">${esc(x.customer_phone)}</small><small class="muted">${esc(x.delivery_address)}</small></td><td>${x.quantity}</td><td>${money(x.retail_unit_price)}</td><td>${money(x.wholesale_unit_price)}</td><td>${money(x.margin_total)}</td><td>${dropdown('request-status',statusOpts,x.status)}</td><td>${dropdown('request-settlement',settlementOpts,x.settlement_status)}</td><td><button type="button" class="btn small" data-reseller-action="request" data-id="${esc(x.id)}">Save</button></td></tr>`).join('')||'<tr><td colspan="9">No fulfillment requests yet.</td></tr>';
+   const referralStatuses=['pending','approved','rejected','settled'];
+   $('resellerReferrals').innerHTML=filtered(referrals).map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td>
+    <td>${esc(x.order_id)}</td><td>${money(x.retail_net)}</td><td>${money(x.wholesale_total)}</td><td><b>${money(x.margin_total)}</b></td>
+    <td>${dropdown('ref-status',referralStatuses,x.status)}</td><td><button class="btn small" type="button" data-reseller-action="referral" data-id="${esc(x.id)}">Save</button></td></tr>`).join('')||'<tr><td colspan="7">No referral-linked orders yet.</td></tr>';
+ }
  async function reload(){
   if(!allowed())return;
   try{
@@ -126,27 +175,11 @@ export function setupResellerOperations({db,roleCan,notify}){
    ]);
    for(const q of [a,p,r,o,rf,apps])if(q.error)throw q.error;
    accounts=a.data||[];products=p.data||[];prices=r.data||[];orders=o.data||[];referrals=rf.data||[];applications=apps.data||[];
-   renderApplications();
-   $('resellerAccounts').innerHTML=accounts.map(x=>`<tr><td><b>${esc(x.business_name||'Reseller')}</b><div class="muted">Login: ${esc(x.login_name||'Not configured')}</div><small>${esc(x.user_id)}</small></td>
-    <td><span>${esc(x.status)}</span>${x.must_change_password?'<small class="muted">Password change required</small>':''}</td>
-    <td>${new Date(x.created_at).toLocaleDateString('en-BD')}</td>
-    <td><label>Shop URL <input data-edit-slug value="${esc(x.shop_slug||'')}" maxlength="40" placeholder="partner-shop"></label>
-    <div class="tools"><button type="button" class="btn small" data-reseller-action="slug" data-id="${esc(x.user_id)}">Save URL</button>
-    <button type="button" class="btn small" data-reseller-action="account" data-status="approved" data-id="${esc(x.user_id)}">Approve</button>
-    <button type="button" class="btn small" data-reseller-action="account" data-status="suspended" data-id="${esc(x.user_id)}">Suspend</button>
-    <button type="button" class="btn small" data-reseller-action="force-password" data-id="${esc(x.user_id)}">Require Password Change</button>
-    <button type="button" class="btn small danger" data-reseller-action="account" data-status="rejected" data-id="${esc(x.user_id)}">Reject</button></div></td></tr>`).join('')||'<tr><td colspan="4">No reseller accounts created yet.</td></tr>';
+   renderFiltered();
    $('resellerPrices').innerHTML=products.map(x=>{
     const p=prices.find(p=>p.product_id===x.id),retail=Number(x.base_price);
     return `<tr><td>${esc(x.name)}</td><td>${money(retail)}</td><td><input data-price-value type="number" step="0.01" min="0" max="${retail}" value="${p?Number(p.wholesale_price):retail}" aria-label="Wholesale price for ${esc(x.name)}"></td><td><input data-price-active type="checkbox" ${p?.active?'checked':''} style="width:auto"></td><td><button type="button" class="btn small" data-reseller-action="price" data-id="${esc(x.id)}" data-public-price="${retail}">Save</button></td></tr>`;
    }).join('')||'<tr><td colspan="5">No active products.</td></tr>';
-   const statusOpts=['pending','approved','rejected','fulfilled','cancelled'],settlementOpts=['unsettled','pending','settled'];
-   const dropdown=(key,values,current)=>'<select data-'+key+' aria-label="'+key+'">'+values.map(v=>'<option value="'+v+'" '+(current===v?'selected':'')+'>'+v+'</option>').join('')+'</select>';
-   $('resellerOrders').innerHTML=orders.map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td><td>${esc(x.customer_name)}<small class="muted">${esc(x.customer_phone)}</small><small class="muted">${esc(x.delivery_address)}</small></td><td>${x.quantity}</td><td>${money(x.retail_unit_price)}</td><td>${money(x.wholesale_unit_price)}</td><td>${money(x.margin_total)}</td><td>${dropdown('request-status',statusOpts,x.status)}</td><td>${dropdown('request-settlement',settlementOpts,x.settlement_status)}</td><td><button type="button" class="btn small" data-reseller-action="request" data-id="${esc(x.id)}">Save</button></td></tr>`).join('')||'<tr><td colspan="9">No fulfillment requests yet.</td></tr>';
-   const referralStatuses=['pending','approved','rejected','settled'];
-   $('resellerReferrals').innerHTML=referrals.map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td>
-    <td>${esc(x.order_id)}</td><td>${money(x.retail_net)}</td><td>${money(x.wholesale_total)}</td><td><b>${money(x.margin_total)}</b></td>
-    <td>${dropdown('ref-status',referralStatuses,x.status)}</td><td><button class="btn small" type="button" data-reseller-action="referral" data-id="${esc(x.id)}">Save</button></td></tr>`).join('')||'<tr><td colspan="7">No referral-linked orders yet.</td></tr>';
    notify('resellerMsg',accounts.length+' resellers, '+orders.length+' fulfillment requests, '+referrals.length+' referral orders loaded.');
   }catch(e){notify('resellerMsg',e.message,true)}
  }
