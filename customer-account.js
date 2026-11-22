@@ -119,7 +119,19 @@ async function ordersView(){
  if(error)return panel('<p>'+esc(error.message)+'</p>');
  const orders=Array.isArray(data)?data:[];
  panel('<h3>Order History</h3><p class="sh-account-note">Your verified mobile links previous guest orders as well.</p>'+
- (orders.length?orders.map(o=>'<div class="sh-account-line"><div><b>'+esc(o.order_number)+'</b><small>'+esc(o.status||'Pending')+' · '+new Date(o.created_at).toLocaleDateString('en-BD')+'</small></div><span>'+money(o.total)+'</span></div>').join(''):'<p>No orders yet. You can check out as a guest anytime.</p>'));
+ (orders.length?orders.map(o=>'<div class="sh-account-line"><div><b>'+esc(o.order_number)+'</b><small>'+esc(o.status||'Pending')+' · '+new Date(o.created_at).toLocaleDateString('en-BD')+'</small></div><div><span>'+money(o.total)+'</span><button type="button" class="sh-account-secondary" data-track-order="'+esc(o.order_number)+'">Track</button></div></div>').join(''):'<p>No orders yet. You can check out as a guest anytime.</p>'));
+ document.querySelectorAll('[data-track-order]').forEach(button=>button.onclick=()=>{
+  const number=String(button.dataset.trackOrder||'');
+  const mobile=normalPhone(profile?.phone||signedUser?.phone)||'';
+  $('shAccountModal')?.close();
+  window.location.hash='#track';
+  setTimeout(()=>{
+   const input=document.getElementById('tId'),phoneInput=document.getElementById('tPhone');
+   if(input)input.value=number;
+   if(phoneInput)phoneInput.value=mobile;
+   document.getElementById('trackForm')?.requestSubmit();
+  },50);
+ });
 }
 async function checkInbox(silent=false){
  if(!signedUser)return;
