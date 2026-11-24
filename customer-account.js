@@ -61,8 +61,8 @@ function passwordView(phone){
   try{
    const {data,error}=await db.auth.signUp({email,password:pass,options:{data:{name:pendingName,mobile:pendingPhone}}});
    if(error)throw error;
-   if(data.session){await loadAccount();render();message('Your SHOPYHAT account is ready. Welcome!');return}
-   view('<div class="sh-auth-complete"><span class="sh-auth-done">✓</span><h3>Registration received</h3><p>Supabase is still requiring email confirmation. To enable instant login without verification, SHOPYHAT Admin must turn off Confirm Email in Supabase Authentication settings.</p><button class="sh-account-primary" id="shReturnLogin" type="button">Back to sign in</button></div>');
+   if(data.session){await loadAccount();render();message('Welcome to SHOPYHAT! Your account has been created successfully.');return}
+   view('<div class="sh-auth-complete"><span class="sh-auth-done">✓</span><h3>Registration received</h3><p>Thank you for joining SHOPYHAT. Please check your email to confirm your account before signing in.</p><button class="sh-account-primary" id="shReturnLogin" type="button">Back to sign in</button></div>');
    $('shReturnLogin').onclick=loginView;
   }catch(error){message(error.message||'Could not register. Please try again.',true)}
   finally{button.disabled=false;button.textContent='Create my account →'}
