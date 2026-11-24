@@ -35,7 +35,7 @@ async function loadReviewPhotos(){
  }catch(e){console.warn('Review photos unavailable',e)}
 }
 const nav=()=>{document.querySelectorAll('[data-care-tab]').forEach(b=>{b.classList.toggle('on',b.dataset.careTab===tab);b.setAttribute('aria-pressed',String(b.dataset.careTab===tab))})};
-const honeypot='<div class="care-honeypot" aria-hidden="true"><label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>';
+const honeypot='<div class="care-honeypot" hidden style="display:none" aria-hidden="true"><label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>';
 const submitButton=label=>'<button class="btn" type="submit">'+esc(label)+'</button>';
 async function getCatalog(){
  const url=api+'/rest/v1/sh_products?select=id,legacy_id,name,name_bn&status=eq.active&order=created_at.desc&limit=200';
@@ -71,7 +71,6 @@ function renderReviewForm(){
  host.innerHTML='<h2>'+t('Write a Product Review','পণ্যের রিভিউ দিন')+'</h2><p class="care-intro">'+t('Be specific and respectful. Your review will appear after moderation. Do not include phone numbers, addresses or other personal information.','সুনির্দিষ্ট ও শালীনভাবে লিখুন। যাচাইয়ের পর রিভিউ প্রকাশিত হবে। ফোন নম্বর, ঠিকানা বা ব্যক্তিগত তথ্য লিখবেন না।')+'</p>'+
  productHint()+'<form id="careReviewForm" enctype="multipart/form-data">'+honeypot+'<label for="rvProduct">'+t('Product *','পণ্য *')+'</label><select id="rvProduct" name="product_id" required>'+opts()+'</select>'+
  '<div class="care-grid"><div><label for="rvName">'+t('Your Name *','আপনার নাম *')+'</label><input id="rvName" name="reviewer_name" required minlength="2" maxlength="90" autocomplete="name"></div><div><label for="rvRating">'+t('Rating *','রেটিং *')+'</label><select id="rvRating" name="rating" required><option value="5">★★★★★ (5)</option><option value="4">★★★★☆ (4)</option><option value="3">★★★☆☆ (3)</option><option value="2">★★☆☆☆ (2)</option><option value="1">★☆☆☆☆ (1)</option></select></div></div>'+
- '<label for="rvTitle">'+t('Review Title (optional)','রিভিউ শিরোনাম (ঐচ্ছিক)')+'</label><input id="rvTitle" name="title" maxlength="120">'+
  '<label for="rvText">'+t('Your Experience *','আপনার অভিজ্ঞতা *')+'</label><textarea id="rvText" name="review_text" minlength="12" maxlength="1200" required></textarea>'+
  '<label for="rvPhoto">'+t('Photo (optional, maximum 4 MB)','ছবি (ঐচ্ছিক, সর্বোচ্চ ৪ MB)')+'</label><input id="rvPhoto" name="review_photo" type="file" accept="image/jpeg,image/png,image/webp"><div id="reviewPhotoPreview" class="care-media-preview"></div><p class="care-hint">'+t('Photo remains private until review approval.','রিভিউ অনুমোদনের আগে ছবিটি গোপন থাকবে।')+'</p><p class="care-hint">'+t('Moderation is required; submitting does not guarantee publication.','অনুমোদনের পর রিভিউ প্রকাশ হতে পারে; জমা দিলেই প্রকাশ নিশ্চিত নয়।')+'</p>'+submitButton(t('Submit Review','রিভিউ জমা দিন'))+' <button type="button" class="btn ghost" id="careReviewBack">'+t('← Back to Reviews','← রিভিউতে ফিরে যান')+'</button></form><div id="careMsg"></div>';
  let photoUrl='';
@@ -91,8 +90,8 @@ function renderReviewForm(){
  document.getElementById('careReviewForm').onsubmit=async e=>{
   e.preventDefault();const f=e.currentTarget,button=f.querySelector('button[type=submit]');button.disabled=true;
   const p=new FormData(f);p.set('action','review');const photo=p.get('review_photo');
-  if(photo instanceof File&&photo.size===0)p.delete('review_photo');
-  if(photo instanceof File&&photo.size>4194304){msg(t('Photo must be 4 MB or smaller.','ছবি ৪ MB বা তার কম হতে হবে।'),true);button.disabled=false;return}
+  if(!(photo instanceof File)||!photo.name||photo.size===0)p.delete('review_photo');
+  else if(photo.size>4194304||!['image/jpeg','image/png','image/webp'].includes(photo.type)){msg(t('Choose a JPG, PNG or WebP image up to 4 MB.','সর্বোচ্চ ৪ MB-এর JPG, PNG বা WebP ছবি দিন।'),true);button.disabled=false;return}
   try{const r=await fetch(endpoint,{method:'POST',headers:{apikey:key},body:p});const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Review not submitted');
    f.reset();if(photoUrl){URL.revokeObjectURL(photoUrl);photoUrl=''}document.getElementById('reviewPhotoPreview').textContent='';msg(t('Thank you! Your review is waiting for approval.','ধন্যবাদ! আপনার রিভিউ অনুমোদনের অপেক্ষায় আছে।'));
   }catch(err){msg(err.message,true)}finally{button.disabled=false}
@@ -214,7 +213,6 @@ function writeReviewForProduct(legacy){
  const body='<p class="care-intro">'+esc(productName(p))+'</p><form id="shInlineReviewForm" enctype="multipart/form-data">'+honeypot+
  '<div class="care-grid"><div><label>'+t('Your name','আপনার নাম')+' *</label><input name="reviewer_name" minlength="2" maxlength="90" required autocomplete="name"></div>'+
  '<div><label>'+t('Rating','রেটিং')+' *</label><select name="rating" required><option value="5">★★★★★</option><option value="4">★★★★☆</option><option value="3">★★★☆☆</option><option value="2">★★☆☆☆</option><option value="1">★☆☆☆☆</option></select></div></div>'+
- '<label>'+t('Review title (optional)','রিভিউ শিরোনাম (ঐচ্ছিক)')+'</label><input name="title" maxlength="120">'+
  '<label>'+t('Your review','আপনার রিভিউ')+' *</label><textarea name="review_text" minlength="12" maxlength="1200" required></textarea>'+
  '<label>'+t('Photo (optional, 4MB max)','ছবি (ঐচ্ছিক, সর্বোচ্চ ৪MB)')+'</label><input name="review_photo" type="file" accept="image/jpeg,image/png,image/webp">'+
  '<p class="care-hint">'+t('Reviews appear after moderation. Do not include private contact details.','যাচাইয়ের পর রিভিউ প্রকাশিত হয়। ব্যক্তিগত যোগাযোগের তথ্য লিখবেন না।')+'</p>'+
@@ -226,8 +224,8 @@ function writeReviewForProduct(legacy){
   const button=form.querySelector('button[type=submit]');button.disabled=true;
   const data=new FormData(form);data.set('action','review');data.set('product_id',p.id);
   const photo=data.get('review_photo');
-  if(photo instanceof File&&photo.size===0)data.delete('review_photo');
-  if(photo instanceof File&&(photo.size>4194304||!['image/jpeg','image/png','image/webp'].includes(photo.type))){
+  if(!(photo instanceof File)||!photo.name||photo.size===0)data.delete('review_photo');
+  else if(photo.size>4194304||!['image/jpeg','image/png','image/webp'].includes(photo.type)){
    document.getElementById('shInlineReviewMessage').innerHTML='<p class="care-error">'+t('Use a JPG/PNG/WebP photo up to 4MB.','সর্বোচ্চ ৪MB JPG/PNG/WebP ছবি দিন।')+'</p>';button.disabled=false;return;
   }
   try{
