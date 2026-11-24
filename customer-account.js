@@ -29,7 +29,7 @@ const passInput=(name,label,mode)=>'<label class="sh-auth-field"><span>'+label+'
 const bindPassword=()=>document.querySelectorAll('#shAccountBody [data-toggle-password]').forEach(b=>b.onclick=()=>{const i=b.parentNode.querySelector('input');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'Show':'Hide';b.setAttribute('aria-label',i.type==='password'?'Show password':'Hide password')});
 function signupStep1(){
  message('');
- view(authIntro('Create an account','Join SHOPYHAT in two easy steps. No OTP required.','signup','Step 1 of 2 · Your details')+
+ view(authIntro('Create an account','Join SHOPYHAT and verify your email address.','signup','Step 1 of 2 · Your details')+
  '<form id="shSignup1" class="sh-auth-form">'+field('name','Full name','text','minlength="2" maxlength="100" autocomplete="name" placeholder="Your full name"')+
  field('phone','Mobile number','tel','placeholder="01XXXXXXXXX" inputmode="tel" maxlength="14" autocomplete="tel"')+
  '<p class="sh-form-hint">Your delivery address is only needed when you place an order.</p>'+formButton('Continue →')+'</form>');
@@ -48,7 +48,7 @@ function passwordView(phone){
  '<div class="sh-signup-summary"><span>Creating account for</span><strong>'+esc(pendingName)+'</strong><small>'+esc(phone)+'</small></div>'+
  '<form id="shSignup2" class="sh-auth-form">'+field('email','Email address','email','maxlength="180" autocomplete="email" placeholder="name@example.com"')+
  passInput('password','Create password','new-password')+passInput('confirm','Confirm password','new-password')+
- '<p class="sh-form-hint">At least 8 characters. No signup OTP or verification code.</p>'+
+ '<p class="sh-form-hint">At least 8 characters. Email verification is required.</p>'+
  formButton('Create my account →')+'</form><button type="button" class="sh-auth-back" id="shBackAccount">← Back to personal details</button>');
  bindTabs();bindPassword();$('shBackAccount').onclick=signupStep1;
  $('shSignup2').onsubmit=async e=>{
@@ -62,11 +62,19 @@ function passwordView(phone){
    const {data,error}=await db.auth.signUp({email,password:pass,options:{data:{name:pendingName,mobile:pendingPhone}}});
    if(error)throw error;
    if(data.session){await loadAccount();render();message('Welcome to SHOPYHAT! Your account has been created successfully.');return}
-   view('<div class="sh-auth-complete"><span class="sh-auth-done">✓</span><h3>Registration received</h3><p>Thank you for joining SHOPYHAT. Please check your email to confirm your account before signing in.</p><button class="sh-account-primary" id="shReturnLogin" type="button">Back to sign in</button></div>');
-   $('shReturnLogin').onclick=loginView;
+   verifySignupView(email);
   }catch(error){message(error.message||'Could not register. Please try again.',true)}
   finally{button.disabled=false;button.textContent='Create my account →'}
  };
+}
+function verifySignupView(email){
+ message('');
+ view('<div class="sh-auth-intro"><h3>Verify your email</h3><p>Check '+esc(email)+' for a verification code or confirmation link. Check your spam folder too.</p></div>'+
+ '<form id="shVerifySignup" class="sh-auth-form">'+field('code','Verification code','text','inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" minlength="6" maxlength="8"')+formButton('Verify and continue →')+'</form>'+
+ '<button type="button" class="sh-auth-back" id="shResendSignup">Resend verification email</button><button type="button" class="sh-auth-back" id="shVerifyBack">Back to sign in</button>');
+ $('shVerifyBack').onclick=loginView;
+ $('shResendSignup').onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{const {error}=await db.auth.resend({type:'signup',email});if(error)throw error;message('If eligible, a verification email has been sent. Please check your inbox.')}catch(err){message(err.message||'Unable to resend. Please try again later.',true)}finally{b.disabled=false}};
+ $('shVerifySignup').onsubmit=async e=>{e.preventDefault();const b=e.currentTarget.querySelector('[type=submit]');b.disabled=true;try{const token=String(new FormData(e.currentTarget).get('code')||'').trim();const {data,error}=await db.auth.verifyOtp({email,token,type:'signup'});if(error)throw error;if(!data.session)throw Error('Verification completed. Please sign in.');await loadAccount();render();message('Email verified. Welcome to SHOPYHAT!')}catch(err){message(err.message||'Verification failed. Check the code and try again.',true)}finally{b.disabled=false}};
 }
 function loginView(){
  message('');
