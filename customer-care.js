@@ -67,6 +67,15 @@ function renderReviews(){
  document.getElementById('careReviewFilter').onchange=e=>{selectedProduct=e.target.value;renderReviews()};
  document.getElementById('careWriteReview').onclick=renderReviewForm;bindRetry();
 }
+function showReviewThanks(){
+ const old=document.getElementById('shReviewOverlay');if(old)old.remove();
+ const d=document.createElement('dialog');
+ d.setAttribute('aria-labelledby','shReviewThanksTitle');
+ d.style.cssText='width:min(90vw,420px);border:0;border-radius:24px;padding:32px 24px;text-align:center;color:#29231f;background:#fffdf8;box-shadow:0 24px 90px #0005';
+ d.innerHTML='<div aria-hidden="true" style="margin:0 auto 20px;width:64px;height:64px;border-radius:50%;background:#e6f6ed;color:#27824c;display:grid;place-items:center;font-size:36px">✓</div><h2 id="shReviewThanksTitle" style="margin:0 0 12px;font-size:23px">'+t('Thank You for Your Review!','আপনার রিভিউয়ের জন্য ধন্যবাদ!')+'</h2><p style="line-height:1.65;margin:0 0 22px">'+t('We appreciate your feedback. Your review has been submitted successfully and is awaiting approval.','আপনার মূল্যবান মতামত সফলভাবে জমা হয়েছে এবং অনুমোদনের অপেক্ষায় রয়েছে।')+'</p><p style="font-size:12px;color:#9b633a;font-weight:700">SHOPYHAT | Your Choice, Our Gift.</p><button type="button" class="btn" style="margin-top:16px">'+t('Done','সম্পন্ন')+'</button>';
+ document.body.append(d);d.addEventListener('close',()=>d.remove(),{once:true});d.querySelector('button').onclick=()=>d.close();d.showModal();
+ if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches)d.animate([{opacity:0,transform:'translateY(12px) scale(.96)'},{opacity:1,transform:'none'}],{duration:280,easing:'ease-out'});
+}
 function renderReviewForm(){
  host.innerHTML='<h2>'+t('Write a Product Review','পণ্যের রিভিউ দিন')+'</h2><p class="care-intro">'+t('Be specific and respectful. Your review will appear after moderation. Do not include phone numbers, addresses or other personal information.','সুনির্দিষ্ট ও শালীনভাবে লিখুন। যাচাইয়ের পর রিভিউ প্রকাশিত হবে। ফোন নম্বর, ঠিকানা বা ব্যক্তিগত তথ্য লিখবেন না।')+'</p>'+
  productHint()+'<form id="careReviewForm" enctype="multipart/form-data">'+honeypot+'<label for="rvProduct">'+t('Product *','পণ্য *')+'</label><select id="rvProduct" name="product_id" required>'+opts()+'</select>'+
@@ -93,7 +102,7 @@ function renderReviewForm(){
   if(!(photo instanceof File)||!photo.name||photo.size===0)p.delete('review_photo');
   else if(photo.size>4194304||!['image/jpeg','image/png','image/webp'].includes(photo.type)){msg(t('Choose a JPG, PNG or WebP image up to 4 MB.','সর্বোচ্চ ৪ MB-এর JPG, PNG বা WebP ছবি দিন।'),true);button.disabled=false;return}
   try{const r=await fetch(endpoint,{method:'POST',headers:{apikey:key},body:p});const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Review not submitted');
-   f.reset();if(photoUrl){URL.revokeObjectURL(photoUrl);photoUrl=''}document.getElementById('reviewPhotoPreview').textContent='';msg(t('Thank you! Your review is waiting for approval.','ধন্যবাদ! আপনার রিভিউ অনুমোদনের অপেক্ষায় আছে।'));
+   f.reset();if(photoUrl){URL.revokeObjectURL(photoUrl);photoUrl=''}document.getElementById('reviewPhotoPreview').textContent='';showReviewThanks();
   }catch(err){msg(err.message,true)}finally{button.disabled=false}
  };
 }
@@ -232,7 +241,7 @@ function writeReviewForProduct(legacy){
    const r=await fetch(endpoint,{method:'POST',headers:{apikey:key},body:data});
    const response=await r.json();
    if(!r.ok||!response.ok)throw Error(response.error||'Submission failed');
-   form.reset();document.getElementById('shInlineReviewMessage').innerHTML='<p class="care-success">'+t('Thank you! Your review is pending approval.','ধন্যবাদ! আপনার রিভিউ অনুমোদনের অপেক্ষায় আছে।')+'</p>';
+   form.reset();showReviewThanks();
   }catch(err){document.getElementById('shInlineReviewMessage').innerHTML='<p class="care-error">'+esc(err.message)+'</p>'}
   finally{button.disabled=false}
  };
