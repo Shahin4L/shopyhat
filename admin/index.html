@@ -139,7 +139,7 @@
  <p class="muted">Log is append-only. Changes made before audit tracking was enabled cannot be reconstructed. New activity is stored by the database.</p>
 </div>
 <div id="page-reviews" class="panel hidden">
- <div class="topline"><div><h2>Customer Reviews</h2><p class="muted">Moderate customer feedback before publishing. Do not publish abusive or personal data.</p></div><div class="tools"><select id="reviewStatusFilter" style="width:170px"><option value="">All Review Statuses</option><option>Pending</option><option>Approved</option><option>Rejected</option></select></div></div>
+ <div class="topline"><div><h2>Customer Reviews</h2><p class="muted">Reviews publish automatically. Hide or unhide inappropriate content at any time.</p></div><div class="tools"><select id="reviewStatusFilter" style="width:170px"><option value="">All Review Statuses</option><option value="Pending">Legacy hidden</option><option value="Approved">Published</option><option value="Rejected">Hidden</option></select></div></div>
  <div class="scroll"><table><thead><tr><th>Date</th><th>Product</th><th>Customer / Rating</th><th>Review</th><th>Status</th><th>Updated By</th><th>Action</th></tr></thead><tbody id="reviewsRows"></tbody></table></div>
 </div>
 <div id="page-cases" class="panel hidden">
@@ -150,4 +150,4 @@
 <p id="appMsg" class="msg" role="status"></p>
 </section></main>
 <div class="overlay hidden" id="overlay"><aside class="drawer"><div class="topline"><h2 id="drawerTitle">Edit</h2><button id="closeDrawer" class="btn" type="button">Close ✕</button></div><div id="drawerBody"></div><p id="drawerMsg" class="msg" role="status"></p></aside></div>
-<script type="module" src="./app.js?v=20261122adminrecover"></script></body></html>
+<script type="module" src="./app.js?v=20261124reviewvisibility"></script></body></html>
