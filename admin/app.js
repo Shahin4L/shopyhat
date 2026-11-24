@@ -208,16 +208,16 @@ function render(){
 
 function renderReviews(){
  const filter=$('reviewStatusFilter').value,rows=dateFiltered(reviews).filter(r=>!filter||r.status===filter).sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)));
- $('reviewsRows').innerHTML=rows.map(r=>'<tr><td>'+fmtDate(r.created_at)+'</td><td>'+esc(products.find(p=>p.id===r.product_id)?.name||'Deleted product')+'</td><td>'+esc(r.reviewer_name)+'<div class="muted">'+('★'.repeat(r.rating))+'</div></td><td><b>'+esc(r.title)+'</b><div class="muted">'+esc(r.review_text.slice(0,110))+'</div></td><td><span class="pill">'+esc(r.status)+'</span></td><td>'+esc(r.moderated_by||'—')+'<div class="muted">'+fmtDate(r.moderated_at)+'</div></td><td><button class="btn small" data-review-customer="'+r.id+'">Review</button></td></tr>').join('')||'<tr><td colspan="7">No customer reviews match your filters.</td></tr>';
+ $('reviewsRows').innerHTML=rows.map(r=>'<tr><td>'+fmtDate(r.created_at)+'</td><td>'+esc(products.find(p=>p.id===r.product_id)?.name||'Deleted product')+'</td><td>'+esc(r.reviewer_name)+'<div class="muted">'+('★'.repeat(r.rating))+'</div></td><td><b>'+esc(r.title)+'</b><div class="muted">'+esc(r.review_text.slice(0,110))+'</div></td><td><span class="pill">'+esc(r.status==='Approved'?'Published':'Hidden')+'</span></td><td>'+esc(r.moderated_by||'—')+'<div class="muted">'+fmtDate(r.moderated_at)+'</div></td><td><button class="btn small" data-review-customer="'+r.id+'">Review</button></td></tr>').join('')||'<tr><td colspan="7">No customer reviews match your filters.</td></tr>';
 }
 function moderateReview(id){
  const r=reviews.find(r=>r.id===id);if(!r)return;
  const edit=roleCan('owner','manager');
- drawer('Moderate Customer Review',`<p class="muted">${esc(products.find(p=>p.id===r.product_id)?.name||'Product')} · ${fmtDate(r.created_at)}</p><h3>${esc(r.reviewer_name)} · ${'★'.repeat(r.rating)}</h3><h4>${esc(r.title)}</h4><p style="white-space:pre-wrap">${esc(r.review_text)}</p><div class="badge">Customer reviews remain hidden until approved. Reject reviews containing personal contact information, offensive content, or unrelated claims.</div>
+ drawer('Moderate Customer Review',`<p class="muted">${esc(products.find(p=>p.id===r.product_id)?.name||'Product')} · ${fmtDate(r.created_at)}</p><h3>${esc(r.reviewer_name)} · ${'★'.repeat(r.rating)}</h3><h4>${esc(r.title)}</h4><p style="white-space:pre-wrap">${esc(r.review_text)}</p><div class="badge">Reviews publish automatically. Hide content containing personal information, offensive language, or unrelated claims.</div>
  <h3>Attached Review Photos</h3><div class="case-evidence" id="reviewPhotoEvidence"><p class="muted">Loading private review photos…</p></div>
- <form id="reviewModeration"><label>Moderation Status</label><select name="status" ${edit?'':'disabled'}>${['Pending','Approved','Rejected'].map(x=>'<option '+(x===r.status?'selected':'')+'>'+x+'</option>').join('')}</select>
+ <form id="reviewModeration"><label>Visibility</label><select name="status" ${edit?'':'disabled'}><option value="Approved" ${r.status==='Approved'?'selected':''}>Published / Unhide</option><option value="Rejected" ${r.status!=='Approved'?'selected':''}>Hidden / Hide</option></select>
  <label>Public Staff Response (optional)</label><textarea name="staff_response" maxlength="1000" ${edit?'':'readonly'}>${esc(r.staff_response||'')}</textarea>
- <div class="editor-actions"><button type="button" class="btn" id="backFromReview">← Back to Reviews</button><button class="btn primary" ${edit?'':'disabled'} type="submit">Save Review Decision</button></div></form>`);
+ <div class="editor-actions"><button type="button" class="btn" id="backFromReview">← Back to Reviews</button><button class="btn primary" ${edit?'':'disabled'} type="submit">Save Visibility</button></div></form>`);
  const media=reviewMedia.filter(m=>m.review_id===id),el=$('reviewPhotoEvidence');
  if(!media.length)el.innerHTML='<p class="muted">No photo attached.</p>';
  else{el.innerHTML='';(async()=>{
@@ -232,7 +232,7 @@ function moderateReview(id){
  $('reviewModeration').onsubmit=async e=>{e.preventDefault();if(!edit)return;const f=formData('reviewModeration');
  const res=await db.from('sh_reviews').update({status:f.status,staff_response:String(f.staff_response||'').trim()}).eq('id',id);
  if(res.error)return notice('drawerMsg',res.error.message,true);
- await refresh();closeDrawer();notice('appMsg','Review moderation saved.')};
+ await refresh();closeDrawer();notice('appMsg','Review visibility saved.')};
 }
 function renderCases(){
  const status=$('caseStatusFilter').value,priority=$('casePriorityFilter').value,search=$('caseSearch').value.trim().toLowerCase();
