@@ -27,7 +27,7 @@ Deno.serve(async req=>{
    });
    const data=await resp.json().catch(()=>({}));
    if(resp.ok&&data.messageId){state='sent';provider=String(data.messageId)}
-   else {state=resp.status>=400&&resp.status<500?'failed':'uncertain';error='brevo_http_'+resp.status}
+   else {state=resp.status>=400&&resp.status<500&&![408,409].includes(resp.status)&&data.code!=='duplicate_parameter'?'failed':'uncertain';error='brevo_http_'+resp.status}
   }catch{state='uncertain';error='delivery_outcome_unknown'}
   try{await rpc('sh_finish_order_mail',{p_id:job.id,p_lease:job.lease_id,p_state:state,p_message_id:provider,p_error:error});processed++}
   catch{console.error('Mail result could not be recorded')}
