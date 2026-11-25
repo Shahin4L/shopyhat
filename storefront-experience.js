@@ -4,7 +4,7 @@
 const configDefault={cinematic:true,video_url:'',hero_image_url:'',headline:'Your choice, our gift.',subtitle:'Sarees, three-piece sets, hijab and accessories, chosen with care.',show_ribbon:true,show_floating_cards:true,show_new_arrivals:true,show_categories:true,show_campaigns:true,announcement:'Free delivery on orders above ৳1500',campaign_text:'Discover our new arrivals'};
 let cfg={...configDefault},lastNames='',featuredId='';
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text)n.textContent=text;return n};
-const safeMedia=(v)=>{try{const u=new URL(v,location.href);return u.protocol==='https:'?u.href:''}catch{return ''}};
+const safeMedia=(v)=>{if(typeof v!=='string'||!v.trim())return '';try{const u=new URL(v,location.href);return u.protocol==='https:'?u.href:''}catch{return ''}};
 const list=()=>typeof PRODUCTS!=='undefined'?PRODUCTS:[];
 function image(p){try{return typeof storefrontCover==='function'?safeMedia(storefrontCover(p)):''}catch{return ''}}
 function nav(){
@@ -135,7 +135,7 @@ function applyDesign(){
 /* Real image slideshow: accessible arrows/dots, interval control, reduced-motion support. */
 let slideIndex=0,lastSlideSignature='',slideTimer=null,slidePointerPaused=false,slideFocusPaused=false;
 let slideLoadSeq=0,stageActive=0,lastRenderedSlideURL='';
-const configuredSlides=()=>Array.isArray(cfg.hero_slides)?cfg.hero_slides.filter(x=>x&&safeMedia(x.image_url)).slice(0,8):[];
+const configuredSlides=()=>cfg.hero_media_mode==='video'&&cfg.cinematic!==false&&safeMedia(cfg.video_url)?[]:Array.isArray(cfg.hero_slides)?cfg.hero_slides.filter(x=>x&&safeMedia(x.image_url)).slice(0,8):[];
 function setHeroTitle(node,title){
  if(!node||!title)return;
  node.replaceChildren();
@@ -218,7 +218,7 @@ function decorate(){
  hero.classList.toggle('sh-cinematic',cfg.cinematic!==false);
  const imageURL=safeMedia(cfg.hero_image_url||'./assets/shopyhat-cinematic-art.svg');hero.classList.toggle('sh-has-image',!!imageURL);if(imageURL)hero.style.setProperty('--sh-hero-image','url("'+imageURL.replaceAll('"','%22')+'")');else hero.style.removeProperty('--sh-hero-image');
  hero.classList.toggle('sh-no-ribbon',!cfg.show_ribbon);hero.classList.toggle('sh-no-cards',!cfg.show_floating_cards);
- let video=hero.querySelector('.sh-hero-video');const videoURL=configuredSlides().length?'':safeMedia(cfg.video_url);
+ let video=hero.querySelector('.sh-hero-video');const videoURL=cfg.hero_media_mode==='slides'||configuredSlides().length?'':safeMedia(cfg.video_url);
  if(videoURL&&cfg.cinematic!==false&&!(window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {if(!video){video=el('video','sh-hero-video');video.muted=true;video.autoplay=true;video.loop=true;video.playsInline=true;hero.prepend(video)}if(video.src!==videoURL)video.src=videoURL}else video?.remove();
  const h=hero.querySelector('h1');if(h&&cfg.headline){const words=String(cfg.headline).split(',');h.innerHTML='';h.setAttribute('aria-label',cfg.headline);words.forEach((w,i)=>{const sp=el('span'),em=el('i','',w.trim()+(i<words.length-1?',':''));sp.append(em);h.append(sp)})}
  const desc=hero.querySelector('.wrap p');if(desc&&cfg.subtitle)desc.textContent=cfg.subtitle;
@@ -267,7 +267,7 @@ if(new URLSearchParams(location.search).get('studio_preview')==='1'){
   if(event.origin!==location.origin||event.source!==window.parent)return;
   if(event.data?.type!=='shopyhat:studio-preview'||!event.data.config||typeof event.data.config!=='object')return;
   const preview=event.data.config;
-  const allowed=['announcement','headline','subtitle','hero_image_url','video_url','campaign_text','hero_eyebrow','primary_cta','secondary_cta','search_placeholder','categories_title','arrivals_title','offers_title','story_title','cinematic','show_ribbon','show_floating_cards','show_new_arrivals','show_categories','show_campaigns','ui_font','heading_font','hero_alignment','hero_vertical','hero_image_position','product_card_side','body_font_size','heading_scale','content_width','section_spacing','hero_height','category_columns','accent_color','section_order','hero_slides','hero_autoplay','hero_interval'];
+  const allowed=['announcement','headline','subtitle','hero_image_url','video_url','hero_media_mode','campaign_text','hero_eyebrow','primary_cta','secondary_cta','search_placeholder','categories_title','arrivals_title','offers_title','story_title','cinematic','show_ribbon','show_floating_cards','show_new_arrivals','show_categories','show_campaigns','ui_font','heading_font','hero_alignment','hero_vertical','hero_image_position','product_card_side','body_font_size','heading_scale','content_width','section_spacing','hero_height','category_columns','accent_color','section_order','hero_slides','hero_autoplay','hero_interval'];
   for(const key of allowed){if(Object.prototype.hasOwnProperty.call(preview,key))cfg[key]=preview[key]}
   decorate();
  });
@@ -278,3 +278,4 @@ const watched=document.getElementById('homeGrid');
 if(watched){let pending=false;const observer=new MutationObserver(()=>{if(!pending){pending=true;requestAnimationFrame(()=>{pending=false;populateMega();decorate()})}});observer.observe(watched,{childList:true})}
 window.addEventListener('hashchange',()=>setTimeout(()=>{if(location.hash.startsWith('#home'))decorate()},30));
 })();
+
