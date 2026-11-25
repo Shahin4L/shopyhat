@@ -7,6 +7,7 @@ const mobile=s=>{let v=String(s||'').trim().replace(/[\s-]/g,'');if(v.startsWith
 const message=(text,bad=false)=>{const el=$('alert');el.textContent=text;el.classList.toggle('error',bad);if(text)el.scrollIntoView({behavior:'smooth',block:'nearest'})};
 let user=null,account=null,selection=null,catalog=[],catalogPage=1,catalogTotal=0,catalogQueryToken=0,catalogSearchTimer=null;
 const CATALOG_PAGE_SIZE=12;
+let shippingRates=null;
 const mediaURL=raw=>{const url=String(raw||'').trim();const match=url.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||url.match(/[?&]id=([\w-]+)/);if(match&&url.includes('google.com'))return 'https://drive.google.com/thumbnail?id='+encodeURIComponent(match[1])+'&sz=w800';try{const u=new URL(url);return u.protocol==='https:'?u.href:''}catch{return ''}};
 function productFallback(){const el=document.createElement('div');el.className='product-placeholder';el.innerHTML='<span aria-hidden="true">▧</span><strong>SHOPYHAT</strong><small>Image unavailable</small>';return el}
 
@@ -43,10 +44,13 @@ function tab(which){
  }
 }
 async function loadDashboard(){
- const [requests,referrals]=await Promise.all([
-  db.from('sh_reseller_fulfillment_requests').select('id,variant_id,customer_name,status,settlement_status,quantity,retail_unit_price,wholesale_unit_price,margin_total,created_at').order('created_at',{ascending:false}).limit(80),
-  db.from('sh_reseller_referrals').select('id,status,margin_total,created_at').order('created_at',{ascending:false}).limit(80)
+ const [requests,referrals,actions,rates]=await Promise.all([
+  db.from('sh_reseller_fulfillment_requests').select('id,variant_id,customer_name,status,settlement_status,quantity,retail_unit_price,wholesale_unit_price,margin_total,created_at,delivery_zone,cancellation_status,cancellation_reason').order('created_at',{ascending:false}).limit(80),
+  db.from('sh_reseller_referrals').select('id,status,margin_total,created_at').order('created_at',{ascending:false}).limit(80),
+  db.rpc('sh_reseller_order_actions'),db.rpc('sh_reseller_shipping_rates')
  ]);
+ if(!rates.error)shippingRates=rates.data;
+ const orderActions=new Map((actions.data||[]).map(x=>[x.request_id,x]));
  if(requests.error||referrals.error){message('Unable to load reseller orders. Please try again.',true);return}
  await loadCatalog();
  const list=(target,items,formatter)=>{
@@ -56,8 +60,8 @@ async function loadDashboard(){
  };
  const ids=[...new Set((requests.data||[]).map(r=>r.variant_id).filter(Boolean))];let productsById=new Map();
  if(ids.length){const products=await db.from('sh_reseller_catalog').select('variant_id,name,color,image_url').in('variant_id',ids);if(!products.error)productsById=new Map((products.data||[]).map(p=>[p.variant_id,p]));}
- list('requestList',requests.data||[],r=>{const p=productsById.get(r.variant_id),name=p?.name||'Product unavailable',photo=mediaURL(p?.image_url),status=String(r.status||'pending'),date=new Date(r.created_at).toLocaleDateString('en-GB',{timeZone:'Asia/Dhaka',day:'2-digit',month:'short',year:'numeric'});
- return '<div class="request-photo"><span>No photo</span>'+(photo?'<img src="'+escape(photo)+'" alt="'+escape(name)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')+'</div><div class="request-main"><div class="request-heading"><strong>'+escape(name)+'</strong><span class="request-status">'+escape(status)+'</span></div><p class="request-variant">'+escape(p?.color||'Variant unavailable')+' · '+Number(r.quantity)+' piece(s)</p><div class="request-details"><span>Customer <b>'+escape(r.customer_name)+'</b></span><span>Placed <b>'+escape(date)+'</b></span><span>Settlement <b>'+escape(r.settlement_status)+'</b></span></div><small class="request-ref">Reference: '+escape(r.id)+'</small></div><div class="request-amounts"><span>Product total <b>'+money(Number(r.retail_unit_price)*Number(r.quantity))+'</b></span><span>Estimated margin <b>'+money(r.margin_total)+'</b></span></div>';});
+ list('requestList',requests.data||[],r=>{const p=productsById.get(r.variant_id),name=p?.name||'Product unavailable',photo=mediaURL(p?.image_url),action=orderActions.get(r.id),status=String(action?.order_status||r.status||'pending'),date=new Date(r.created_at).toLocaleDateString('en-GB',{timeZone:'Asia/Dhaka',day:'2-digit',month:'short',year:'numeric'});
+ return '<div class="request-photo"><span>No photo</span>'+(photo?'<img src="'+escape(photo)+'" alt="'+escape(name)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')+'</div><div class="request-main"><div class="request-heading"><strong>'+escape(name)+'</strong><span class="request-status">'+escape(status)+'</span></div><p class="request-variant">'+escape(p?.color||'Variant unavailable')+' · '+Number(r.quantity)+' piece(s)</p><div class="request-details"><span>Customer <b>'+escape(r.customer_name)+'</b></span><span>Placed <b>'+escape(date)+'</b></span><span>Settlement <b>'+escape(r.settlement_status)+'</b></span><span>Delivery <b>'+escape(r.delivery_zone==='dhaka'?'Inside Dhaka':r.delivery_zone==='outside'?'Outside Dhaka':'Not selected')+'</b></span></div>'+(r.cancellation_status==='pending'?'<p class="cancel-notice">Cancellation requested — awaiting admin review.</p>':r.cancellation_status==='rejected'?'<p class="cancel-notice">Cancellation request declined.</p>':r.cancellation_status==='approved'?'<p class="cancel-notice">Cancellation approved.</p>':'')+(action?.can_request_cancellation?'<button type="button" class="outline cancel-order" data-cancel-request="'+escape(r.id)+'">Request cancellation</button>':'')+'<small class="request-ref">Reference: '+escape(r.id)+'</small></div><div class="request-amounts"><span>Product total <b>'+money(Number(r.retail_unit_price)*Number(r.quantity))+'</b></span><span>Estimated margin <b>'+money(r.margin_total)+'</b></span></div>';});
  list('referralList',referrals.data||[],r=>'<span><b>'+escape(r.status)+'</b><small>'+new Date(r.created_at).toLocaleDateString('en-BD')+'</small></span><span>'+money(r.margin_total)+' provisional</span>');
 }
 async function loadCatalog(){
@@ -190,11 +194,22 @@ function openRequest(p){selection=p;$('requestProduct').textContent=p.name+' —
  $('requestError').hidden=true;$('requestError').textContent='';updateRequestSummary();$('requestDialog').showModal();
 }
 function updateRequestSummary(){if(!selection)return;const f=$('requestForm'),qty=Number(f.elements.qty.value)||0,price=Number(f.elements.retail.value)||0;
- $('requestSummary').textContent='Products: '+money(qty*price)+' · Wholesale: '+money(qty*selection.wholesale)+' · Estimated gross margin: '+money(qty*(price-selection.wholesale))+'. Delivery charges excluded.';
+ const zone=f.elements.zone.value,raw=shippingRates?.[zone],fee=raw===null||raw===undefined?null:Number(raw);
+ $('requestSummary').textContent='Products: '+money(qty*price)+' · Estimated gross margin: '+money(qty*(price-selection.wholesale))+(zone&&fee!==null&&Number.isFinite(fee)?' · Estimated delivery: '+money(fee)+' · Customer total: '+money(qty*price+fee):' · Select a delivery zone for the delivery estimate')+'. Rates are confirmed on approval.';
 }
 $('requestForm').elements.qty.addEventListener('input',updateRequestSummary);
 $('requestForm').elements.retail.addEventListener('input',updateRequestSummary);
+$('requestForm').elements.zone.addEventListener('change',updateRequestSummary);
 $('refreshRequests').onclick=()=>loadDashboard();
+$('requestList').addEventListener('click',async event=>{
+ const button=event.target.closest('[data-cancel-request]');if(!button)return;
+ const reason=prompt('Optional: why does the customer want to cancel? (up to 250 characters)','');if(reason===null)return;
+ if(reason.trim().length>250)return message('Cancellation reason must be 250 characters or fewer.',true);
+ if(!confirm('Send this cancellation request to SHOPYHAT? The order is not cancelled until admin approves.'))return;
+ button.disabled=true;button.textContent='Sending…';
+ try{const {error}=await db.rpc('sh_reseller_request_cancel',{p_request:button.dataset.cancelRequest,p_reason:reason.trim()});if(error)throw error;await loadDashboard();message('Cancellation request sent. Waiting for SHOPYHAT to review it.');}
+ catch(error){message(error.message||'Unable to send cancellation request.',true);button.disabled=false;button.textContent='Request cancellation'}
+});
 $('openApply').onclick=()=>{$('loginPanel').hidden=true;$('applyPanel').hidden=false;$('applySuccess').hidden=true;message('')};
 $('backLogin').onclick=()=>{$('loginPanel').hidden=false;$('applyPanel').hidden=true;$('applySuccess').hidden=true;message('')};
 $('successLogin').onclick=()=>{$('applySuccess').hidden=true;$('loginPanel').hidden=false;message('')};
@@ -272,9 +287,9 @@ $('requestForm').onsubmit=async event=>{
  if(!selection||!Number.isInteger(qty)||qty<1||qty>20||!Number.isFinite(price)||price<selection.wholesale||price>selection.public_price*5)return fail('Check the quantity and customer selling price.');
  const b=form.querySelector('[type=submit]');b.disabled=true;b.textContent='Sending…';
  try{
-  const {data,error}=await db.rpc('sh_reseller_request',{
+  const {data,error}=await db.rpc('sh_reseller_request_v2',{
    p_variant:selection.variant_id,p_qty:qty,p_customer:String(f.get('customer')||'').trim(),
-   p_phone:phone,p_address:String(f.get('address')||'').trim(),p_retail:price
+   p_phone:phone,p_address:String(f.get('address')||'').trim(),p_retail:price,p_zone:String(f.get('zone')||'')
   });
   if(error)throw error;
   $('requestDialog').close();tab('requests');
