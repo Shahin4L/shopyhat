@@ -4,17 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
-/* Supabase may redirect approved Magic Links to the Site URL root.
-   Before loading storefront scripts, route only Auth callbacks to /admin/.
-   Keep the original query/hash intact; never send tokens to third parties. */
+/* Preserve explicit auth flow boundaries for root callbacks. */
 (function(){
- const query=window.location.search||'';
- const hash=window.location.hash||'';
- const hasAuthFragment=/(?:^#|[&#])(?:access_token|refresh_token|error|error_description|token_hash)=/.test(hash);
- const hasPkceCode=/(?:^\?|[&])code=/.test(query);
- if((hasAuthFragment||hasPkceCode)&&window.location.pathname.replace(/\/+$/,'')!=='/admin'){
-   window.location.replace('/admin/'+query+hash);
- }
+ const query=window.location.search||'',hash=window.location.hash||'';
+ const params=new URLSearchParams(hash.startsWith('#')?hash.slice(1):hash);
+ const q=new URLSearchParams(query),type=params.get('type')||q.get('type')||'';
+ const hasAuth=/(?:^#|[&#])(?:access_token|refresh_token|error|error_description|token_hash)=/.test(hash)||q.has('code');
+ if(!hasAuth)return;
+ if(type==='recovery'){window.location.replace('/reset-password.html'+query+hash);return}
+ if(type==='signup'||q.get('auth_flow')==='customer')return;
+ if(type==='magiclink'||type==='invite'){window.location.replace('/admin/'+query+hash);return}
 })();
 </script>
 <title>SHOPYHAT | Tangail Sarees, Women's Clothing & Accessories</title>
