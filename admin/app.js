@@ -4,7 +4,7 @@ import {setupBrandManager} from './brand.js';
 import {setupCatalogManager} from './catalog.js';
 import {setupExperienceStudio} from './experience.js';
 import {setupPromotions} from './promotions.js';
-import {setupResellerOperations} from './resellers.js';
+import {setupResellerOperations} from './resellers.js?v=20261125-reseller-orders';
 const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -725,7 +725,8 @@ document.querySelectorAll('[data-range]').forEach(b=>b.onclick=()=>setDatePreset
 $('sendOtp').onclick=loginSend;$('verifyOtp').onclick=loginVerify;
 $('email').onkeydown=e=>{if(e.key==='Enter')loginSend()};$('otp').onkeydown=e=>{if(e.key==='Enter')loginVerify()};
 $('logout').onclick=async()=>{await db.auth.signOut();location.reload()};
-$('refresh').onclick=refresh;$('closeDrawer').onclick=closeDrawer;
+window.addEventListener('sh:reseller-order-created',()=>refresh());
+$('refresh').onclick=()=>{refresh();resellers.refreshPending()};$('closeDrawer').onclick=closeDrawer;
 $('productSearch').oninput=render;
 $('productCategoryFilter').onchange=()=>{catalog.refreshProductFilterOptions();render()};
 $('productSubcategoryFilter').onchange=render;$('orderSearch').oninput=render;$('statusFilter').onchange=render;$('orderPaymentFilter').onchange=render;$('orderPaymentState').onchange=render;
