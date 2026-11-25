@@ -78,7 +78,7 @@ create table if not exists sh_private.sh_order_email_outbox(
  event_type text not null check(event_type in ('order_confirmed','payment_confirmed')),
  recipient text not null,
  payload jsonb not null,
- state text not null default 'pending' check(state in ('pending','sending','sent','failed','uncertain')),
+ state text not null default 'pending' check(state in ('pending','sending','sent','failed','uncertain','skipped')),
  lease_id uuid,
  lease_started_at timestamptz,
  created_at timestamptz not null default now(),
@@ -120,6 +120,7 @@ begin
   raise exception 'Unauthorized mail dispatcher';
  end if;
  update sh_private.sh_order_email_outbox set state='uncertain',error_code='worker_interrupted' where state='sending' and lease_started_at<now()-interval '5 minutes';
+ update sh_private.sh_order_email_outbox q set state='skipped',error_code='order_state_changed' from public.sh_orders o where q.order_id=o.id and q.state='pending' and ((q.event_type='order_confirmed' and o.status in ('Cancelled','Returned')) or (q.event_type='payment_confirmed' and lower(o.payment_status) not in ('verified - paid','paid','verified','collected - cod')));
  return query
  with candidates as (
   select q.id from sh_private.sh_order_email_outbox q where q.state='pending'
