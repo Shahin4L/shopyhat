@@ -255,9 +255,25 @@ function scheduleWatchSync(){
 }
 window.addEventListener('sh:saved-items',scheduleWatchSync);
 function profileView(){
- panel('<h3>Profile</h3><p>Delivery address remains optional until checkout.</p><form id="shProfileForm">'+field('full_name','Full name','text','maxlength="120" value="'+esc(profile?.full_name||'')+'"')+'<label>Preferred delivery address<textarea name="preferred_address" maxlength="400">'+esc(profile?.preferred_address||'')+'</textarea></label>'+formButton('Save profile')+'</form><details><summary>Change password</summary><form id="shPasswordForm">'+field('password','New password','password','minlength="8"')+formButton('Update password')+'</form></details>');
- $('shProfileForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.currentTarget);const {data,error}=await db.from('sh_customer_profiles').update({full_name:String(f.get('full_name')).trim(),preferred_address:String(f.get('preferred_address')||'').trim(),updated_at:new Date().toISOString()}).eq('user_id',signedUser.id).select().maybeSingle();if(data)profile=data;message(error?error.message:'Profile saved.',!!error)};
- $('shPasswordForm').onsubmit=async e=>{e.preventDefault();const pass=String(new FormData(e.currentTarget).get('password'));const {error}=await db.auth.updateUser({password:pass});message(error?error.message:'Password updated.',!!error)};
+ panel('<h3>Profile</h3><p>Delivery address remains optional until checkout.</p><form id="shProfileForm">'+field('full_name','Full name','text','maxlength="120" value="'+esc(profile?.full_name||'')+'"')+'<label>Preferred delivery address<textarea name="preferred_address" maxlength="400">'+esc(profile?.preferred_address||'')+'</textarea></label>'+formButton('Save profile')+'<p id="shProfileStatus" role="status" aria-live="polite" style="margin:12px 0;font-weight:600"></p></form><details><summary>Change password</summary><form id="shPasswordForm">'+field('password','New password','password','minlength="8" autocomplete="new-password"')+field('confirm','Confirm new password','password','minlength="8" autocomplete="new-password"')+formButton('Update password')+'<p id="shPasswordStatus" role="status" aria-live="polite" style="margin:12px 0;font-weight:600"></p></form></details>');
+ const status=(id,text,bad=false)=>{const n=$(id);if(n){n.textContent=text;n.style.color=bad?'#b42318':'#167443'}};
+ $('shProfileForm').onsubmit=async e=>{
+  e.preventDefault();const form=e.currentTarget,btn=form.querySelector('[type=submit]'),f=new FormData(form),name=String(f.get('full_name')||'').trim();
+  if(name.length<2){status('shProfileStatus','Please enter a name with at least 2 characters.',true);return}
+  btn.disabled=true;btn.textContent='Saving…';status('shProfileStatus','Saving your profile…');
+  try{const {data,error}=await db.from('sh_customer_profiles').update({full_name:name,preferred_address:String(f.get('preferred_address')||'').trim(),updated_at:new Date().toISOString()}).eq('user_id',signedUser.id).select().maybeSingle();
+   if(error)throw error;if(!data)throw Error('Profile could not be saved. Please try again or contact support.');profile=data;window.dispatchEvent(new Event('sh:account'));status('shProfileStatus','✓ Profile updated successfully.');
+  }catch(err){status('shProfileStatus',err.message||'Unable to save your profile. Please try again.',true)}
+  finally{btn.disabled=false;btn.textContent='Save profile'}
+ };
+ $('shPasswordForm').onsubmit=async e=>{
+  e.preventDefault();const form=e.currentTarget,btn=form.querySelector('[type=submit]'),f=new FormData(form),pass=String(f.get('password')||'');
+  if(pass!==String(f.get('confirm')||'')){status('shPasswordStatus','Passwords do not match. Please try again.',true);return}
+  btn.disabled=true;btn.textContent='Updating…';status('shPasswordStatus','Updating your password…');
+  try{const {error}=await db.auth.updateUser({password:pass});if(error)throw error;form.reset();status('shPasswordStatus','✓ Password updated successfully. Use your new password next time you sign in.')}
+  catch(err){status('shPasswordStatus',err.code==='same_password'?'Please choose a password different from your current password.':err.message||'Unable to update your password. Please try again.',true)}
+  finally{btn.disabled=false;btn.textContent='Update password'}
+ };
 }
 db.auth.onAuthStateChange((_event,session)=>{if(session?.user?.id!==signedUser?.id){setTimeout(()=>loadAccount().then(()=>{if($('shAccountModal')?.open)render()}),0)}});
 /* Existing checkout/support forms remain usable for guests. Only populate blank fields of verified customers. */
