@@ -5,7 +5,7 @@ export function setupResellerOperations({db,roleCan,notify}){
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const money=n=>'৳'+Number(n||0).toLocaleString('en-BD',{maximumFractionDigits:2});
  const allowed=()=>roleCan('owner','manager');
- let accounts=[],orders=[],referrals=[],applications=[],orderProducts=new Map(),pricePage=0,priceTotal=0,priceQueryToken=0,activeSubpage='applications';
+ let accounts=[],orders=[],referrals=[],applications=[],orderProducts=new Map(),orderLinks=new Map(),openFulfillment=null,pendingTimer=null,pricePage=0,priceTotal=0,priceQueryToken=0,activeSubpage='applications';
  const statusBySection={applications:['pending','approved','rejected'],accounts:['pending','approved','suspended','rejected'],fulfillment:['pending','approved','rejected','fulfilled','cancelled'],referrals:['pending','approved','rejected','settled']};
  const pricingPageSize=20;
  const uniqueLogin=()=>('sh'+crypto.randomUUID().replace(/-/g,'').slice(0,9));
@@ -32,7 +32,7 @@ export function setupResellerOperations({db,roleCan,notify}){
   <h3>Approved Reseller Accounts</h3><div class="scroll"><table><thead><tr><th>Business</th><th>Status</th><th>Registered</th><th>Decision</th></tr></thead><tbody id="resellerAccounts"></tbody></table></div>
   <h3>Reseller Product Pricing</h3><p class="muted">Only enabled products appear in the reseller catalog. Search your full active catalog and publish exactly the items you want to offer.</p><div class="reseller-price-toolbar"><label>Search Product<input id="resellerPriceSearch" type="search" placeholder="Find a product by name" autocomplete="off"></label><label>Availability<select id="resellerPriceMode"><option value="all">All Active Products</option><option value="enabled">Enabled for Resellers</option><option value="disabled">Not Enabled</option></select></label></div><p id="resellerPriceCount" class="muted" role="status"></p>
   <div class="scroll"><table><thead><tr><th>Product</th><th>Public Selling Price</th><th>Reseller Wholesale Price</th><th>Publish</th><th>Save</th></tr></thead><tbody id="resellerPrices"></tbody></table></div><div class="reseller-price-paging"><button id="resellerPricePrev" class="btn small" type="button">← Previous</button><span id="resellerPricePageLabel">Page 1</span><button id="resellerPriceNext" class="btn small" type="button">Next →</button></div>
-  <h3>Customer Fulfillment Requests</h3><p class="muted">Reseller requests are not paid orders. Review payment collection, shipping and settlement separately.</p>
+  <h3>Customer Fulfillment Requests</h3><p class="muted">To approve, choose the delivery zone, select approved and save. This creates one unpaid Cash on Delivery order in Order Management and deducts stock. Existing approved requests without an order can be converted the same way. Confirm the customer's delivery zone and COD before saving. Delivery and settlement are separate.</p>
   <div class="scroll"><table><thead><tr><th>Reseller</th><th>Customer</th><th>Product / Reference</th><th>Quantity</th><th>Retail</th><th>Wholesale</th><th>Margin</th><th>Request Status</th><th>Settlement</th><th>Update</th></tr></thead><tbody id="resellerOrders"></tbody></table></div>
   <h3>Referral Link Orders</h3><p class="muted">Attributed margin is provisional. Approve settlement only after the SHOPYHAT order is delivered and payment is verified.</p>
   <div class="scroll"><table><thead><tr><th>Reseller</th><th>Order ID</th><th>Net eligible sale</th><th>Wholesale</th><th>Margin</th><th>Referral status</th><th>Update</th></tr></thead><tbody id="resellerReferrals"></tbody></table></div><p id="resellerMsg" class="msg" role="status"></p>`;
@@ -58,6 +58,16 @@ export function setupResellerOperations({db,roleCan,notify}){
    btn.onclick=()=>subpage(key);subnav.append(btn);
   }
   panel.querySelector('.topline')?.after(subnav);
+  openFulfillment=()=>{window.SHOPYHAT_SHOW_PAGE?.('resellers');subpage('fulfillment');reload()};
+  const orderPage=$('page-orders');
+  if(allowed()&&orderPage&&!$('resellerPendingOrders')){
+   const notice=document.createElement('button');notice.id='resellerPendingOrders';notice.type='button';notice.className='btn';
+   notice.style.cssText='margin:8px 0 14px;background:#fff3e7;border-color:#f47721;font-weight:700';
+   notice.textContent='Reseller requests: loading…';notice.onclick=()=>openFulfillment?.();
+   orderPage.querySelector('.scroll')?.before(notice);
+  }
+  refreshPending();
+  if(!pendingTimer)pendingTimer=setInterval(refreshPending,30000);
   panel.querySelector('#resellerCredentials')?.classList.add('reseller-credentials-panel');
   function subpage(key){
    activeSubpage=key;
@@ -152,8 +162,22 @@ export function setupResellerOperations({db,roleCan,notify}){
     }else if(action==='request'){
      const row=target.closest('tr'),status=row.querySelector('[data-request-status]').value,settlement_status=row.querySelector('[data-request-settlement]').value;
      if(!['pending','approved','rejected','fulfilled','cancelled'].includes(status)||!['unsettled','pending','settled'].includes(settlement_status))throw Error('Invalid fulfillment status');
-     const {error}=await db.from('sh_reseller_fulfillment_requests').update({status,settlement_status,updated_at:new Date().toISOString()}).eq('id',id);
-     if(error)throw error;
+     const request=orders.find(item=>item.id===id);
+     if(!request)throw Error('Request no longer available. Refresh and try again.');
+     if(status==='approved'&&!orderLinks.has(id)){
+      if(settlement_status!==request.settlement_status)throw Error('Create the order first; update settlement separately.');
+      const zone=row.querySelector('[data-request-zone]')?.value;
+      if(!['dhaka','outside'].includes(zone))throw Error('Select the delivery zone before creating the order.');
+      if(!confirm('Create an unpaid Cash on Delivery order for this customer? Delivery charge will use the configured '+(zone==='dhaka'?'Dhaka':'outside Dhaka')+' rate and stock will be deducted.'))return;
+      const {data,error}=await db.rpc('sh_approve_reseller_order',{p_request:id,p_zone:zone});
+      if(error)throw error;
+      window.dispatchEvent(new CustomEvent('sh:reseller-order-created'));
+      await reload();await refreshPending();
+      notify('resellerMsg',(data?.duplicate?'Existing order: ':'Order created: ')+(data?.order_number||'')+'. Find it in Order Management.');return;
+     }
+     const {data,error}=await db.from('sh_reseller_fulfillment_requests').update({status,settlement_status,updated_at:new Date().toISOString()}).eq('id',id).select('id').maybeSingle();
+     if(error)throw error;if(!data)throw Error('Request could not be updated. Refresh and try again.');
+     await refreshPending();
     }
     await reload();notify('resellerMsg','Changes saved successfully.');
    }catch(err){notify('resellerMsg',err.message,true)}finally{target.disabled=false}
@@ -258,7 +282,7 @@ export function setupResellerOperations({db,roleCan,notify}){
  function renderOrdersAndReferrals(){
    const statusOpts=['pending','approved','rejected','fulfilled','cancelled'],settlementOpts=['unsettled','pending','settled'];
    const dropdown=(key,values,current)=>'<select data-'+key+' aria-label="'+key+'">'+values.map(v=>'<option value="'+v+'" '+(current===v?'selected':'')+'>'+v+'</option>').join('')+'</select>';
-   $('resellerOrders').innerHTML=filtered(orders,'fulfillment').map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td><td>${esc(x.customer_name)}<small class="muted">${esc(x.customer_phone)}</small><small class="muted">${esc(x.delivery_address)}</small></td><td>${esc(orderProducts.get(x.variant_id)?.name||"Product unavailable")}<small class="muted">${esc(orderProducts.get(x.variant_id)?.color||"")}</small><small class="muted">Ref: ${esc(x.id)}</small></td><td>${x.quantity}</td><td>${money(x.retail_unit_price)}</td><td>${money(x.wholesale_unit_price)}</td><td>${money(x.margin_total)}</td><td>${dropdown('request-status',statusOpts,x.status)}</td><td>${dropdown('request-settlement',settlementOpts,x.settlement_status)}</td><td><button type="button" class="btn small" data-reseller-action="request" data-id="${esc(x.id)}">Save</button></td></tr>`).join('')||'<tr><td colspan="10">No fulfillment requests yet.</td></tr>';
+   $('resellerOrders').innerHTML=filtered(orders,'fulfillment').map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td><td>${esc(x.customer_name)}<small class="muted">${esc(x.customer_phone)}</small><small class="muted">${esc(x.delivery_address)}</small></td><td>${esc(orderProducts.get(x.variant_id)?.name||"Product unavailable")}<small class="muted">${esc(orderProducts.get(x.variant_id)?.color||"")}</small><small class="muted">Ref: ${esc(x.id)}</small>${orderLinks.has(x.id)?'<small class="muted">Order: '+esc(orderLinks.get(x.id))+'</small>':(['pending','approved'].includes(x.status)?'<label>Delivery zone<select data-request-zone aria-label="Delivery zone"><option value="">Choose zone</option><option value="dhaka">Inside Dhaka</option><option value="outside">Outside Dhaka</option></select></label><small class="muted">COD; delivery charge applies</small>':'')}</td><td>${x.quantity}</td><td>${money(x.retail_unit_price)}</td><td>${money(x.wholesale_unit_price)}</td><td>${money(x.margin_total)}</td><td>${dropdown('request-status',statusOpts,x.status)}</td><td>${dropdown('request-settlement',settlementOpts,x.settlement_status)}</td><td><button type="button" class="btn small" data-reseller-action="request" data-id="${esc(x.id)}">Save</button></td></tr>`).join('')||'<tr><td colspan="10">No fulfillment requests yet.</td></tr>';
    const referralStatuses=['pending','approved','rejected','settled'];
    $('resellerReferrals').innerHTML=filtered(referrals,'referrals').map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td>
     <td>${esc(x.order_id)}</td><td>${money(x.retail_net)}</td><td>${money(x.wholesale_total)}</td><td><b>${money(x.margin_total)}</b></td>
@@ -314,7 +338,9 @@ export function setupResellerOperations({db,roleCan,notify}){
     fetchSection('sh_reseller_referrals'),
     fetchSection('sh_reseller_applications')
    ]);
-   orderProducts=new Map();
+   orderProducts=new Map();orderLinks=new Map();
+   const requestIds=orders.map(item=>item.id);
+   for(let i=0;i<requestIds.length;i+=100){const linked=await db.from('sh_orders').select('request_id,order_number').in('request_id',requestIds.slice(i,i+100));if(linked.error)throw linked.error;for(const item of linked.data||[])orderLinks.set(item.request_id,item.order_number);}
    const ids=[...new Set(orders.map(x=>x.variant_id).filter(Boolean))];
    for(let i=0;i<ids.length;i+=100){
     const result=await db.from('sh_variants').select('id,color,sh_products(name)').in('id',ids.slice(i,i+100));
@@ -326,5 +352,12 @@ export function setupResellerOperations({db,roleCan,notify}){
    notify('resellerMsg',accounts.length+' resellers, '+orders.length+' fulfillment requests, '+referrals.length+' referral orders loaded.');
   }catch(e){notify('resellerMsg',e.message,true)}
  }
- return{mount,reload};
+ async function refreshPending(){
+  if(!allowed())return;
+  let r;try{r=await db.from('sh_reseller_fulfillment_requests').select('id',{count:'exact',head:true}).eq('status','pending')}catch(error){r={error}}
+  const label=r.error?'Reseller requests: unavailable':'Reseller requests: '+(r.count||0)+' pending';
+  const notice=$('resellerPendingOrders');if(notice){notice.hidden=false;notice.textContent=label}
+  const nav=$('resellerTab');if(nav)nav.textContent=r.error?'Resellers':'Resellers ('+(r.count||0)+')';
+ }
+ return{mount,reload,refreshPending};
 }
