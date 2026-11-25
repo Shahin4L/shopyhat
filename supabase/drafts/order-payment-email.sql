@@ -109,3 +109,36 @@ end $$;
 drop trigger if exists sh_queue_order_confirmation on public.sh_orders;
 create trigger sh_queue_order_confirmation after update of status,payment_status on public.sh_orders
 for each row execute function sh_private.queue_order_confirmation();
+-- Worker claims only already-created events. The capability grants no read access
+-- to other data and is checked inside a service-role-only RPC.
+create or replace function public.sh_claim_order_mail(p_token text)
+returns table(id uuid,lease_id uuid,event_type text,recipient text,payload jsonb)
+language plpgsql security definer set search_path='' as $$
+begin
+ if p_token is null or not exists(select 1 from vault.decrypted_secrets where name='shopyhat_order_mail_dispatch' and decrypted_secret=p_token) then
+  raise exception 'Unauthorized mail dispatcher';
+ end if;
+ return query
+ with candidates as (
+  select q.id from sh_private.sh_order_email_outbox q where q.state='pending'
+  order by q.created_at for update skip locked limit 10
+ )
+ update sh_private.sh_order_email_outbox q set state='sending',lease_id=gen_random_uuid()
+ from candidates c where q.id=c.id
+ returning q.id,q.lease_id,q.event_type,q.recipient,q.payload;
+end $$;
+revoke all on function public.sh_claim_order_mail(text) from public,anon,authenticated;
+grant execute on function public.sh_claim_order_mail(text) to service_role;
+
+create or replace function public.sh_finish_order_mail(p_id uuid,p_lease uuid,p_state text,p_message_id text,p_error text)
+returns void language plpgsql security definer set search_path='' as $$
+begin
+ if p_state not in ('sent','failed','uncertain') then raise exception 'Invalid state'; end if;
+ update sh_private.sh_order_email_outbox set state=p_state,
+  sent_at=case when p_state='sent' then now() else null end,
+  provider_message_id=left(coalesce(p_message_id,''),200),error_code=left(coalesce(p_error,''),100)
+ where id=p_id and lease_id=p_lease and state='sending';
+ if not found then raise exception 'Mail lease not found';end if;
+end $$;
+revoke all on function public.sh_finish_order_mail(uuid,uuid,text,text,text) from public,anon,authenticated;
+grant execute on function public.sh_finish_order_mail(uuid,uuid,text,text,text) to service_role;
