@@ -44,7 +44,7 @@ function tab(which){
 }
 async function loadDashboard(){
  const [requests,referrals]=await Promise.all([
-  db.from('sh_reseller_fulfillment_requests').select('id,status,quantity,retail_unit_price,wholesale_unit_price,margin_total,created_at').order('created_at',{ascending:false}).limit(80),
+  db.from('sh_reseller_fulfillment_requests').select('id,variant_id,customer_name,status,settlement_status,quantity,retail_unit_price,wholesale_unit_price,margin_total,created_at').order('created_at',{ascending:false}).limit(80),
   db.from('sh_reseller_referrals').select('id,status,margin_total,created_at').order('created_at',{ascending:false}).limit(80)
  ]);
  if(requests.error||referrals.error){message('Unable to load reseller orders. Please try again.',true);return}
@@ -54,7 +54,10 @@ async function loadDashboard(){
   if(!items.length){$(''+target).textContent='No records yet.';return}
   for(const item of items){const entry=document.createElement('div');entry.className='entry';entry.innerHTML=formatter(item);$(target).append(entry)}
  };
- list('requestList',requests.data||[],r=>'<span><b>'+escape(r.status)+'</b><small>'+new Date(r.created_at).toLocaleDateString('en-BD')+' · '+r.quantity+' piece(s)</small></span><span>'+money(r.margin_total)+' gross margin</span>');
+ const ids=[...new Set((requests.data||[]).map(r=>r.variant_id).filter(Boolean))];let productsById=new Map();
+ if(ids.length){const products=await db.from('sh_reseller_catalog').select('variant_id,name,color').in('variant_id',ids);if(!products.error)productsById=new Map((products.data||[]).map(p=>[p.variant_id,p]));}
+ list('requestList',requests.data||[],r=>{const p=productsById.get(r.variant_id),product=p?p.name+' — '+p.color:'Product '+String(r.variant_id||'').slice(0,8);
+ return '<span><b>'+escape(product)+'</b><small>Reference: '+escape(r.id)+'<br>Customer: '+escape(r.customer_name)+' · '+Number(r.quantity)+' piece(s)<br>'+new Date(r.created_at).toLocaleDateString('en-BD')+' · Status: '+escape(r.status)+' · Settlement: '+escape(r.settlement_status)+'</small></span><span>Product total '+money(Number(r.retail_unit_price)*Number(r.quantity))+'<br>Estimated margin '+money(r.margin_total)+'</span>';});
  list('referralList',referrals.data||[],r=>'<span><b>'+escape(r.status)+'</b><small>'+new Date(r.created_at).toLocaleDateString('en-BD')+'</small></span><span>'+money(r.margin_total)+' provisional</span>');
 }
 async function loadCatalog(){
@@ -131,7 +134,7 @@ function renderCatalog(){
    const url=location.origin+'/?ref='+encodeURIComponent(account.shop_slug)+'#p/'+encodeURIComponent(p.legacy_id);
    try{await navigator.clipboard.writeText(url);message('Reseller product link copied.')}catch{message('Copy this link: '+url)}
   };
-  const order=document.createElement('button');order.type='button';order.textContent=p.stock!==null&&p.stock<=0?'Out of Stock':'Create Request';order.disabled=p.stock!==null&&p.stock<=0;
+  const order=document.createElement('button');order.type='button';order.textContent=p.stock!==null&&p.stock<=0?'Out of Stock':'Add Customer Order';order.disabled=p.stock!==null&&p.stock<=0;
   order.onclick=()=>openRequest(p);
   const media=document.createElement('button');media.type='button';media.textContent='Download Photos';media.onclick=()=>openMediaLibrary(p);
   actions.append(share,media,order);body.append(title,meta,prices,editor,actions);card.append(body);host.append(card);
@@ -182,9 +185,16 @@ async function downloadMedia(photo,button){
 }
 function openRequest(p){selection=p;$('requestProduct').textContent=p.name+' — '+p.color+' · Wholesale '+money(p.wholesale)+' · Selling '+money(p.resale_price);
  const f=$('requestForm');f.reset();f.elements.retail.value=p.resale_price;
- f.elements.retail.min=p.wholesale;f.elements.retail.max=Math.max(p.public_price*5,p.wholesale);
- $('requestDialog').showModal();
+ f.elements.retail.min=p.wholesale;f.elements.retail.max=p.public_price*5;
+ f.elements.qty.max=p.stock===null?20:Math.min(20,p.stock);
+ $('requestError').hidden=true;$('requestError').textContent='';updateRequestSummary();$('requestDialog').showModal();
 }
+function updateRequestSummary(){if(!selection)return;const f=$('requestForm'),qty=Number(f.elements.qty.value)||0,price=Number(f.elements.retail.value)||0;
+ $('requestSummary').textContent='Products: '+money(qty*price)+' · Wholesale: '+money(qty*selection.wholesale)+' · Estimated gross margin: '+money(qty*(price-selection.wholesale))+'. Delivery charges excluded.';
+}
+$('requestForm').elements.qty.addEventListener('input',updateRequestSummary);
+$('requestForm').elements.retail.addEventListener('input',updateRequestSummary);
+$('refreshRequests').onclick=()=>loadDashboard();
 $('openApply').onclick=()=>{$('loginPanel').hidden=true;$('applyPanel').hidden=false;$('applySuccess').hidden=true;message('')};
 $('backLogin').onclick=()=>{$('loginPanel').hidden=false;$('applyPanel').hidden=true;$('applySuccess').hidden=true;message('')};
 $('successLogin').onclick=()=>{$('applySuccess').hidden=true;$('loginPanel').hidden=false;message('')};
@@ -254,19 +264,24 @@ $('mediaClose').onclick=()=>$('mediaDialog').close();
 $('logout').onclick=logout;$('logoutFirst').onclick=logout;$('closeRequest').onclick=()=>$('requestDialog').close();
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 $('requestForm').onsubmit=async event=>{
- event.preventDefault();const f=new FormData(event.currentTarget),phone=mobile(f.get('phone'));
- if(!phone)return message('Enter a valid customer mobile number.',true);
- if(!f.has('consent'))return message('Customer permission is required.',true);
- const b=event.currentTarget.querySelector('[type=submit]');b.disabled=true;
+ event.preventDefault();const form=event.currentTarget,f=new FormData(form),phone=mobile(f.get('phone')),errEl=$('requestError');
+ const fail=msg=>{errEl.textContent=msg;errEl.hidden=false;errEl.scrollIntoView({block:'nearest'});};
+ errEl.hidden=true;if(!phone)return fail('Enter a valid Bangladesh customer mobile number.');
+ if(!f.has('consent'))return fail('Customer permission is required.');
+ const qty=Number(f.get('qty')),price=Number(f.get('retail'));
+ if(!selection||!Number.isInteger(qty)||qty<1||qty>20||!Number.isFinite(price)||price<selection.wholesale||price>selection.public_price*5)return fail('Check the quantity and customer selling price.');
+ const b=form.querySelector('[type=submit]');b.disabled=true;b.textContent='Sending…';
  try{
   const {data,error}=await db.rpc('sh_reseller_request',{
-   p_variant:selection.variant_id,p_qty:Number(f.get('qty')),p_customer:String(f.get('customer')||'').trim(),
-   p_phone:phone,p_address:String(f.get('address')||'').trim(),p_retail:Number(f.get('retail'))
+   p_variant:selection.variant_id,p_qty:qty,p_customer:String(f.get('customer')||'').trim(),
+   p_phone:phone,p_address:String(f.get('address')||'').trim(),p_retail:price
   });
   if(error)throw error;
-  $('requestDialog').close();message('Fulfillment request received: '+data+'. SHOPYHAT Admin must approve it.');
-  await loadDashboard();tab('requests');
- }catch(err){message(err.message,true)}finally{b.disabled=false}
+  $('requestDialog').close();tab('requests');
+  message('Order request sent to SHOPYHAT for review. Reference: '+data+'. It is not yet a confirmed order.');
+  try{await loadDashboard()}catch(refreshError){message('Order request sent. Reference: '+data+'. Refresh My Customer Orders to see its status.')}
+ }catch(err){fail((err.message||'Unable to send the request.')+' If the connection was interrupted, check My Customer Orders before trying again to avoid duplicates.')}
+ finally{b.disabled=false;b.textContent='Send Order Request'}
 };
 db.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){user=null;account=null;showLogin()}});
 restore();
