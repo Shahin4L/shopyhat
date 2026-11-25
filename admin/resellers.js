@@ -5,7 +5,7 @@ export function setupResellerOperations({db,roleCan,notify}){
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const money=n=>'৳'+Number(n||0).toLocaleString('en-BD',{maximumFractionDigits:2});
  const allowed=()=>roleCan('owner','manager');
- let accounts=[],orders=[],referrals=[],applications=[],pricePage=0,priceTotal=0,priceQueryToken=0,activeSubpage='applications';
+ let accounts=[],orders=[],referrals=[],applications=[],orderProducts=new Map(),pricePage=0,priceTotal=0,priceQueryToken=0,activeSubpage='applications';
  const statusBySection={applications:['pending','approved','rejected'],accounts:['pending','approved','suspended','rejected'],fulfillment:['pending','approved','rejected','fulfilled','cancelled'],referrals:['pending','approved','rejected','settled']};
  const pricingPageSize=20;
  const uniqueLogin=()=>('sh'+crypto.randomUUID().replace(/-/g,'').slice(0,9));
@@ -33,7 +33,7 @@ export function setupResellerOperations({db,roleCan,notify}){
   <h3>Reseller Product Pricing</h3><p class="muted">Only enabled products appear in the reseller catalog. Search your full active catalog and publish exactly the items you want to offer.</p><div class="reseller-price-toolbar"><label>Search Product<input id="resellerPriceSearch" type="search" placeholder="Find a product by name" autocomplete="off"></label><label>Availability<select id="resellerPriceMode"><option value="all">All Active Products</option><option value="enabled">Enabled for Resellers</option><option value="disabled">Not Enabled</option></select></label></div><p id="resellerPriceCount" class="muted" role="status"></p>
   <div class="scroll"><table><thead><tr><th>Product</th><th>Public Selling Price</th><th>Reseller Wholesale Price</th><th>Publish</th><th>Save</th></tr></thead><tbody id="resellerPrices"></tbody></table></div><div class="reseller-price-paging"><button id="resellerPricePrev" class="btn small" type="button">← Previous</button><span id="resellerPricePageLabel">Page 1</span><button id="resellerPriceNext" class="btn small" type="button">Next →</button></div>
   <h3>Customer Fulfillment Requests</h3><p class="muted">Reseller requests are not paid orders. Review payment collection, shipping and settlement separately.</p>
-  <div class="scroll"><table><thead><tr><th>Reseller</th><th>Customer</th><th>Quantity</th><th>Retail</th><th>Wholesale</th><th>Margin</th><th>Request Status</th><th>Settlement</th><th>Update</th></tr></thead><tbody id="resellerOrders"></tbody></table></div>
+  <div class="scroll"><table><thead><tr><th>Reseller</th><th>Customer</th><th>Product / Reference</th><th>Quantity</th><th>Retail</th><th>Wholesale</th><th>Margin</th><th>Request Status</th><th>Settlement</th><th>Update</th></tr></thead><tbody id="resellerOrders"></tbody></table></div>
   <h3>Referral Link Orders</h3><p class="muted">Attributed margin is provisional. Approve settlement only after the SHOPYHAT order is delivered and payment is verified.</p>
   <div class="scroll"><table><thead><tr><th>Reseller</th><th>Order ID</th><th>Net eligible sale</th><th>Wholesale</th><th>Margin</th><th>Referral status</th><th>Update</th></tr></thead><tbody id="resellerReferrals"></tbody></table></div><p id="resellerMsg" class="msg" role="status"></p>`;
   // Create compact, keyboard-accessible subnavigation without duplicating the main Admin sidebar.
@@ -191,7 +191,7 @@ export function setupResellerOperations({db,roleCan,notify}){
    if(section!==activeSubpage||!query)return true;
    const fields=section==='applications'?[x.full_name,x.business_name,x.phone,x.email,x.status]:
      section==='accounts'?[x.business_name,x.login_name,x.contact_phone,x.shop_slug,x.status]:
-     section==='fulfillment'?[x.customer_name,x.customer_phone,x.delivery_address,x.reseller_id,x.status]:
+     section==='fulfillment'?[x.customer_name,x.customer_phone,x.delivery_address,x.reseller_id,x.id,x.variant_id,orderProducts.get(x.variant_id)?.name,x.status]:
      [x.order_id,x.reseller_id,x.status];
    return fields.some(v=>String(v??'').toLowerCase().includes(query));
   });
@@ -258,7 +258,7 @@ export function setupResellerOperations({db,roleCan,notify}){
  function renderOrdersAndReferrals(){
    const statusOpts=['pending','approved','rejected','fulfilled','cancelled'],settlementOpts=['unsettled','pending','settled'];
    const dropdown=(key,values,current)=>'<select data-'+key+' aria-label="'+key+'">'+values.map(v=>'<option value="'+v+'" '+(current===v?'selected':'')+'>'+v+'</option>').join('')+'</select>';
-   $('resellerOrders').innerHTML=filtered(orders,'fulfillment').map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td><td>${esc(x.customer_name)}<small class="muted">${esc(x.customer_phone)}</small><small class="muted">${esc(x.delivery_address)}</small></td><td>${x.quantity}</td><td>${money(x.retail_unit_price)}</td><td>${money(x.wholesale_unit_price)}</td><td>${money(x.margin_total)}</td><td>${dropdown('request-status',statusOpts,x.status)}</td><td>${dropdown('request-settlement',settlementOpts,x.settlement_status)}</td><td><button type="button" class="btn small" data-reseller-action="request" data-id="${esc(x.id)}">Save</button></td></tr>`).join('')||'<tr><td colspan="9">No fulfillment requests yet.</td></tr>';
+   $('resellerOrders').innerHTML=filtered(orders,'fulfillment').map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td><td>${esc(x.customer_name)}<small class="muted">${esc(x.customer_phone)}</small><small class="muted">${esc(x.delivery_address)}</small></td><td>${esc(orderProducts.get(x.variant_id)?.name||"Product unavailable")}<small class="muted">${esc(orderProducts.get(x.variant_id)?.color||"")}</small><small class="muted">Ref: ${esc(x.id)}</small></td><td>${x.quantity}</td><td>${money(x.retail_unit_price)}</td><td>${money(x.wholesale_unit_price)}</td><td>${money(x.margin_total)}</td><td>${dropdown('request-status',statusOpts,x.status)}</td><td>${dropdown('request-settlement',settlementOpts,x.settlement_status)}</td><td><button type="button" class="btn small" data-reseller-action="request" data-id="${esc(x.id)}">Save</button></td></tr>`).join('')||'<tr><td colspan="10">No fulfillment requests yet.</td></tr>';
    const referralStatuses=['pending','approved','rejected','settled'];
    $('resellerReferrals').innerHTML=filtered(referrals,'referrals').map(x=>`<tr><td>${esc(accounts.find(a=>a.user_id===x.reseller_id)?.business_name||x.reseller_id.slice(0,8))}</td>
     <td>${esc(x.order_id)}</td><td>${money(x.retail_net)}</td><td>${money(x.wholesale_total)}</td><td><b>${money(x.margin_total)}</b></td>
@@ -314,6 +314,13 @@ export function setupResellerOperations({db,roleCan,notify}){
     fetchSection('sh_reseller_referrals'),
     fetchSection('sh_reseller_applications')
    ]);
+   orderProducts=new Map();
+   const ids=[...new Set(orders.map(x=>x.variant_id).filter(Boolean))];
+   for(let i=0;i<ids.length;i+=100){
+    const result=await db.from('sh_variants').select('id,color,sh_products(name)').in('id',ids.slice(i,i+100));
+    if(result.error){notify('resellerMsg','Requests loaded, but some product details could not be loaded.',true);break}
+    for(const v of result.data||[])orderProducts.set(v.id,{name:v.sh_products?.name||'Product unavailable',color:v.color});
+   }
    renderFiltered();
    if(activeSubpage==='pricing')await loadPrices();
    notify('resellerMsg',accounts.length+' resellers, '+orders.length+' fulfillment requests, '+referrals.length+' referral orders loaded.');
