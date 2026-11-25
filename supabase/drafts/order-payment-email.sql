@@ -155,3 +155,13 @@ begin
 end $$;
 revoke all on function public.sh_admin_update_order_delivery_v2(uuid,text,text,text,text,text) from public,anon;
 grant execute on function public.sh_admin_update_order_delivery_v2(uuid,text,text,text,text,text) to authenticated;
+
+create or replace function public.sh_admin_order_mail_status(p_order uuid)
+returns table(event_type text,state text,created_at timestamptz,sent_at timestamptz,error_code text)
+language plpgsql stable security definer set search_path='' as $$
+begin
+ if auth.uid() is null or coalesce(sh_private.staff_role(),'') not in ('owner','manager','operator','viewer') then raise exception 'Authorized staff required';end if;
+ return query select q.event_type,q.state,q.created_at,q.sent_at,q.error_code from sh_private.sh_order_email_outbox q where q.order_id=p_order order by q.created_at;
+end $$;
+revoke all on function public.sh_admin_order_mail_status(uuid) from public,anon;
+grant execute on function public.sh_admin_order_mail_status(uuid) to authenticated;
