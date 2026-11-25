@@ -142,3 +142,16 @@ begin
 end $$;
 revoke all on function public.sh_finish_order_mail(uuid,uuid,text,text,text) from public,anon,authenticated;
 grant execute on function public.sh_finish_order_mail(uuid,uuid,text,text,text) to service_role;
+
+create or replace function public.sh_admin_update_order_delivery_v2(p_order uuid,p_name text,p_phone text,p_address text,p_zone text,p_email text)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare result jsonb; mail text:=nullif(trim(coalesce(p_email,'')),''); req uuid;
+begin
+ if mail is not null and (length(mail)>254 or mail !~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$') then raise exception 'Invalid customer email';end if;
+ result:=public.sh_admin_update_order_delivery(p_order,p_name,p_phone,p_address,p_zone);
+ update public.sh_orders set customer_email=mail where id=p_order returning request_id into req;
+ update public.sh_reseller_fulfillment_requests set customer_email=mail where id=req;
+ return result;
+end $$;
+revoke all on function public.sh_admin_update_order_delivery_v2(uuid,text,text,text,text,text) from public,anon;
+grant execute on function public.sh_admin_update_order_delivery_v2(uuid,text,text,text,text,text) to authenticated;
