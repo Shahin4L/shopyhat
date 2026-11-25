@@ -80,6 +80,7 @@ create table if not exists sh_private.sh_order_email_outbox(
  payload jsonb not null,
  state text not null default 'pending' check(state in ('pending','sending','sent','failed','uncertain')),
  lease_id uuid,
+ lease_started_at timestamptz,
  created_at timestamptz not null default now(),
  sent_at timestamptz,
  provider_message_id text,
@@ -118,12 +119,13 @@ begin
  if p_token is null or not exists(select 1 from vault.decrypted_secrets where name='shopyhat_order_mail_dispatch' and decrypted_secret=p_token) then
   raise exception 'Unauthorized mail dispatcher';
  end if;
+ update sh_private.sh_order_email_outbox set state='uncertain',error_code='worker_interrupted' where state='sending' and lease_started_at<now()-interval '5 minutes';
  return query
  with candidates as (
   select q.id from sh_private.sh_order_email_outbox q where q.state='pending'
   order by q.created_at for update skip locked limit 10
  )
- update sh_private.sh_order_email_outbox q set state='sending',lease_id=gen_random_uuid()
+ update sh_private.sh_order_email_outbox q set state='sending',lease_id=gen_random_uuid(),lease_started_at=now()
  from candidates c where q.id=c.id
  returning q.id,q.lease_id,q.event_type,q.recipient,q.payload;
 end $$;
