@@ -25,7 +25,7 @@ function shell(){
 function open(){shell();const dialog=$('shAccountModal');if(!dialog.open)dialog.showModal();render()}
 const authIntro=(title,desc,active,step='')=>'<div class="sh-auth-intro"><div class="sh-auth-eyebrow">YOUR CHOICE, OUR GIFT.</div><h3>'+title+'</h3><p>'+desc+'</p></div><nav class="sh-auth-nav" aria-label="Customer account access"><button type="button" id="shAuthLogin" class="'+(active==='login'?'active':'')+'">Sign in</button><button type="button" id="shAuthSignup" class="'+(active==='signup'?'active':'')+'">Create account</button></nav>'+(step?'<div class="sh-auth-progress">'+step+'<div class="sh-progress-bars"><i class="on"></i><i class="'+(step.includes('2')?'on':'')+'"></i></div></div>':'');
 const bindTabs=()=>{$('shAuthLogin').onclick=loginView;$('shAuthSignup').onclick=signupStep1};
-const passInput=(name,label,mode)=>'<label class="sh-auth-field"><span>'+label+'</span><span class="sh-password-input"><input name="'+name+'" type="password" minlength="8" autocomplete="'+mode+'" required><button class="sh-eye" type="button" data-toggle-password aria-label="Show password">Show</button></span></label>';
+const passInput=(name,label,mode)=>'<label class="sh-auth-field"><span>'+label+'</span><span class="sh-password-input"><input name="'+name+'" type="password" '+(mode==='new-password'?'minlength="8"':'')+' autocomplete="'+mode+'" required><button class="sh-eye" type="button" data-toggle-password aria-label="Show password">Show</button></span></label>';
 const bindPassword=()=>document.querySelectorAll('#shAccountBody [data-toggle-password]').forEach(b=>b.onclick=()=>{const i=b.parentNode.querySelector('input');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'Show':'Hide';b.setAttribute('aria-label',i.type==='password'?'Show password':'Hide password')});
 function signupStep1(){
  message('');
@@ -48,9 +48,10 @@ function passwordView(phone){
  '<div class="sh-signup-summary"><span>Creating account for</span><strong>'+esc(pendingName)+'</strong><small>'+esc(phone)+'</small></div>'+
  '<form id="shSignup2" class="sh-auth-form">'+field('email','Email address','email','maxlength="180" autocomplete="email" placeholder="name@example.com"')+
  passInput('password','Create password','new-password')+passInput('confirm','Confirm password','new-password')+
- '<p class="sh-form-hint">At least 8 characters. Email verification is required.</p>'+
+ '<p class="sh-form-hint" id="shPasswordStrength" aria-live="polite">Use at least 8 characters; a longer, unique password is safer.</p><p class="sh-form-hint">Email verification is required.</p>'+
  formButton('Create my account →')+'</form><button type="button" class="sh-auth-back" id="shBackAccount">← Back to personal details</button>');
  bindTabs();bindPassword();$('shBackAccount').onclick=signupStep1;
+ const strengthInput=$('shSignup2').querySelector('[name=password]');strengthInput.addEventListener('input',()=>{const v=strengthInput.value,n=[/[a-z]/.test(v),/[A-Z]/.test(v),/[0-9]/.test(v),/[^a-zA-Z0-9]/.test(v)].filter(Boolean).length;const label=!v?'Use at least 8 characters; a longer, unique password is safer.':v.length<8?'Too short — use at least 8 characters.':v.length>=12&&n>=3?'Strength: strong':v.length>=10&&n>=2?'Strength: moderate':'Strength: weak — use a longer, unique password.';$('shPasswordStrength').textContent=label;});
  $('shSignup2').onsubmit=async e=>{
   e.preventDefault();const form=e.currentTarget,f=new FormData(form);
   const pass=String(f.get('password')||''),confirmation=String(f.get('confirm')||'');
@@ -62,6 +63,7 @@ function passwordView(phone){
    const {data,error}=await db.auth.signUp({email,password:pass,options:{data:{name:pendingName,mobile:pendingPhone}}});
    if(error)throw error;
    if(data.session){await loadAccount();render();message('Welcome to SHOPYHAT! Your account has been created successfully.');return}
+   if(data.user && Array.isArray(data.user.identities) && data.user.identities.length===0){view('<div class="sh-auth-complete"><h3>Check your account</h3><p>If an account already exists with this email, please sign in or use Forgot password. Otherwise, check your inbox for a verification message.</p><button class="sh-account-primary" type="button" id="shExistingLogin">Back to sign in</button><button class="sh-auth-back" type="button" id="shExistingVerify">Enter a verification code</button></div>');$('shExistingLogin').onclick=loginView;$('shExistingVerify').onclick=()=>verifySignupView(email);return;}
    verifySignupView(email);
   }catch(error){message(error.message||'Could not register. Please try again.',true)}
   finally{button.disabled=false;button.textContent='Create my account →'}
@@ -71,7 +73,7 @@ function verifySignupView(email){
  message('');
  view('<div class="sh-auth-intro"><h3>Verify your email</h3><p>Check '+esc(email)+' for a verification code or confirmation link. Check your spam folder too.</p></div>'+
  '<form id="shVerifySignup" class="sh-auth-form">'+field('code','Verification code','text','inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" minlength="6" maxlength="8"')+formButton('Verify and continue →')+'</form>'+
- '<button type="button" class="sh-auth-back" id="shResendSignup">Resend verification email</button><button type="button" class="sh-auth-back" id="shVerifyBack">Back to sign in</button>');
+ '<button type="button" class="sh-auth-back" id="shResendSignup">Resend verification email</button><br><button type="button" class="sh-auth-back" id="shVerifyBack">Back to sign in</button>');
  $('shVerifyBack').onclick=loginView;
  $('shResendSignup').onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{const {error}=await db.auth.resend({type:'signup',email});if(error)throw error;message('If eligible, a verification email has been sent. Please check your inbox.')}catch(err){message(err.message||'Unable to resend. Please try again later.',true)}finally{b.disabled=false}};
  $('shVerifySignup').onsubmit=async e=>{e.preventDefault();const b=e.currentTarget.querySelector('[type=submit]');b.disabled=true;try{const token=String(new FormData(e.currentTarget).get('code')||'').trim();const {data,error}=await db.auth.verifyOtp({email,token,type:'signup'});if(error)throw error;if(!data.session)throw Error('Verification completed. Please sign in.');await loadAccount();render();message('Email verified. Welcome to SHOPYHAT!')}catch(err){message(err.message||'Verification failed. Check the code and try again.',true)}finally{b.disabled=false}};
@@ -93,7 +95,7 @@ function loginView(){
    if(error)throw error;
    if(!data.session)throw Error('Unable to start a secure session. Please try again.');
    await loadAccount();render();
-  }catch(error){message(error.message||'Sign in failed. Check your email and password.',true)}
+  }catch(error){message(error.code==='invalid_credentials'?'Email or password is incorrect. Please try again or select Forgot password.':error.code==='email_not_confirmed'?'Please verify your email before signing in.':error.message||'Sign in failed. Please try again.',true)}
   finally{button.disabled=false;button.textContent='Sign in →'}
  };
 }
@@ -111,7 +113,7 @@ function forgotView(){
    if(error)throw error;
    view('<div class="sh-auth-complete"><span class="sh-auth-done">✉</span><h3>Check your inbox</h3><p>If this email is registered, a secure password reset link will be sent. Check your spam folder if necessary.</p><button class="sh-account-primary" id="shForgotReturn" type="button">Back to sign in</button></div>');
    $('shForgotReturn').onclick=loginView;
-  }catch(error){message(error.message||'Unable to send your recovery link.',true)}
+  }catch(error){message(/error sending|smtp|unexpected/i.test(error.message||'')?'We could not send the recovery email right now. Please try again later or contact support.':error.message||'Unable to send your recovery link.',true)}
   finally{btn.disabled=false;btn.textContent='Send password reset link →'}
  };
 }
