@@ -52,12 +52,12 @@ async function loadDashboard(){
  const list=(target,items,formatter)=>{
   $(target).replaceChildren();
   if(!items.length){$(''+target).textContent='No records yet.';return}
-  for(const item of items){const entry=document.createElement('div');entry.className='entry';entry.innerHTML=formatter(item);$(target).append(entry)}
+  for(const item of items){const entry=document.createElement('div');entry.className=target==='requestList'?'entry request-card':'entry';entry.innerHTML=formatter(item);$(target).append(entry)}
  };
  const ids=[...new Set((requests.data||[]).map(r=>r.variant_id).filter(Boolean))];let productsById=new Map();
- if(ids.length){const products=await db.from('sh_reseller_catalog').select('variant_id,name,color').in('variant_id',ids);if(!products.error)productsById=new Map((products.data||[]).map(p=>[p.variant_id,p]));}
- list('requestList',requests.data||[],r=>{const p=productsById.get(r.variant_id),product=p?p.name+' — '+p.color:'Product '+String(r.variant_id||'').slice(0,8);
- return '<span><b>'+escape(product)+'</b><small>Reference: '+escape(r.id)+'<br>Customer: '+escape(r.customer_name)+' · '+Number(r.quantity)+' piece(s)<br>'+new Date(r.created_at).toLocaleDateString('en-BD')+' · Status: '+escape(r.status)+' · Settlement: '+escape(r.settlement_status)+'</small></span><span>Product total '+money(Number(r.retail_unit_price)*Number(r.quantity))+'<br>Estimated margin '+money(r.margin_total)+'</span>';});
+ if(ids.length){const products=await db.from('sh_reseller_catalog').select('variant_id,name,color,image_url').in('variant_id',ids);if(!products.error)productsById=new Map((products.data||[]).map(p=>[p.variant_id,p]));}
+ list('requestList',requests.data||[],r=>{const p=productsById.get(r.variant_id),name=p?.name||'Product unavailable',photo=mediaURL(p?.image_url),status=String(r.status||'pending'),date=new Date(r.created_at).toLocaleDateString('en-GB',{timeZone:'Asia/Dhaka',day:'2-digit',month:'short',year:'numeric'});
+ return '<div class="request-photo"><span>No photo</span>'+(photo?'<img src="'+escape(photo)+'" alt="'+escape(name)+'" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">':'')+'</div><div class="request-main"><div class="request-heading"><strong>'+escape(name)+'</strong><span class="request-status">'+escape(status)+'</span></div><p class="request-variant">'+escape(p?.color||'Variant unavailable')+' · '+Number(r.quantity)+' piece(s)</p><div class="request-details"><span>Customer <b>'+escape(r.customer_name)+'</b></span><span>Placed <b>'+escape(date)+'</b></span><span>Settlement <b>'+escape(r.settlement_status)+'</b></span></div><small class="request-ref">Reference: '+escape(r.id)+'</small></div><div class="request-amounts"><span>Product total <b>'+money(Number(r.retail_unit_price)*Number(r.quantity))+'</b></span><span>Estimated margin <b>'+money(r.margin_total)+'</b></span></div>';});
  list('referralList',referrals.data||[],r=>'<span><b>'+escape(r.status)+'</b><small>'+new Date(r.created_at).toLocaleDateString('en-BD')+'</small></span><span>'+money(r.margin_total)+' provisional</span>');
 }
 async function loadCatalog(){
