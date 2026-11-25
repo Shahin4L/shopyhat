@@ -4,7 +4,7 @@ import {setupBrandManager} from './brand.js';
 import {setupCatalogManager} from './catalog.js';
 import {setupExperienceStudio} from './experience.js';
 import {setupPromotions} from './promotions.js';
-import {setupResellerOperations} from './resellers.js?v=20261125-reseller-orders';
+import {setupResellerOperations} from './resellers.js?v=20261125-order-photos';
 const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -25,11 +25,17 @@ function closeDrawer(){show('overlay',false)}
 function formData(id){return Object.fromEntries(new FormData($(id)).entries())}
 function imgTag(url,label='Product photo'){return url?'<img src="'+esc(imageUrl(url))+'" alt="'+esc(label)+'" loading="lazy" onerror="this.style.visibility=\'hidden\'">':''}
 
+function orderItemImage(item){
+ if(item.image_url)return item.image_url;
+ const candidates=images.filter(img=>img.product_id===item.product_id&&(img.variant_id===item.variant_id||!img.variant_id)&&img.image_url);
+ candidates.sort((x,y)=>Number(y.variant_id===item.variant_id&&!!y.variant_id)-Number(x.variant_id===item.variant_id&&!!x.variant_id)||(Number(x.sort_order)||0)-(Number(y.sort_order)||0));
+ return candidates[0]?.image_url||'';
+}
 function orderThumb(o){
- const item=orderItems.find(i=>i.order_id===o.id && i.image_url);
+ const item=orderItems.find(i=>i.order_id===o.id&&orderItemImage(i));
  if(!item)return '<span class="order-thumb" aria-label="No image">—</span>';
- const src=esc(imageUrl(item.image_url)),title=esc(item.product_name);
- return '<span class="order-thumb" tabindex="0" aria-label="Preview '+title+'"><img src="'+src+'" alt="'+title+'" loading="lazy"><span class="image-popover" aria-hidden="true"><img src="'+src+'" alt=""></span></span>';
+ const src=esc(imageUrl(orderItemImage(item))),title=esc(item.product_name);
+ return '<span class="order-thumb" tabindex="0" aria-label="Preview '+title+'"><img src="'+src+'" alt="'+title+'" loading="lazy" onerror="this.hidden=true"><span class="image-popover" aria-hidden="true"><img src="'+src+'" alt=""></span></span>';
 }
 function productPhotoTiles(rows,label,canDelete=true){
  return rows.map(i=>'<figure><img src="'+esc(imageUrl(i.image_url))+'" alt="'+esc(label||'Photo')+'" loading="lazy" data-view-photo="'+esc(imageUrl(i.image_url))+'" title="Click to preview" tabindex="0">'+(canDelete&&roleCan('owner','manager')?'<button type="button" class="photo-delete" title="Remove photo" aria-label="Remove photo" data-delete-photo="'+esc(i.id)+'">×</button>':'')+'<figcaption>'+esc(i.alt_text||'Photo')+'</figcaption></figure>').join('');
@@ -633,7 +639,7 @@ async function editOrder(id){
  const editable=roleCan('owner','manager','operator');
  $('drawerBody').innerHTML=`<div class="split"><section><h3>Customer</h3><b>${esc(o.customer_name)}</b><p>${esc(o.customer_phone)}<br>${esc(o.address)}<br>${esc(o.zone)}</p></section>
  <section><h3>Payment</h3><p>${esc(o.payment_method)}<br>${esc(o.payment_status)}<br>Transaction: ${esc(o.transaction_id||'—')}<br>Sender last 4: ${esc(o.sender_last4||'—')}</p></section></div>
- <h3>Items</h3>${items.data.map(i=>'<div class="order-item-row"><div class="order-item-info">'+(i.image_url?imgTag(i.image_url,i.product_name):'<span class="order-item-placeholder"></span>')+'<div><b>'+esc(i.product_name)+'</b><div class="muted">'+esc(i.color)+' · '+esc(i.size)+' · '+esc(i.sku)+'</div></div></div><b>'+i.qty+' × '+money(i.unit_price)+'</b></div>').join('')}
+ <h3>Items</h3>${items.data.map(i=>'<div class="order-item-row"><div class="order-item-info">'+(orderItemImage(i)?imgTag(orderItemImage(i),i.product_name):'<span class="order-item-placeholder"></span>')+'<div><b>'+esc(i.product_name)+'</b><div class="muted">'+esc(i.color)+' · '+esc(i.size)+' · '+esc(i.sku)+'</div></div></div><b>'+i.qty+' × '+money(i.unit_price)+'</b></div>').join('')}
  <div class="badge">Subtotal ${money(o.subtotal)} − Discount ${money(o.discount)} + Delivery ${money(o.shipping)} = <b>${money(o.total)}</b></div>
  <form id="orderForm"><div class="fieldrow"><div><label>Order Status</label><select name="status">${['Pending','Confirmed','Processing','Ready to Ship','Shipped','Delivered','Cancelled','Return Requested','Returned'].map(v=>'<option '+(v===o.status?'selected':'')+'>'+v+'</option>').join('')}</select></div>
  <div><label>Courier</label><input name="courier" value="${esc(o.courier)}"></div><div><label>Tracking ID</label><input name="tracking_id" value="${esc(o.tracking_id)}"></div><div><label>Internal Note</label><textarea name="internal_note">${esc(o.internal_note)}</textarea></div></div>
@@ -663,8 +669,11 @@ async function editOrder(id){
  }catch(e){notice('drawerMsg',e.message,true)}
 }
 function printInvoice(o,items){const w=window.open('','_blank','width=840,height=900');if(!w)return notice('drawerMsg','Allow pop-ups to print the invoice.',true);
- const html=`<!doctype html><title>Invoice ${esc(o.order_number)}</title><style>body{font:14px Arial;padding:32px;color:#222}h1{margin:0}table{width:100%;border-collapse:collapse;margin:25px 0}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.total{text-align:right;font-size:21px;font-weight:bold}</style><h1>SHOPYHAT</h1><p>Your Choice, Our Gift. · Since 2020</p><hr><h2>Invoice ${esc(o.order_number)}</h2><p>${fmtDate(o.created_at)}</p><b>Delivery to</b><p>${esc(o.customer_name)} · ${esc(o.customer_phone)}<br>${esc(o.address)}</p><table><tr><th>Product</th><th>Variant</th><th>Qty</th><th>Amount</th></tr>${items.map(i=>'<tr><td>'+esc(i.product_name)+'</td><td>'+esc(i.color)+' / '+esc(i.size)+'</td><td>'+i.qty+'</td><td>'+money(i.line_total)+'</td></tr>').join('')}</table><p>Subtotal: ${money(o.subtotal)}<br>Discount: ${money(o.discount)}<br>Delivery: ${money(o.shipping)}</p><p class="total">Total ${money(o.total)}</p><p>Payment: ${esc(o.payment_method)} — ${esc(o.payment_status)}<br>Order status: ${esc(o.status)}</p>`;
- w.document.write(html);w.document.close();w.focus();w.print()}
+ const html=`<!doctype html><title>Invoice ${esc(o.order_number)}</title><style>body{font:14px Arial;padding:32px;color:#222}h1{margin:0}table{width:100%;border-collapse:collapse;margin:25px 0}td,th{padding:10px;border-bottom:1px solid #ccc;text-align:left}.invoice-photo{width:56px;height:56px;object-fit:cover;border-radius:6px;background:#f7f2ec}.total{text-align:right;font-size:21px;font-weight:bold}</style><h1>SHOPYHAT</h1><p>Your Choice, Our Gift. · Since 2020</p><hr><h2>Invoice ${esc(o.order_number)}</h2><p>${fmtDate(o.created_at)}</p><b>Delivery to</b><p>${esc(o.customer_name)} · ${esc(o.customer_phone)}<br>${esc(o.address)}</p><table><tr><th>Photo</th><th>Product</th><th>Variant</th><th>Qty</th><th>Amount</th></tr>${items.map(i=>'<tr><td>'+(orderItemImage(i)?'<img class="invoice-photo" src="'+esc(imageUrl(orderItemImage(i)))+'" alt="'+esc(i.product_name)+'" referrerpolicy="no-referrer">':'—')+'</td><td>'+esc(i.product_name)+'</td><td>'+esc(i.color)+' / '+esc(i.size)+'</td><td>'+i.qty+'</td><td>'+money(i.line_total)+'</td></tr>').join('')}</table><p>Subtotal: ${money(o.subtotal)}<br>Discount: ${money(o.discount)}<br>Delivery: ${money(o.shipping)}</p><p class="total">Total ${money(o.total)}</p><p>Payment: ${esc(o.payment_method)} — ${esc(o.payment_status)}<br>Order status: ${esc(o.status)}</p>`;
+ w.document.write(html);w.document.close();
+ const photos=[...w.document.images];const wait=photos.map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.addEventListener('load',resolve,{once:true});img.addEventListener('error',resolve,{once:true})}));
+ Promise.race([Promise.all(wait),new Promise(resolve=>setTimeout(resolve,5000))]).then(()=>{if(!w.closed){w.focus();w.print()}});
+}
 function reviewPayment(id){
  if(!roleCan('owner','manager'))return;
  const p=payments.find(x=>x.id===id),o=orders.find(x=>x.id===p?.order_id);if(!p)return;
