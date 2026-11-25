@@ -111,11 +111,16 @@ function forgotView(){
   try{
    const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/reset-password.html'});
    if(error)throw error;
-   view('<div class="sh-auth-complete"><span class="sh-auth-done">✉</span><h3>Check your inbox</h3><p>If this email is registered, a secure password reset link will be sent. Check your spam folder if necessary.</p><button class="sh-account-primary" id="shForgotReturn" type="button">Back to sign in</button></div>');
-   $('shForgotReturn').onclick=loginView;
+   recoveryCodeView(email);
   }catch(error){message(/error sending|smtp|unexpected/i.test(error.message||'')?'We could not send the recovery email right now. Please try again later or contact support.':error.message||'Unable to send your recovery link.',true)}
   finally{btn.disabled=false;btn.textContent='Send password reset link →'}
  };
+}
+function recoveryCodeView(email){
+ message('');
+ view('<div class="sh-auth-intro"><div class="sh-auth-eyebrow">ACCOUNT RECOVERY</div><h3>Check your inbox</h3><p>If the address is registered, a reset email has been sent. Enter its code below or follow the reset link. Check spam too.</p></div><form id="shRecoveryCode" class="sh-auth-form">'+field('code','Recovery code','text','inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" minlength="6" maxlength="8"')+formButton('Verify code →')+'</form><button type="button" class="sh-auth-back" id="shForgotReturn">← Back to sign in</button>');
+ $('shForgotReturn').onclick=loginView;
+ $('shRecoveryCode').onsubmit=async e=>{e.preventDefault();const b=e.currentTarget.querySelector('[type=submit]');b.disabled=true;try{const token=String(new FormData(e.currentTarget).get('code')||'').trim();const {data,error}=await db.auth.verifyOtp({email,token,type:'recovery'});if(error)throw error;if(!data.session)throw Error('Verification could not be completed. Please request a new code.');location.assign('/reset-password.html')}catch(err){message('Code invalid or expired. Please request a new recovery email.',true)}finally{b.disabled=false}};
 }
 async function loadAccount(){
  const {data:{user}}=await db.auth.getUser();signedUser=user||null;profile=null;
