@@ -647,7 +647,7 @@ async function editOrder(id){
  <button class="btn primary" ${editable?'':'disabled'} type="submit">Save Order Changes</button>
  <button class="btn" id="printInvoice" type="button">Print Invoice</button>
   ${editable&&roleCan('owner','manager')&&o.payment_method==='COD'&&o.status==='Delivered'&&o.payment_status!=='Collected - COD'?'<button class="btn" id="markCodCollected" type="button">Confirm COD Collection</button>':''}</form>
- <div class="divider"></div><h3>Email updates</h3><p class="muted">${mailStatus.error?'Email status unavailable.':(mailStatus.data||[]).map(m=>esc(m.event_type==='order_confirmed'?'Order confirmation':'Payment confirmation')+': '+esc(m.state==='sent'?'Accepted by email provider':m.state==='uncertain'?'Needs delivery review':m.state)+(m.sent_at?' · '+fmtDate(m.sent_at):'')+(m.error_code?' · '+esc(m.error_code):'')).join('<br>')||'No confirmation emails recorded. An email address is required.'}</p><h3>Activity History</h3><p class="muted">${(history.data||[]).map(h=>esc(h.action)+' · '+esc(h.actor||'system')+' · '+fmtDate(h.created_at)).join('<br>')||'No history yet'}</p>`;
+ <div class="divider"></div><h3>Email updates</h3><p class="muted">${mailStatus.error?'Email status unavailable.':(mailStatus.data||[]).map(m=>esc(m.event_type==='order_confirmed'?'Order confirmation':'Payment confirmation')+': '+esc(m.state==='sent'?'Accepted by email provider':m.state==='uncertain'?'Needs delivery review':m.state)+(m.sent_at?' · '+fmtDate(m.sent_at):'')+(m.error_code?' · '+esc(m.error_code):'')+(m.state==='failed'&&roleCan('owner','manager')?' <button type="button" class="btn small" data-mail-retry="'+esc(m.id)+'">Retry</button>':'')).join('<br>')||'No confirmation emails recorded. An email address is required.'}</p><h3>Activity History</h3><p class="muted">${(history.data||[]).map(h=>esc(h.action)+' · '+esc(h.actor||'system')+' · '+fmtDate(h.created_at)).join('<br>')||'No history yet'}</p>`;
  if(deliveryEditable){
   const df=$('deliveryEditForm'),status=$('deliveryStatus'),rate=deliveryConfig.data?.value||{};
   const preview=()=>{const zone=df.elements.zone.value,configured=rate[zone],fee=zone===o.zone?Number(o.shipping):configured===undefined||configured===null?null:Number(configured);$('deliveryEstimate').textContent=fee!==null&&Number.isFinite(fee)?'Delivery '+money(fee)+' · Updated order total '+money(Number(o.subtotal)-Number(o.discount)+fee):'Select a zone to calculate delivery.';};
@@ -665,6 +665,12 @@ async function editOrder(id){
   const changes={status:f.status,courier:f.courier,tracking_id:f.tracking_id,internal_note:f.internal_note,updated_at:new Date().toISOString()};
  const r=await db.from('sh_orders').update(changes).eq('id',id);if(r.error)return notice('drawerMsg',r.error.message,true);
  await refresh();editOrder(id);notice('drawerMsg','Order saved.')};
+ document.querySelectorAll('#drawerBody [data-mail-retry]').forEach(button=>button.onclick=async()=>{
+  if(!confirm('Retry the email rejected by the provider?'))return;
+  button.disabled=true;
+  try{const {error}=await db.rpc('sh_admin_retry_order_mail',{p_id:button.dataset.mailRetry});if(error)throw error;await editOrder(id);notice('drawerMsg','Email queued for retry.');}
+  catch(error){button.disabled=false;notice('drawerMsg',error.message||'Could not retry email.',true)}
+ });
  $('printInvoice').onclick=()=>printInvoice(o,items.data);
   const codButton=$('markCodCollected');
   if(codButton)codButton.onclick=async()=>{
