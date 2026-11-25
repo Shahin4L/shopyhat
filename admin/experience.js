@@ -6,7 +6,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
  const fields=[['announcement','Announcement bar text','text'],['headline','Hero headline','text'],['subtitle','Hero subtitle','textarea'],['hero_image_url','Cinematic background image HTTPS URL','url'],['video_url','Background MP4 / WebM HTTPS URL (optional)','url'],['campaign_text','Campaign heading','text'],['hero_eyebrow','Hero Eyebrow / Label','text'],['primary_cta','Primary CTA Button Text','text'],['secondary_cta','Secondary CTA Button Text','text'],['search_placeholder','Search Bar Placeholder','text'],['categories_title','Featured Categories Title','text'],['arrivals_title','New Arrivals Title','text'],['offers_title','Special Offers Title','text'],['story_title','Brand Story Title','text']];
  const switches=[['cinematic','Cinematic Hero'],['show_ribbon','Orange Ribbon Design'],['show_floating_cards','Floating Product Images'],['show_new_arrivals','New Arrivals Section'],['show_categories','Featured Categories'],['show_campaigns','Campaign Section']];
 
- const mediaModes=['auto','video','slides'];
+ const mediaModes=['auto','video','slides','mixed'];
 
  const designSelects=[
   ['ui_font','Body / UI Font',['Instrument Sans','Inter','Manrope','Plus Jakarta Sans'],'Instrument Sans'],
@@ -53,9 +53,9 @@ export function setupExperienceStudio({db,roleCan,notify}){
 
  function carouselHTML(){
   return '<details class="sh-design-editor" open><summary>Hero Slideshow — Multiple Pictures</summary>'+
-   '<p class="muted">Up to eight hero images. Dragging is not required: use ↑/↓ to set order. Slides automatically rotate, while customers can click arrows or dots.</p>'+
+   '<p class="muted">Up to eight hero images. Recommended: 1920 × 1080 px (16:9), JPG / PNG / WebP. Keep important details near the center for mobile. Use ↑/↓ to change image order. Select “Photos + video” to include the hero video.</p>'+
    '<div class="fieldrow"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="hero_autoplay" style="width:auto" checked> Autoplay slideshow</label>'+
-   '<label>Slide interval (seconds)<input type="number" name="hero_interval" min="3" max="15" step="1" value="6"></label></div>'+
+   '<label>Time per photo or video (seconds)<input type="number" name="hero_interval" min="3" max="60" step="1" value="6"></label></div>'+
    '<div id="shSlideRows" class="sh-slide-rows"></div>'+
    '<div class="tools" style="margin-top:15px"><button type="button" id="shSlideAdd" class="btn primary">+ Add Hero Slide</button></div></details>';
  }
@@ -129,6 +129,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   for(const [key] of fields)c[key]=f.elements[key]?.value?.trim()||'';
   for(const [key] of switches)c[key]=f.elements[key]?.checked!==false;
   c.hero_media_mode=mediaModes.includes(f.elements.hero_media_mode?.value)?f.elements.hero_media_mode.value:'auto';
+  c.about_media_type=f.elements.about_media_type?.value||'none';c.about_media_url=f.elements.about_media_url?.value?.trim()||'';
   for(const [key] of designSelects)c[key]=f.elements[key]?.value;
   for(const [key,,min,max,fallback] of designNumbers){
    const n=Number(f.elements[key]?.value);c[key]=Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;
@@ -136,8 +137,8 @@ export function setupExperienceStudio({db,roleCan,notify}){
   c.accent_color=f.elements.accent_color?.value||'#f47721';
   c.section_order=[...sectionOrder];
   c.hero_slides=heroSlides.filter(slide=>/^https:\/\//i.test(slide.image_url||'')).map(x=>({...x}));
-  c.hero_autoplay=false;
-  c.hero_interval=Math.max(3,Math.min(15,Number(f.elements.hero_interval?.value)||6));
+  c.hero_autoplay=f.elements.hero_autoplay?.checked!==false;
+  c.hero_interval=Math.max(3,Math.min(60,Number(f.elements.hero_interval?.value)||6));
   return c;
  }
  function refreshPreview(){
@@ -153,14 +154,19 @@ export function setupExperienceStudio({db,roleCan,notify}){
   const b=document.createElement('button');b.type='button';b.className='btn';b.id='experienceTab';b.dataset.page='experience';b.textContent='Storefront Studio';
   const brand=$('brandTab');nav.insertBefore(b,brand||nav.firstChild);
   const panel=document.createElement('div');panel.className='panel hidden';panel.id='page-experience';
-  panel.innerHTML='<div class="topline"><div><h2>Storefront Experience Studio</h2><p class="muted">Control homepage visuals, campaigns and sections without changing order workflows.</p></div><a class="btn" target="_blank" rel="noopener" href="/">↗ Preview Storefront</a></div><div class="media-section" style="margin:18px 0;padding:18px"><h3>Cinematic Hero Photo</h3><p class="muted">Upload JPG, PNG or WebP. Larger images are automatically compressed to fit the 2 MB storage limit. The website will use the new photo immediately after publishing the settings.</p><input type="file" id="shHeroUpload" accept="image/png,image/jpeg,image/webp"><div class="editor-actions"><button type="button" class="btn primary" id="shHeroUploadButton">Upload Hero Image</button></div><img id="shHeroPreview" alt="Current hero preview" style="width:100%;max-width:550px;aspect-ratio:16/9;object-fit:cover;display:none;border-radius:12px;margin-top:12px"><p id="shHeroUploadMsg" class="msg" role="status"></p></div><form id="shExperienceForm" class="sh-experience-form"><div class="sh-experience-fields">'+fields.map(([key,title,type])=>'<label>'+esc(title)+(type==='textarea'?'<textarea name="'+key+'" rows="3"></textarea>':'<input type="'+type+'" name="'+key+'" placeholder="'+(type==='url'?'https://...':'')+'">')+'</label>').join('')+'</div><h3>Homepage visibility</h3><div class="sh-experience-switches">'+switches.map(([key,title])=>'<label><input type="checkbox" name="'+key+'"> '+esc(title)+'</label>').join('')+'</div>'+previewHTML()+carouselHTML()+designHTML()+'<p class="muted">Tip: Hero video is optional. For performance, use an optimized, muted looping video and an image fallback. Product images in Mega Menu and Live Search come from your existing catalog.</p><div class="editor-actions"><button class="btn primary" type="submit">Save & Publish Experience</button><button class="btn" type="button" id="shExperienceReload">Reload</button></div><p id="shExperienceMsg" class="msg" role="status"></p></form>';
+  panel.innerHTML='<div class="topline"><div><h2>Storefront Experience Studio</h2><p class="muted">Control homepage visuals, campaigns and sections without changing order workflows.</p></div><a class="btn" target="_blank" rel="noopener" href="/">↗ Preview Storefront</a></div><div class="media-section" style="margin:18px 0;padding:18px"><h3>Cinematic Hero Photo</h3><p class="muted">Recommended: 1920 × 1080 px (16:9); keep key details near the center for mobile. Upload JPG, PNG or WebP. Larger images are automatically compressed to fit the 2 MB storage limit. The website will use the new photo immediately after publishing the settings.</p><input type="file" id="shHeroUpload" accept="image/png,image/jpeg,image/webp"><div class="editor-actions"><button type="button" class="btn primary" id="shHeroUploadButton">Upload Hero Image</button></div><img id="shHeroPreview" alt="Current hero preview" style="width:100%;max-width:550px;aspect-ratio:16/9;object-fit:cover;display:none;border-radius:12px;margin-top:12px"><p id="shHeroUploadMsg" class="msg" role="status"></p></div><form id="shExperienceForm" class="sh-experience-form"><div class="sh-experience-fields">'+fields.map(([key,title,type])=>'<label>'+esc(title)+(type==='textarea'?'<textarea name="'+key+'" rows="3"></textarea>':'<input type="'+type+'" name="'+key+'" placeholder="'+(type==='url'?'https://...':'')+'">')+'</label>').join('')+'</div><h3>Homepage visibility</h3><div class="sh-experience-switches">'+switches.map(([key,title])=>'<label><input type="checkbox" name="'+key+'"> '+esc(title)+'</label>').join('')+'</div>'+previewHTML()+carouselHTML()+designHTML()+'<p class="muted">Tip: Hero video is optional. For performance, use an optimized, muted looping video and an image fallback. Product images in Mega Menu and Live Search come from your existing catalog.</p><div class="editor-actions"><button class="btn primary" type="submit">Save & Publish Experience</button><button class="btn" type="button" id="shExperienceReload">Reload</button></div><p id="shExperienceMsg" class="msg" role="status"></p></form>';
   const heroVideoSection=document.createElement('section');
   heroVideoSection.className='media-section';heroVideoSection.style.cssText='margin:18px 0;padding:18px';
   heroVideoSection.innerHTML='<h3>Hero Background Video</h3><p class="muted">Choose an MP4 or WebM video up to 25 MB. Use a short, optimized video for faster loading. The video plays muted and loops; your hero photo is the fallback. Videos are public when published.</p><label for="shHeroVideoFile">Choose video</label><input type="file" id="shHeroVideoFile" accept="video/mp4,video/webm"><div class="editor-actions"><button type="button" class="btn primary" id="shHeroVideoUpload">Upload Hero Video</button><button type="button" class="btn" id="shHeroVideoRemove">Remove video from hero</button></div><video id="shHeroVideoPreview" controls muted playsinline preload="metadata" style="display:none;width:100%;max-width:550px;aspect-ratio:16/9;object-fit:contain;background:#1b1714;border-radius:12px;margin-top:12px"></video><p id="shHeroVideoMsg" class="msg" role="status" aria-live="polite"></p>';
   panel.querySelector('#shExperienceForm').before(heroVideoSection);
   const modeLabel=document.createElement('label');
-  modeLabel.innerHTML='Hero background mode<select name="hero_media_mode"><option value="auto">Automatic (existing behavior)</option><option value="video">Video (photo fallback)</option><option value="slides">Photo slideshow</option></select><small>Choosing video keeps your slideshow saved. Preview, then publish to apply.</small>';
+  modeLabel.innerHTML='Hero background mode<select name="hero_media_mode"><option value="auto">Automatic (existing behavior)</option><option value="video">Video (photo fallback)</option><option value="slides">Photo slideshow</option><option value="mixed">Photos + video rotation</option></select><small>Choose photos + video to rotate through your images and uploaded video. Preview, then publish.</small>';
   panel.querySelector('.sh-experience-fields').prepend(modeLabel);
+  const aboutSection=document.createElement('section');aboutSection.className='media-section';aboutSection.style.cssText='margin:18px 0;padding:18px';
+  aboutSection.innerHTML='<h3>About Us — Photo or Video</h3><p class="muted">Add a story photo or MP4 / WebM video to the About Us page. Recommended image: 1920 × 1080 px. Images up to 12 MB are optimized; videos up to 25 MB.</p><label for="shAboutFile">Choose photo or video</label><input type="file" id="shAboutFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"><div class="editor-actions"><button type="button" class="btn primary" id="shAboutUpload">Upload About Media</button><button type="button" class="btn" id="shAboutRemove">Remove About Media</button></div><p id="shAboutMsg" class="msg" role="status" aria-live="polite"></p>';
+  panel.querySelector('#shExperienceForm').before(aboutSection);
+  const aboutFields=document.createElement('div');aboutFields.className='sh-experience-fields';aboutFields.innerHTML='<label>About media type<select name="about_media_type"><option value="none">None</option><option value="image">Photo</option><option value="video">Video</option></select></label><label>About media HTTPS URL<input type="url" name="about_media_url" placeholder="https://..."></label>';
+  panel.querySelector('#shExperienceForm').prepend(aboutFields);
   nav.after(panel);
   const style=document.createElement('style');style.textContent=`
  #dashboard{position:relative;padding-left:0;display:flow-root}#dashboard>.nav{position:relative;float:left;left:auto;top:auto;bottom:auto;width:192px;height:auto;max-height:none;z-index:1;overflow:visible;margin:14px 0 18px;padding:12px 8px;background:linear-gradient(180deg,#21150f,#17110e);border:1px solid #433025;border-radius:13px;display:flex;flex-direction:column;flex-wrap:nowrap;gap:3px;box-shadow:0 12px 32px #00000012}
@@ -208,6 +214,8 @@ export function setupExperienceStudio({db,roleCan,notify}){
  renderOrder();
  $('shHeroUploadButton').onclick=uploadHero;
  $('shHeroVideoUpload').onclick=uploadHeroVideo;
+ $('shAboutUpload').onclick=uploadAboutMedia;
+ $('shAboutRemove').onclick=()=>{const f=$('shExperienceForm');f.elements.about_media_url.value='';f.elements.about_media_type.value='none';notify('shAboutMsg','Removed from settings. Click Save & Publish Experience to apply.');refreshPreview()};
  $('shHeroVideoRemove').onclick=()=>{const f=$('shExperienceForm');f.elements.video_url.value='';f.elements.hero_media_mode.value='auto';setVideoPreview('');notify('shHeroVideoMsg','Video removed from the settings. Click Save & Publish Experience to apply.');refreshPreview()};
  $('shHeroVideoFile').onchange=()=>{const file=$('shHeroVideoFile').files?.[0];if(file)setVideoPreview(URL.createObjectURL(file),true)};
  $('shHeroUpload').onchange=()=>{const file=$('shHeroUpload').files?.[0];if(!file)return;const u=URL.createObjectURL(file);const img=$('shHeroPreview');img.onload=()=>URL.revokeObjectURL(u);img.src=u;img.style.display='block'};
@@ -232,10 +240,27 @@ export function setupExperienceStudio({db,roleCan,notify}){
    const {error}=await db.storage.from('shopyhat-hero-videos').upload(path,file,{contentType:file.type,cacheControl:'86400',upsert:false});
    if(error)throw error;
    const url=db.storage.from('shopyhat-hero-videos').getPublicUrl(path).data.publicUrl;
-   const f=$('shExperienceForm');f.elements.video_url.value=url;f.elements.hero_media_mode.value='video';f.elements.cinematic.checked=true;
+   const f=$('shExperienceForm');f.elements.video_url.value=url;f.elements.hero_media_mode.value=heroSlides.length?'mixed':'video';f.elements.cinematic.checked=true;
    setVideoPreview(url);refreshPreview();
    notify('shHeroVideoMsg','Video uploaded. Preview it below, then click Save & Publish Experience to show it on the website.');
   }catch(e){notify('shHeroVideoMsg','Upload failed: '+(e.message||'Please try again.'),true)}finally{button.disabled=false}
+ }
+ async function uploadAboutMedia(){
+  if(!roleCan('owner','manager'))return;
+  const selected=$('shAboutFile')?.files?.[0];if(!selected)return notify('shAboutMsg','Choose a photo or video first.',true);
+  const video=['video/mp4','video/webm'].includes(selected.type),photo=['image/png','image/jpeg','image/webp'].includes(selected.type);
+  if(!video&&!photo)return notify('shAboutMsg','Use JPG, PNG, WebP, MP4 or WebM.',true);
+  if(!selected.size||selected.size>(video?25:12)*1024*1024)return notify('shAboutMsg',video?'Video must be at most 25 MB.':'Photo must be at most 12 MB.',true);
+  const button=$('shAboutUpload');button.disabled=true;
+  try{
+   notify('shAboutMsg','Uploading media. Please keep this page open…');
+   const file=photo?await optimizeHero(selected):selected;
+   const ext=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','video/mp4':'mp4','video/webm':'webm'})[file.type];
+   const bucket=photo?'shopyhat-branding':'shopyhat-hero-videos',path='hero/about-'+crypto.randomUUID()+'.'+ext;
+   const {error}=await db.storage.from(bucket).upload(path,file,{contentType:file.type,cacheControl:'86400',upsert:false});if(error)throw error;
+   const f=$('shExperienceForm');f.elements.about_media_url.value=db.storage.from(bucket).getPublicUrl(path).data.publicUrl;f.elements.about_media_type.value=video?'video':'image';
+   notify('shAboutMsg','Uploaded. Click Save & Publish Experience to show it on About Us.');refreshPreview();
+  }catch(e){notify('shAboutMsg','Upload failed: '+(e.message||'Please try again.'),true)}finally{button.disabled=false}
  }
  async function optimizeHero(file){
   const cap=2*1024*1024;
@@ -283,6 +308,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
    for(const [key] of fields)form.elements[key].value=v[key]||'';
    for(const [key] of switches)form.elements[key].checked=v[key]!==false;
    form.elements.hero_media_mode.value=mediaModes.includes(v.hero_media_mode)?v.hero_media_mode:'auto';
+   form.elements.about_media_type.value=['image','video'].includes(v.about_media_type)?v.about_media_type:'none';form.elements.about_media_url.value=v.about_media_url||'';
    setVideoPreview(/^https:\/\//i.test(v.video_url||'')?v.video_url:'');
    for(const [key,,opts,fallback] of designSelects)form.elements[key].value=opts.includes(v[key])?v[key]:fallback;
    for(const [key,,min,max,initial] of designNumbers){const n=Number(v[key]);form.elements[key].value=Number.isFinite(n)&&n>=min&&n<=max?n:initial;}
@@ -290,7 +316,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
    sectionOrder=Array.isArray(v.section_order)&&v.section_order.length===sectionDefs.length&&sectionDefs.every(x=>v.section_order.includes(x[0]))?[...v.section_order]:sectionDefs.map(x=>x[0]);renderOrder();
    heroSlides=Array.isArray(v.hero_slides)?v.hero_slides.slice(0,8).map(x=>({image_url:String(x.image_url||''),headline:String(x.headline||''),subtitle:String(x.subtitle||''),cta_url:String(x.cta_url||'')})):[];
    form.elements.hero_autoplay.checked=v.hero_autoplay!==false;
-   form.elements.hero_interval.value=Math.max(3,Math.min(15,Number(v.hero_interval)||6));
+   form.elements.hero_interval.value=Math.max(3,Math.min(60,Number(v.hero_interval)||6));
    renderSlides();
    const preview=$('shHeroPreview');if(v.hero_image_url){preview.src=v.hero_image_url;preview.style.display='block'}
    notify('shExperienceMsg','Experience settings loaded.');refreshPreview();
@@ -302,6 +328,9 @@ export function setupExperienceStudio({db,roleCan,notify}){
   for(const [key] of fields){config[key]=f.elements[key].value.trim();if(key.endsWith('_url')&&config[key]&&!/^https:\/\//i.test(config[key]))return notify('shExperienceMsg',key+' must be an HTTPS URL.',true)}
   for(const [key] of switches)config[key]=f.elements[key].checked;
   config.hero_media_mode=mediaModes.includes(f.elements.hero_media_mode.value)?f.elements.hero_media_mode.value:'auto';
+  config.about_media_type=['image','video'].includes(f.elements.about_media_type.value)?f.elements.about_media_type.value:'none';
+  config.about_media_url=f.elements.about_media_url.value.trim();
+  if(config.about_media_type!=='none'&&!/^https:\/\//i.test(config.about_media_url))return notify('shExperienceMsg','Upload About media or provide a valid HTTPS URL.',true);
   if(config.hero_media_mode==='video'&&!config.video_url)return notify('shExperienceMsg','Upload a video or enter a video URL before selecting video mode.',true);
   for(const [key,,options] of designSelects)config[key]=options.includes(f.elements[key].value)?f.elements[key].value:options[0];
   for(const [key,,min,max,initial] of designNumbers){const n=Number(f.elements[key].value);config[key]=Number.isFinite(n)?Math.max(min,Math.min(max,n)):initial;}
@@ -314,7 +343,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   }
   config.hero_slides=heroSlides.map(x=>({...x}));
   config.hero_autoplay=f.elements.hero_autoplay.checked;
-  config.hero_interval=Math.max(3,Math.min(15,Number(f.elements.hero_interval.value)||6));
+  config.hero_interval=Math.max(3,Math.min(60,Number(f.elements.hero_interval.value)||6));
   const button=f.querySelector('[type=submit]');button.disabled=true;
   try{const {error}=await db.from('sh_storefront_experience').upsert({id:1,config,updated_at:new Date().toISOString()},{onConflict:'id'});
    if(error)throw error;currentConfig={...config};notify('shExperienceMsg','Published successfully. Refresh storefront to see your changes.');
