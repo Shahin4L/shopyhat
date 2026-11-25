@@ -160,11 +160,23 @@ revoke all on function public.sh_admin_update_order_delivery_v2(uuid,text,text,t
 grant execute on function public.sh_admin_update_order_delivery_v2(uuid,text,text,text,text,text) to authenticated;
 
 create or replace function public.sh_admin_order_mail_status(p_order uuid)
-returns table(event_type text,state text,created_at timestamptz,sent_at timestamptz,error_code text)
+returns table(id uuid,event_type text,state text,created_at timestamptz,sent_at timestamptz,error_code text)
 language plpgsql stable security definer set search_path='' as $$
 begin
  if auth.uid() is null or coalesce(sh_private.staff_role(),'') not in ('owner','manager','operator','viewer') then raise exception 'Authorized staff required';end if;
- return query select q.event_type,q.state,q.created_at,q.sent_at,q.error_code from sh_private.sh_order_email_outbox q where q.order_id=p_order order by q.created_at;
+ return query select q.id,q.event_type,q.state,q.created_at,q.sent_at,q.error_code from sh_private.sh_order_email_outbox q where q.order_id=p_order order by q.created_at;
 end $$;
 revoke all on function public.sh_admin_order_mail_status(uuid) from public,anon;
 grant execute on function public.sh_admin_order_mail_status(uuid) to authenticated;
+
+-- Retry only provider-rejected jobs; uncertain delivery outcomes require review.
+create or replace function public.sh_admin_retry_order_mail(p_id uuid)
+returns void language plpgsql security definer set search_path='' as $$
+begin
+ if auth.uid() is null or coalesce(sh_private.staff_role(),'') not in ('owner','manager') then raise exception 'Only owner or manager can retry mail';end if;
+ update sh_private.sh_order_email_outbox set state='pending',lease_id=null,lease_started_at=null,error_code=null
+ where id=p_id and state='failed';
+ if not found then raise exception 'Only a rejected email can be retried';end if;
+end $$;
+revoke all on function public.sh_admin_retry_order_mail(uuid) from public,anon;
+grant execute on function public.sh_admin_retry_order_mail(uuid) to authenticated;
