@@ -12,6 +12,7 @@ select cron.schedule('shopyhat-order-mail','*/2 * * * *',
    url:='https://xwfqgmgiunlxzvzoermn.supabase.co/functions/v1/shopyhat-order-mail',
    headers:=jsonb_build_object('content-type','application/json','apikey','sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP','x-shopyhat-dispatch',(select decrypted_secret from vault.decrypted_secrets where name='shopyhat_order_mail_dispatch')),
    body:='{}'::jsonb
- )$$);
+ ) where exists (select 1 from sh_private.sh_order_email_settings where id and enabled)
+ and exists (select 1 from sh_private.sh_order_email_outbox where state='pending' or (state='sending' and lease_started_at<now()-interval '5 minutes'))$);
 -- Keep disabled until the test message is accepted and the recipient confirms delivery.
 -- update sh_private.sh_order_email_settings set enabled=true where id;
