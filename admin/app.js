@@ -634,7 +634,7 @@ async function editOrder(id){
  const o=orders.find(o=>o.id===id);if(!o)return;
  drawer('Order '+o.order_number,'<p>Loading order items…</p>');
  try{
- const [items,history,deliveryConfig]=await Promise.all([db.from('sh_order_items').select('*').eq('order_id',id),db.from('sh_order_history').select('*').eq('order_id',id).order('created_at',{ascending:false}),db.from('sh_settings').select('value').eq('key','shipping').maybeSingle()]);
+ const [items,history,deliveryConfig,mailStatus]=await Promise.all([db.from('sh_order_items').select('*').eq('order_id',id),db.from('sh_order_history').select('*').eq('order_id',id).order('created_at',{ascending:false}),db.from('sh_settings').select('value').eq('key','shipping').maybeSingle(),db.rpc('sh_admin_order_mail_status',{p_order:id})]);
  if(items.error||history.error)throw items.error||history.error;
  const editable=roleCan('owner','manager','operator'),deliveryEditable=editable&&['Pending','Confirmed','Processing'].includes(o.status);
  $('drawerBody').innerHTML=`<div class="split"><section><h3>Customer</h3><b>${esc(o.customer_name)}</b><p>${esc(o.customer_phone)}<br>${esc(o.address)}<br>${esc(o.zone)}</p></section>
@@ -647,7 +647,7 @@ async function editOrder(id){
  <button class="btn primary" ${editable?'':'disabled'} type="submit">Save Order Changes</button>
  <button class="btn" id="printInvoice" type="button">Print Invoice</button>
   ${editable&&roleCan('owner','manager')&&o.payment_method==='COD'&&o.status==='Delivered'&&o.payment_status!=='Collected - COD'?'<button class="btn" id="markCodCollected" type="button">Confirm COD Collection</button>':''}</form>
- <div class="divider"></div><h3>Activity History</h3><p class="muted">${(history.data||[]).map(h=>esc(h.action)+' · '+esc(h.actor||'system')+' · '+fmtDate(h.created_at)).join('<br>')||'No history yet'}</p>`;
+ <div class="divider"></div><h3>Email updates</h3><p class="muted">${mailStatus.error?'Email status unavailable.':(mailStatus.data||[]).map(m=>esc(m.event_type==='order_confirmed'?'Order confirmation':'Payment confirmation')+': '+esc(m.state)+(m.sent_at?' · '+fmtDate(m.sent_at):'')+(m.error_code?' · '+esc(m.error_code):'')).join('<br>')||'No confirmation emails recorded. An email address is required.'}</p><h3>Activity History</h3><p class="muted">${(history.data||[]).map(h=>esc(h.action)+' · '+esc(h.actor||'system')+' · '+fmtDate(h.created_at)).join('<br>')||'No history yet'}</p>`;
  if(deliveryEditable){
   const df=$('deliveryEditForm'),status=$('deliveryStatus'),rate=deliveryConfig.data?.value||{};
   const preview=()=>{const zone=df.elements.zone.value,configured=rate[zone],fee=zone===o.zone?Number(o.shipping):configured===undefined||configured===null?null:Number(configured);$('deliveryEstimate').textContent=fee!==null&&Number.isFinite(fee)?'Delivery '+money(fee)+' · Updated order total '+money(Number(o.subtotal)-Number(o.discount)+fee):'Select a zone to calculate delivery.';};
