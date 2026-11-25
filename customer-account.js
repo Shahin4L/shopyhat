@@ -61,7 +61,7 @@ function passwordView(phone){
   if(pass.length<8)return message('Use a password of at least 8 characters.',true);
   const button=form.querySelector('[type=submit]');button.disabled=true;button.textContent='Creating account…';
   try{
-   const {data,error}=await db.auth.signUp({email,password:pass,options:{emailRedirectTo:location.origin+'/',data:{name:pendingName,mobile:pendingPhone}}});
+   const {data,error}=await db.auth.signUp({email,password:pass,options:{emailRedirectTo:location.origin+'/account-confirmed.html',data:{name:pendingName,mobile:pendingPhone}}});
    if(error)throw error;
    if(data.session){await loadAccount();render();message('Welcome to SHOPYHAT! Your account has been created successfully.');return}
    if(data.user && Array.isArray(data.user.identities) && data.user.identities.length===0){view('<div class="sh-auth-complete"><h3>Check your account</h3><p>If an account already exists with this email, please sign in or use Forgot password. Otherwise, check your inbox for a verification message.</p><button class="sh-account-primary" type="button" id="shExistingLogin">Back to sign in</button><button class="sh-auth-back" type="button" id="shExistingVerify">Enter a verification code</button></div>');$('shExistingLogin').onclick=loginView;$('shExistingVerify').onclick=()=>verifySignupView(email);return;}
@@ -76,7 +76,7 @@ function verifySignupView(email){
  '<form id="shVerifySignup" class="sh-auth-form">'+field('code','Verification code','text','inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6,8}" minlength="6" maxlength="8"')+formButton('Verify and continue →')+'</form>'+
  '<button type="button" class="sh-auth-back" id="shResendSignup">Resend verification email</button><br><button type="button" class="sh-auth-back" id="shVerifyBack">Back to sign in</button>');
  $('shVerifyBack').onclick=loginView;
- $('shResendSignup').onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{const {error}=await db.auth.resend({type:'signup',email,options:{emailRedirectTo:location.origin+'/'}});if(error)throw error;message('If eligible, a verification email has been sent. Please check your inbox.')}catch(err){message(err.message||'Unable to resend. Please try again later.',true)}finally{b.disabled=false}};
+ $('shResendSignup').onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{const {error}=await db.auth.resend({type:'signup',email,options:{emailRedirectTo:location.origin+'/account-confirmed.html'}});if(error)throw error;message('If eligible, a verification email has been sent. Please check your inbox.')}catch(err){message(err.message||'Unable to resend. Please try again later.',true)}finally{b.disabled=false}};
  $('shVerifySignup').onsubmit=async e=>{e.preventDefault();const b=e.currentTarget.querySelector('[type=submit]');b.disabled=true;try{const token=String(new FormData(e.currentTarget).get('code')||'').trim();const {data,error}=await db.auth.verifyOtp({email,token,type:'signup'});if(error)throw error;if(!data.session)throw Error('Verification completed. Please sign in.');await loadAccount();render();message('Email verified. Welcome to SHOPYHAT!')}catch(err){message(err.message||'Verification failed. Check the code and try again.',true)}finally{b.disabled=false}};
 }
 function loginView(){
