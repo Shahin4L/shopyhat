@@ -4,7 +4,7 @@ import {setupBrandManager} from './brand.js';
 import {setupCatalogManager} from './catalog.js';
 import {setupExperienceStudio} from './experience.js';
 import {setupPromotions} from './promotions.js';
-import {setupResellerOperations} from './resellers.js?v=20261125-order-photos';
+import {setupResellerOperations} from './resellers.js?v=20261125-cancel-zone';
 const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 const $=id=>document.getElementById(id);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -634,11 +634,12 @@ async function editOrder(id){
  const o=orders.find(o=>o.id===id);if(!o)return;
  drawer('Order '+o.order_number,'<p>Loading order items…</p>');
  try{
- const [items,history]=await Promise.all([db.from('sh_order_items').select('*').eq('order_id',id),db.from('sh_order_history').select('*').eq('order_id',id).order('created_at',{ascending:false})]);
+ const [items,history,deliveryConfig]=await Promise.all([db.from('sh_order_items').select('*').eq('order_id',id),db.from('sh_order_history').select('*').eq('order_id',id).order('created_at',{ascending:false}),db.from('sh_settings').select('value').eq('key','shipping').maybeSingle()]);
  if(items.error||history.error)throw items.error||history.error;
- const editable=roleCan('owner','manager','operator');
+ const editable=roleCan('owner','manager','operator'),deliveryEditable=editable&&['Pending','Confirmed','Processing'].includes(o.status);
  $('drawerBody').innerHTML=`<div class="split"><section><h3>Customer</h3><b>${esc(o.customer_name)}</b><p>${esc(o.customer_phone)}<br>${esc(o.address)}<br>${esc(o.zone)}</p></section>
  <section><h3>Payment</h3><p>${esc(o.payment_method)}<br>${esc(o.payment_status)}<br>Transaction: ${esc(o.transaction_id||'—')}<br>Sender last 4: ${esc(o.sender_last4||'—')}</p></section></div>
+ ${deliveryEditable?'<details class="badge" style="margin:12px 0"><summary style="cursor:pointer;font-weight:700">Edit customer and delivery details</summary><form id="deliveryEditForm"><label>Customer name</label><input name="name" value="'+esc(o.customer_name)+'" required minlength="2" maxlength="120"><label>Customer mobile</label><input name="phone" inputmode="tel" value="'+esc(o.customer_phone)+'" required><label>Delivery address</label><textarea name="address" required minlength="10" maxlength="400">'+esc(o.address)+'</textarea><label>Delivery zone</label><select name="zone" required><option value="">Select zone</option><option value="dhaka" '+(o.zone==='dhaka'?'selected':'')+'>Inside Dhaka</option><option value="outside" '+(o.zone==='outside'?'selected':'')+'>Outside Dhaka</option></select><p id="deliveryEstimate" class="muted" aria-live="polite"></p><button type="submit" class="btn primary">Save customer details</button><p id="deliveryStatus" role="status" aria-live="polite"></p></form></details>':'<p class="muted">Customer details are locked once the order is Ready to Ship.</p>'}
  <h3>Items</h3>${items.data.map(i=>'<div class="order-item-row"><div class="order-item-info">'+(orderItemImage(i)?imgTag(orderItemImage(i),i.product_name):'<span class="order-item-placeholder"></span>')+'<div><b>'+esc(i.product_name)+'</b><div class="muted">'+esc(i.color)+' · '+esc(i.size)+' · '+esc(i.sku)+'</div></div></div><b>'+i.qty+' × '+money(i.unit_price)+'</b></div>').join('')}
  <div class="badge">Subtotal ${money(o.subtotal)} − Discount ${money(o.discount)} + Delivery ${money(o.shipping)} = <b>${money(o.total)}</b></div>
  <form id="orderForm"><div class="fieldrow"><div><label>Order Status</label><select name="status">${['Pending','Confirmed','Processing','Ready to Ship','Shipped','Delivered','Cancelled','Return Requested','Returned'].map(v=>'<option '+(v===o.status?'selected':'')+'>'+v+'</option>').join('')}</select></div>
@@ -647,6 +648,18 @@ async function editOrder(id){
  <button class="btn" id="printInvoice" type="button">Print Invoice</button>
   ${editable&&roleCan('owner','manager')&&o.payment_method==='COD'&&o.status==='Delivered'&&o.payment_status!=='Collected - COD'?'<button class="btn" id="markCodCollected" type="button">Confirm COD Collection</button>':''}</form>
  <div class="divider"></div><h3>Activity History</h3><p class="muted">${(history.data||[]).map(h=>esc(h.action)+' · '+esc(h.actor||'system')+' · '+fmtDate(h.created_at)).join('<br>')||'No history yet'}</p>`;
+ if(deliveryEditable){
+  const df=$('deliveryEditForm'),status=$('deliveryStatus'),rate=deliveryConfig.data?.value||{};
+  const preview=()=>{const zone=df.elements.zone.value,configured=rate[zone],fee=zone===o.zone?Number(o.shipping):configured===undefined||configured===null?null:Number(configured);$('deliveryEstimate').textContent=fee!==null&&Number.isFinite(fee)?'Delivery '+money(fee)+' · Updated order total '+money(Number(o.subtotal)-Number(o.discount)+fee):'Select a zone to calculate delivery.';};
+  df.elements.zone.onchange=preview;preview();
+  df.onsubmit=async e=>{e.preventDefault();const f=new FormData(df);let phone=String(f.get('phone')||'').trim().replace(/[\s-]/g,'');if(phone.startsWith('+88'))phone=phone.slice(3);else if(phone.startsWith('88'))phone=phone.slice(2);
+   if(!/^01[3-9][0-9]{8}$/.test(phone)){status.textContent='Enter a valid Bangladesh mobile number.';return}
+   if(String(f.get('zone'))!==o.zone&&!confirm('Changing the delivery zone may change the delivery charge and order total. Continue?'))return;
+   const button=df.querySelector('[type=submit]');button.disabled=true;status.textContent='Saving…';
+   try{const {data,error}=await db.rpc('sh_admin_update_order_delivery',{p_order:o.id,p_name:String(f.get('name')||'').trim(),p_phone:phone,p_address:String(f.get('address')||'').trim(),p_zone:String(f.get('zone')||'')});if(error)throw error;await refresh();await editOrder(o.id);notice('drawerMsg','Customer and delivery details updated. Order total: '+money(data.total)+'.');}
+   catch(error){status.textContent=error.message||'Could not save customer details.'}finally{button.disabled=false}
+  };
+ }
  $('orderForm').onsubmit=async e=>{e.preventDefault();if(!editable)return;const f=formData('orderForm');
  if(f.status==='Cancelled'&&['Shipped','Delivered','Returned'].includes(o.status))return notice('drawerMsg','Shipped/delivered orders require a return/refund review rather than direct cancellation.',true);
   const changes={status:f.status,courier:f.courier,tracking_id:f.tracking_id,internal_note:f.internal_note,updated_at:new Date().toISOString()};
