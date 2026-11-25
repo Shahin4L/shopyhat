@@ -1,0 +1,14 @@
+// SHOPYHAT transactional messages: user-supplied fields are always HTML-escaped.
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const asMoney = value => '৳' + Number(value || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 });
+export function buildOrderEmail(event, order) {
+ if (!['order_confirmed','payment_confirmed'].includes(event)) throw new Error('Unsupported notification');
+ const name = escapeHtml(order.customer_name || 'Customer'), number=escapeHtml(order.order_number), total=escapeHtml(asMoney(order.total));
+ const confirmed = event === 'order_confirmed';
+ const heading = confirmed ? 'Your order is confirmed' : 'Your payment is confirmed';
+ const detail = confirmed ? 'Thank you for shopping with SHOPYHAT. Your order has been confirmed and is being prepared.' : 'We have verified your payment. Thank you for shopping with SHOPYHAT.';
+ const label = confirmed ? 'Order total' : 'Amount confirmed';
+ const subject = (confirmed ? 'Your SHOPYHAT order is confirmed' : 'Your SHOPYHAT payment is confirmed') + ' · ' + String(order.order_number || '');
+ const html = '<!doctype html><html lang="en"><body style="margin:0;background:#f6f2ed;font-family:Arial,Helvetica,sans-serif;color:#24170f"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#fff;border-radius:12px"><tr><td style="background:#23160f;padding:24px 28px;color:#fff"><span style="color:#fa7920;font-size:24px;font-weight:bold">S</span> <strong style="font-size:20px;letter-spacing:1px">SHOPYHAT</strong><br><span style="font-size:11px;color:#dfc8b9">YOUR CHOICE, OUR GIFT. · SINCE 2020</span></td></tr><tr><td style="padding:32px 28px"><h1 style="font-size:24px;margin:0 0 18px">'+heading+'</h1><p>Dear '+name+',</p><p style="line-height:1.6">'+detail+'</p><table role="presentation" width="100%" style="background:#faf4ee;padding:15px;border-radius:8px"><tr><td>Order number</td><td align="right"><strong>'+number+'</strong></td></tr><tr><td>'+label+'</td><td align="right"><strong>'+total+'</strong></td></tr></table><p style="line-height:1.6">If you have any questions about your order, please contact SHOPYHAT support.</p><p style="margin-top:24px"><a href="https://shopyhat.pages.dev/" style="display:inline-block;background:#f47721;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 20px;border-radius:6px">Visit SHOPYHAT</a></p></td></tr><tr><td style="padding:20px 28px;color:#76685e;font-size:12px;border-top:1px solid #eee">SHOPYHAT · Your Choice, Our Gift.<br>This is a transactional update about your order.</td></tr></table></td></tr></table></body></html>';
+ return {subject,htmlContent:html};
+}

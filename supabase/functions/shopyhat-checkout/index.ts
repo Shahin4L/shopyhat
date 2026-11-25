@@ -63,13 +63,14 @@ Deno.serve(async req=>{
   const shaped={
    request_id:String(p.request_id||'').slice(0,40),name:String(p.name||'').trim().slice(0,121),
    phone:String(p.phone||'').replace(/\s/g,'').slice(0,25),
+   email:String(p.email||'').trim().slice(0,255),
    address:String(p.address||'').trim().slice(0,401),
    zone:String(p.zone||'').slice(0,20),payment_method:String(p.payment_method||'cod').slice(0,12),
    transaction_id:String(p.transaction_id||'').trim().slice(0,41),sender_last4:String(p.sender_last4||'').slice(0,8),
    coupon:String(p.coupon||'').slice(0,40),referrer_id:approvedReferrer,note:String(p.note||'').slice(0,501),
    items:p.items.map(x=>({variant_id:String(x.variant_id||'').slice(0,40),qty:Number(x.qty),size:String(x.size||'').slice(0,80)}))
   };
-  const {data,error}=await db.rpc('sh_checkout_api',{p:shaped});
+  const {data,error}=await db.rpc('sh_checkout_email_api',{p:shaped});
   if(error){console.error('Checkout rejected:',error.code);return reply({error:error.message||'Order unavailable'},400)}
   // This independent service-role update links ONLY the authenticated buyer's own new order.
   // A phone number alone must never claim previous guest orders.

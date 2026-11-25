@@ -1955,7 +1955,8 @@ function openCheckout(){
    const saved=loggedProfile?{
      name:loggedProfile.full_name||'',
      phone:String(loggedProfile.phone||'').replace(/^\+?88/,''),
-     addr:loggedProfile.preferred_address||''
+     addr:loggedProfile.preferred_address||'',
+     email:window.SHOPYHAT_CUSTOMER?.getUser?.()?.email||''
    }:LS.get("sh_cust",{});
   $("#coBox").innerHTML=`<form class="f" id="coForm" novalidate>
     <div class="checkout-topline"><span>SHOPYHAT CHECKOUT</span><span>One simple step</span></div>
@@ -1963,7 +1964,7 @@ function openCheckout(){
     <p class="checkout-intro">No account needed. Enter your delivery details and review your total before placing your order.</p>
     <h4>01 &nbsp; Delivery details</h4>
     <div class="fld"><label for="kName">Full name</label><input id="kName" autocomplete="name" value="${esc(saved.name||"")}"></div>
-    <div class="fld"><label for="kPhone">Phone number</label><input id="kPhone" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" value="${esc(saved.phone||"")}"></div>
+    <div class="fld"><label for="kPhone">Phone number</label><input id="kPhone" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" value="${esc(saved.phone||"")}"></div><div class="fld"><label for="kEmail">Email for order updates (optional)</label><input id="kEmail" type="email" autocomplete="email" maxlength="254" value="${esc(saved.email||"")}"><small>We’ll use this address for order and payment confirmations.</small></div>
     <div class="fld"><label for="kZone">Delivery area</label><select id="kZone"><option value="dhaka">Inside Dhaka, ${money(CONFIG.delivery.dhaka)}</option><option value="outside">Outside Dhaka, ${money(CONFIG.delivery.outside)}</option></select></div>
     <div class="fld"><label for="kAddr">Full address</label><textarea id="kAddr" rows="3" placeholder="House, road, area, thana, district">${esc(saved.addr||"")}</textarea></div>
     <div class="fld"><label for="kNote">Order note (optional)</label><input id="kNote" placeholder="Anything we should know?"></div>
@@ -2044,13 +2045,14 @@ async function submitOrder(e){
 
  if(new URLSearchParams(location.search).has("studio_preview")){e?.preventDefault?.();return;}
  e.preventDefault();
- const name=$("#kName").value.trim(),phone=normPhone($("#kPhone").value.trim()),addr=$("#kAddr").value.trim(),err=$("#kErr");
+ const name=$("#kName").value.trim(),phone=normPhone($("#kPhone").value.trim()),addr=$("#kAddr").value.trim(),email=$("#kEmail").value.trim(),err=$("#kErr");
  const pay=document.querySelector('input[name="pay"]:checked')?.value||"cod";
  const trx=($("#kTrx")||{value:""}).value.trim().toUpperCase(),senderLast4=($("#kSender")||{value:""}).value.trim();
  $$("#coForm .fld").forEach(f=>f.classList.remove("bad"));
  const bad=(sel,msg)=>{const el=$(sel);if(el){el.closest(".fld")?.classList.add("bad");el.focus()}err.textContent=msg};
  if(name.length<2)return bad("#kName","Enter your full name.");
  if(!PHONE_RE.test(phone))return bad("#kPhone","Enter a valid Bangladeshi mobile number.");
+ if(email&&!$("#kEmail").checkValidity())return bad("#kEmail","Enter a valid email address.");
  if(addr.length<10)return bad("#kAddr","Enter your full delivery address.");
  if(pay!=="cod"){
    const payNo=pay==="bkash"?CONFIG.bkash:CONFIG.nagad;
@@ -2074,7 +2076,7 @@ async function submitOrder(e){
  const t=calcTotals();
  const items=lines.map(i=>({variant_id:chosenVariant(i.p,i.color)?.id,qty:i.qty,size:i.size||""}));
  if(items.some(i=>!i.variant_id)){err.textContent="This product needs a valid color selection. Please refresh.";return}
- const fingerprint=JSON.stringify({name,phone,addr,zone:t.zone,pay,trx,senderLast4,items,coupon:lastCoupon||"",referrer_slug:(new URLSearchParams(location.search).get("ref")||"")});
+ const fingerprint=JSON.stringify({name,phone,addr,email,zone:t.zone,pay,trx,senderLast4,items,coupon:lastCoupon||"",referrer_slug:(new URLSearchParams(location.search).get("ref")||"")});
  let pending=LS.get("sh_pending_checkout_v2",null);
  if(!pending||pending.fingerprint!==fingerprint){
   pending={fingerprint,id:crypto.randomUUID()};LS.set("sh_pending_checkout_v2",pending)
@@ -2092,7 +2094,7 @@ async function submitOrder(e){
      authHeaders.authorization="Bearer "+token;
    const response=await fetch(SH_CHECKOUT_URL,{
      method:"POST",headers:authHeaders,
-     body:JSON.stringify({request_id:pending.id,name,phone,address:addr,zone:t.zone,
+     body:JSON.stringify({request_id:pending.id,name,phone,email,address:addr,zone:t.zone,
        payment_method:pay,transaction_id:pay==="cod"?"":trx,
        sender_last4:pay==="cod"?"":senderLast4,coupon:lastCoupon||"",
        referrer_slug:(new URLSearchParams(location.search).get("ref")||"").slice(0,40),

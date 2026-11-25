@@ -634,12 +634,12 @@ async function editOrder(id){
  const o=orders.find(o=>o.id===id);if(!o)return;
  drawer('Order '+o.order_number,'<p>Loading order items…</p>');
  try{
- const [items,history,deliveryConfig]=await Promise.all([db.from('sh_order_items').select('*').eq('order_id',id),db.from('sh_order_history').select('*').eq('order_id',id).order('created_at',{ascending:false}),db.from('sh_settings').select('value').eq('key','shipping').maybeSingle()]);
+ const [items,history,deliveryConfig,mailStatus]=await Promise.all([db.from('sh_order_items').select('*').eq('order_id',id),db.from('sh_order_history').select('*').eq('order_id',id).order('created_at',{ascending:false}),db.from('sh_settings').select('value').eq('key','shipping').maybeSingle(),db.rpc('sh_admin_order_mail_status',{p_order:id})]);
  if(items.error||history.error)throw items.error||history.error;
  const editable=roleCan('owner','manager','operator'),deliveryEditable=editable&&['Pending','Confirmed','Processing'].includes(o.status);
  $('drawerBody').innerHTML=`<div class="split"><section><h3>Customer</h3><b>${esc(o.customer_name)}</b><p>${esc(o.customer_phone)}<br>${esc(o.address)}<br>${esc(o.zone)}</p></section>
  <section><h3>Payment</h3><p>${esc(o.payment_method)}<br>${esc(o.payment_status)}<br>Transaction: ${esc(o.transaction_id||'—')}<br>Sender last 4: ${esc(o.sender_last4||'—')}</p></section></div>
- ${deliveryEditable?'<details class="badge" style="margin:12px 0"><summary style="cursor:pointer;font-weight:700">Edit customer and delivery details</summary><form id="deliveryEditForm"><label>Customer name</label><input name="name" value="'+esc(o.customer_name)+'" required minlength="2" maxlength="120"><label>Customer mobile</label><input name="phone" inputmode="tel" value="'+esc(o.customer_phone)+'" required><label>Delivery address</label><textarea name="address" required minlength="10" maxlength="400">'+esc(o.address)+'</textarea><label>Delivery zone</label><select name="zone" required><option value="">Select zone</option><option value="dhaka" '+(o.zone==='dhaka'?'selected':'')+'>Inside Dhaka</option><option value="outside" '+(o.zone==='outside'?'selected':'')+'>Outside Dhaka</option></select><p id="deliveryEstimate" class="muted" aria-live="polite"></p><button type="submit" class="btn primary">Save customer details</button><p id="deliveryStatus" role="status" aria-live="polite"></p></form></details>':(editable?'<p class="muted">Customer details are locked once the order is Ready to Ship.</p>':'<p class="muted">Only authorized staff can edit customer details.</p>')}
+ ${deliveryEditable?'<details class="badge" style="margin:12px 0"><summary style="cursor:pointer;font-weight:700">Edit customer and delivery details</summary><form id="deliveryEditForm"><label>Customer name</label><input name="name" value="'+esc(o.customer_name)+'" required minlength="2" maxlength="120"><label>Customer mobile</label><input name="phone" inputmode="tel" value="'+esc(o.customer_phone)+'" required><label>Customer email (optional)</label><input name="email" type="email" maxlength="254" value="'+esc(o.customer_email||'')+'"><label>Delivery address</label><textarea name="address" required minlength="10" maxlength="400">'+esc(o.address)+'</textarea><label>Delivery zone</label><select name="zone" required><option value="">Select zone</option><option value="dhaka" '+(o.zone==='dhaka'?'selected':'')+'>Inside Dhaka</option><option value="outside" '+(o.zone==='outside'?'selected':'')+'>Outside Dhaka</option></select><p id="deliveryEstimate" class="muted" aria-live="polite"></p><button type="submit" class="btn primary">Save customer details</button><p id="deliveryStatus" role="status" aria-live="polite"></p></form></details>':(editable?'<p class="muted">Customer details are locked once the order is Ready to Ship.</p>':'<p class="muted">Only authorized staff can edit customer details.</p>')}
  <h3>Items</h3>${items.data.map(i=>'<div class="order-item-row"><div class="order-item-info">'+(orderItemImage(i)?imgTag(orderItemImage(i),i.product_name):'<span class="order-item-placeholder"></span>')+'<div><b>'+esc(i.product_name)+'</b><div class="muted">'+esc(i.color)+' · '+esc(i.size)+' · '+esc(i.sku)+'</div></div></div><b>'+i.qty+' × '+money(i.unit_price)+'</b></div>').join('')}
  <div class="badge">Subtotal ${money(o.subtotal)} − Discount ${money(o.discount)} + Delivery ${money(o.shipping)} = <b>${money(o.total)}</b></div>
  <form id="orderForm"><div class="fieldrow"><div><label>Order Status</label><select name="status">${['Pending','Confirmed','Processing','Ready to Ship','Shipped','Delivered','Cancelled','Return Requested','Returned'].map(v=>'<option '+(v===o.status?'selected':'')+'>'+v+'</option>').join('')}</select></div>
@@ -647,7 +647,7 @@ async function editOrder(id){
  <button class="btn primary" ${editable?'':'disabled'} type="submit">Save Order Changes</button>
  <button class="btn" id="printInvoice" type="button">Print Invoice</button>
   ${editable&&roleCan('owner','manager')&&o.payment_method==='COD'&&o.status==='Delivered'&&o.payment_status!=='Collected - COD'?'<button class="btn" id="markCodCollected" type="button">Confirm COD Collection</button>':''}</form>
- <div class="divider"></div><h3>Activity History</h3><p class="muted">${(history.data||[]).map(h=>esc(h.action)+' · '+esc(h.actor||'system')+' · '+fmtDate(h.created_at)).join('<br>')||'No history yet'}</p>`;
+ <div class="divider"></div><h3>Email updates</h3><p class="muted">${mailStatus.error?'Email status unavailable.':(mailStatus.data||[]).map(m=>esc(m.event_type==='order_confirmed'?'Order confirmation':'Payment confirmation')+': '+esc(m.state==='sent'?'Accepted by email provider':m.state==='uncertain'?'Needs delivery review':m.state)+(m.sent_at?' · '+fmtDate(m.sent_at):'')+(m.error_code?' · '+esc(m.error_code):'')+(m.state==='failed'&&roleCan('owner','manager')?' <button type="button" class="btn small" data-mail-retry="'+esc(m.id)+'">Retry</button>':'')).join('<br>')||'No confirmation emails recorded. An email address is required.'}</p><h3>Activity History</h3><p class="muted">${(history.data||[]).map(h=>esc(h.action)+' · '+esc(h.actor||'system')+' · '+fmtDate(h.created_at)).join('<br>')||'No history yet'}</p>`;
  if(deliveryEditable){
   const df=$('deliveryEditForm'),status=$('deliveryStatus'),rate=deliveryConfig.data?.value||{};
   const preview=()=>{const zone=df.elements.zone.value,configured=rate[zone],fee=zone===o.zone?Number(o.shipping):configured===undefined||configured===null?null:Number(configured);$('deliveryEstimate').textContent=fee!==null&&Number.isFinite(fee)?'Delivery '+money(fee)+' · Updated order total '+money(Number(o.subtotal)-Number(o.discount)+fee):'Select a zone to calculate delivery.';};
@@ -656,7 +656,7 @@ async function editOrder(id){
    if(!/^01[3-9][0-9]{8}$/.test(phone)){status.textContent='Enter a valid Bangladesh mobile number.';return}
    if(String(f.get('zone'))!==o.zone&&!confirm('Changing the delivery zone may change the delivery charge and order total. Continue?'))return;
    const button=df.querySelector('[type=submit]');button.disabled=true;status.textContent='Saving…';
-   try{const {data,error}=await db.rpc('sh_admin_update_order_delivery',{p_order:o.id,p_name:String(f.get('name')||'').trim(),p_phone:phone,p_address:String(f.get('address')||'').trim(),p_zone:String(f.get('zone')||'')});if(error)throw error;await refresh();await editOrder(o.id);notice('drawerMsg','Customer and delivery details updated. Order total: '+money(data.total)+'.');}
+   try{const {data,error}=await db.rpc('sh_admin_update_order_delivery_v2',{p_order:o.id,p_name:String(f.get('name')||'').trim(),p_phone:phone,p_address:String(f.get('address')||'').trim(),p_zone:String(f.get('zone')||''),p_email:String(f.get('email')||'').trim()});if(error)throw error;await refresh();await editOrder(o.id);notice('drawerMsg','Customer and delivery details updated. Order total: '+money(data.total)+'.');}
    catch(error){status.textContent=error.message||'Could not save customer details.'}finally{button.disabled=false}
   };
  }
@@ -665,6 +665,12 @@ async function editOrder(id){
   const changes={status:f.status,courier:f.courier,tracking_id:f.tracking_id,internal_note:f.internal_note,updated_at:new Date().toISOString()};
  const r=await db.from('sh_orders').update(changes).eq('id',id);if(r.error)return notice('drawerMsg',r.error.message,true);
  await refresh();editOrder(id);notice('drawerMsg','Order saved.')};
+ document.querySelectorAll('#drawerBody [data-mail-retry]').forEach(button=>button.onclick=async()=>{
+  if(!confirm('Retry the email rejected by the provider?'))return;
+  button.disabled=true;
+  try{const {error}=await db.rpc('sh_admin_retry_order_mail',{p_id:button.dataset.mailRetry});if(error)throw error;await editOrder(id);notice('drawerMsg','Email queued for retry.');}
+  catch(error){button.disabled=false;notice('drawerMsg',error.message||'Could not retry email.',true)}
+ });
  $('printInvoice').onclick=()=>printInvoice(o,items.data);
   const codButton=$('markCodCollected');
   if(codButton)codButton.onclick=async()=>{
@@ -711,13 +717,13 @@ function addOrder(){if(!roleCan('owner','manager','operator'))return;
  drawer('Create Order',`<p class="muted">Manual COD order. Amount and stock are verified by the backend.</p><form id="newOrderForm">
  <label>Product / Color</label><select name="variant_id" required>${available.map(v=>'<option value="'+esc(v.id)+'">'+esc(products.find(p=>p.id===v.product_id)?.name)+' · '+esc(v.color)+'</option>').join('')}</select>
  <div class="fieldrow"><div><label>Qty</label><input name="qty" type="number" required min="1" max="20" value="1"></div><div><label>Size</label><input name="size" placeholder="Optional"></div></div>
- <label>Customer Name</label><input name="name" required minlength="2"><label>Phone (Bangladesh)</label><input name="phone" required placeholder="017XXXXXXXX"><label>Delivery Address</label><textarea name="address" required minlength="10"></textarea>
+ <label>Customer Name</label><input name="name" required minlength="2"><label>Phone (Bangladesh)</label><input name="phone" required placeholder="017XXXXXXXX"><label>Customer email (optional)</label><input name="email" type="email" maxlength="254"><label>Delivery Address</label><textarea name="address" required minlength="10"></textarea>
  <label>Delivery Zone</label><select name="zone"><option value="dhaka">Inside Dhaka</option><option value="outside">Outside Dhaka</option></select>
  <button class="btn primary" type="submit">Create Confirmed COD Order</button></form>`);
  $('newOrderForm').onsubmit=async e=>{e.preventDefault();const f=formData('newOrderForm'),btn=e.currentTarget.querySelector('button[type=submit]');btn.disabled=true;
  try{const {data:{session}}=await db.auth.getSession();const r=await fetch(CHECKOUT_URL,{method:'POST',
  headers:{'content-type':'application/json','apikey':SUPABASE_PUBLISHABLE_KEY,...(session?{'authorization':'Bearer '+session.access_token}:{})},
- body:JSON.stringify({request_id:crypto.randomUUID(),name:f.name,phone:f.phone,address:f.address,zone:f.zone,payment_method:'cod',
+ body:JSON.stringify({request_id:crypto.randomUUID(),name:f.name,phone:f.phone,email:f.email,address:f.address,zone:f.zone,payment_method:'cod',
  items:[{variant_id:f.variant_id,qty:Number(f.qty),size:f.size||''}]})});const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'Order not created');
  await refresh();closeDrawer();notice('appMsg','Created '+j.orderId);}
  catch(err){notice('drawerMsg',err.message,true)}finally{btn.disabled=false}};
