@@ -1,6 +1,7 @@
 /* SHOPYHAT customer account, password-based login without SMS OTP. Guest checkout stays optional. */
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
 const URL='https://xwfqgmgiunlxzvzoermn.supabase.co',KEY='sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP';
+const initialCustomerCallback=(()=>{const p=new URLSearchParams(location.hash.slice(1));return p.get('type')==='signup'&&p.has('access_token')})();
 const db=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'sh_customer_auth_v1'},global:{headers:{'X-Client-Info':'shopyhat-customer-v1'}}});
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'৳'+Number(n||0).toLocaleString('en-BD');
@@ -277,5 +278,5 @@ function observeFormAutofill(){
  }
  window.addEventListener('sh:account',prefillCustomerForms);
 }
-document.addEventListener('DOMContentLoaded',()=>{shell();observeFormAutofill();loadAccount()});
+document.addEventListener('DOMContentLoaded',()=>{shell();observeFormAutofill();loadAccount().then(()=>{if(initialCustomerCallback&&signedUser){open();message('Email verified. Welcome to SHOPYHAT!')}}).catch(e=>console.warn('Account unavailable',e))});
 
