@@ -288,9 +288,9 @@ $('requestForm').onsubmit=async event=>{
  if(!selection||!Number.isInteger(qty)||qty<1||qty>20||!Number.isFinite(price)||price<selection.wholesale||price>selection.public_price*5)return fail('Check the quantity and customer selling price.');
  const b=form.querySelector('[type=submit]');b.disabled=true;b.textContent='Sending…';
  try{
-  const {data,error}=await db.rpc('sh_reseller_request_v2',{
+  const {data,error}=await db.rpc('sh_reseller_request_v3',{
    p_variant:selection.variant_id,p_qty:qty,p_customer:String(f.get('customer')||'').trim(),
-   p_phone:phone,p_address:String(f.get('address')||'').trim(),p_retail:price,p_zone:String(f.get('zone')||'')
+   p_phone:phone,p_address:String(f.get('address')||'').trim(),p_retail:price,p_zone:String(f.get('zone')||''),p_email:String(f.get('email')||'').trim()
   });
   if(error)throw error;
   $('requestDialog').close();tab('requests');
