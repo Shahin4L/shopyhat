@@ -238,27 +238,6 @@ function scheduleAdvance(delay){
 }
 function syncSlider(){
 
- const storyAnchor=document.getElementById('shAboutMedia')||aboutIntro;
- if(storyAnchor&&!document.getElementById('shInsideStory')){
- const section=el('section');section.id='shInsideStory';section.style.cssText='max-width:1040px;margin:36px auto 48px;padding:0 16px';
- const heading=el('h2','','Inside SHOPYHAT');heading.style.cssText='font-size:clamp(26px,4vw,38px);margin:0 0 8px';
- const intro=el('p','','Our stories, inspiration and moments behind the brand.');
- const article=el('article');article.style.cssText='border:1px solid #d8c6b5;border-radius:18px;overflow:hidden';
- const frame=el('img');frame.loading='lazy';frame.style.cssText='display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#21150e';
- const photos=['saree','hijab','campaign'];let active=0;
- const nav=el('div');nav.style.cssText='display:flex;align-items:center;justify-content:center;gap:16px;padding:8px';
- const prev=el('button','','‹'),next=el('button','','›'),count=el('span');count.setAttribute('aria-live','polite');
- for(const b of [prev,next]){b.type='button';b.style.cssText='width:44px;height:44px;border:1px solid #a98a72;border-radius:50%;background:#21150e;color:white;font-size:24px;cursor:pointer'}
- prev.setAttribute('aria-label','Previous story image');next.setAttribute('aria-label','Next story image');
- const show=()=>{frame.src='/assets/hero/shopyhat-cinematic-'+photos[active]+'.png';frame.alt='SHOPYHAT fashion campaign — '+photos[active];count.textContent=(active+1)+' / '+photos.length};
- prev.onclick=()=>{active=(active+photos.length-1)%photos.length;show()};next.onclick=()=>{active=(active+1)%photos.length;show()};show();nav.append(prev,count,next);
- const body=el('div');body.style.cssText='padding:clamp(16px,4vw,32px)';
- const label=el('small','','BRAND STORY · SINCE 2020');label.style.cssText='color:#b85b20;font-weight:700;letter-spacing:.08em';
- const title=el('h3','','Rooted in Tradition. Styled for Today.');title.style.cssText='font-size:clamp(22px,3vw,32px);margin:12px 0';
- const copy=el('p','','Fashion is a personal expression of who we are. At SHOPYHAT, we celebrate the beauty of Bengali traditions alongside contemporary style. From elegant sarees to versatile three-piece sets and hijabs, our vision is to make discovering your own style a simple, enjoyable experience.');
- const signature=el('p','','Your choice, our gift.');signature.style.fontWeight='700';
- body.append(label,title,copy,signature);article.append(frame,nav,body);section.append(heading,intro,article);storyAnchor.after(section);
- }
  const hero=document.querySelector('#p-home .hero');if(!hero)return;
  const slides=configuredSlides();
  hero.classList.toggle('sh-has-rotation',slides.length>0);
@@ -442,6 +421,27 @@ function decorate(){
   aboutPlaybackCleanup?.();
   aboutPlaybackCleanup=undefined;
   aboutMedia.remove();
+ }
+ const storyAnchor=document.getElementById('shAboutMedia')||aboutIntro;
+ if(storyAnchor&&!document.getElementById('shInsideStory')){
+ const section=el('section');section.id='shInsideStory';section.style.cssText='max-width:1040px;margin:36px auto 48px;padding:0 16px';
+ const heading=el('h2','','Inside SHOPYHAT');heading.style.cssText='font-size:clamp(26px,4vw,38px);margin:0 0 8px';
+ const intro=el('p','','Our stories, inspiration and moments behind the brand.');
+ const article=el('article');article.style.cssText='border:1px solid #d8c6b5;border-radius:18px;overflow:hidden';
+ const frame=el('img');frame.loading='lazy';frame.style.cssText='display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#21150e';
+ const photos=['saree','hijab','campaign'];let active=0;
+ const nav=el('div');nav.style.cssText='display:flex;align-items:center;justify-content:center;gap:16px;padding:8px';
+ const prev=el('button','','‹'),next=el('button','','›'),count=el('span');count.setAttribute('aria-live','polite');
+ for(const b of [prev,next]){b.type='button';b.style.cssText='width:44px;height:44px;border:1px solid #a98a72;border-radius:50%;background:#21150e;color:white;font-size:24px;cursor:pointer'}
+ prev.setAttribute('aria-label','Previous story image');next.setAttribute('aria-label','Next story image');
+ const show=()=>{frame.src='/assets/hero/shopyhat-cinematic-'+photos[active]+'.png';frame.alt='SHOPYHAT fashion campaign — '+photos[active];count.textContent=(active+1)+' / '+photos.length};
+ prev.onclick=()=>{active=(active+photos.length-1)%photos.length;show()};next.onclick=()=>{active=(active+1)%photos.length;show()};show();nav.append(prev,count,next);
+ const body=el('div');body.style.cssText='padding:clamp(16px,4vw,32px)';
+ const label=el('small','','BRAND STORY · SINCE 2020');label.style.cssText='color:#b85b20;font-weight:700;letter-spacing:.08em';
+ const title=el('h3','','Rooted in Tradition. Styled for Today.');title.style.cssText='font-size:clamp(22px,3vw,32px);margin:12px 0';
+ const copy=el('p','','Fashion is a personal expression of who we are. At SHOPYHAT, we celebrate the beauty of Bengali traditions alongside contemporary style. From elegant sarees to versatile three-piece sets and hijabs, our vision is to make discovering your own style a simple, enjoyable experience.');
+ const signature=el('p','','Your choice, our gift.');signature.style.fontWeight='700';
+ body.append(label,title,copy,signature);article.append(frame,nav,body);section.append(heading,intro,article);storyAnchor.after(section);
  }
  const hero=document.querySelector('#p-home .hero');if(!hero)return;
  hero.classList.toggle('sh-cinematic',cfg.cinematic!==false);
