@@ -164,3 +164,16 @@
 .sh-order-facts,.sh-order-actions,.sh-order-pages{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px}
 .sh-order-facts span{padding:4px 8px;border-radius:7px;background:#f8eee4;color:#523523;font-size:13px}
 @media(max-width:480px){.sh-profile-details div{display:block}.sh-profile-details dd{text-align:left}.sh-order-actions>*{flex:1}}
+
+.sh-required,.sh-field-guide span{color:#a83411;font-weight:800}
+.sh-optional,.sh-field-guide{color:#67544a;font-weight:500;font-size:.86em}
+.sh-field-guide{margin:.6rem 0}
+.sh-default-address{display:inline-block;background:#fcead8;color:#703709;border-radius:999px;padding:4px 11px;font-size:.8rem;font-weight:700}
+.sh-password-guide{margin:.35rem 0 .65rem}
+.sh-password-guide p,#shAccountBody .sh-password-guide p{font-size:.83rem;line-height:1.45;margin:.4rem 0 0;color:#554439}
+.sh-password-meter{height:6px;overflow:hidden;background:#eee0d4;border-radius:999px}
+.sh-password-meter span{height:100%;width:0;display:block;border-radius:inherit}
+.sh-password-meter[data-level="1"] span{width:25%;background:#ad321e}
+.sh-password-meter[data-level="2"] span{width:50%;background:#ad321e}
+.sh-password-meter[data-level="3"] span{width:75%;background:#a15c0a}
+.sh-password-meter[data-level="4"] span{width:100%;background:#157043}

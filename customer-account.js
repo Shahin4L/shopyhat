@@ -1,3 +1,4 @@
+import {bindPasswordStrength,passwordStrengthMarkup} from './password-strength.js?v=1';
 /* SHOPYHAT customer account, password-based login without SMS OTP. Guest checkout stays optional. */
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
 const URL='https://xwfqgmgiunlxzvzoermn.supabase.co',KEY='sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP';
@@ -6,16 +7,16 @@ const db=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,d
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>'৳'+Number(n||0).toLocaleString('en-BD');
 const normalPhone=s=>{let n=String(s||'').trim().replace(/[\s-]/g,'');if(n.startsWith('+88'))n=n.slice(3);else if(n.startsWith('88'))n=n.slice(2);return /^01[3-9]\d{8}$/.test(n)?n:null};
-let accountReady=false, currentTab='', requestedTab='orders';
+let accountReady=false, currentTab='', requestedTab='profile';
 let profile=null,profileExists=false,pendingName='',pendingPhone='',signedUser=null,inboxTimer=null;
-window.SHOPYHAT_CUSTOMER={getProfile:()=>profile,getUser:()=>signedUser,show:open,route:routeAccount,addressFields,readAddress,formatAddress,db};
+window.SHOPYHAT_CUSTOMER={getProfile:()=>profile,getUser:()=>signedUser,show:open,route:routeAccount,addressFields,readAddress,formatAddress,addressError,checkoutAddresses,bindCheckoutAddresses,db};
 const message=(s,bad=false)=>{const n=$('shAccountMessage');if(n){n.textContent=s;n.classList.toggle('error',bad)}};
 const view=(html)=>{$('shAccountBody').innerHTML=html};
 const field=(name,label,type='text',more='')=>'<label>'+label+'<input name="'+name+'" type="'+type+'" '+more+' required></label>';
 const formButton=text=>'<button class="sh-account-primary" type="submit">'+text+'</button>';
-const tabs={orders:'Orders',cart:'Cart',saved:'Saved items',address:'Delivery address',notifications:'Notifications',profile:'Profile',security:'Security'};
+const tabs={profile:'Profile',orders:'Orders',address:'Delivery addresses',cart:'Cart',saved:'Saved items',notifications:'Notifications',security:'Security'};
 const isAccountPage=()=>Boolean($('p-account')&&!$('p-account').classList.contains('hidden'));
-const focusedTab=tab=>Object.hasOwn(tabs,tab)?tab:'orders';
+const focusedTab=tab=>Object.hasOwn(tabs,tab)?tab:'profile';
 function open(tab){
  if(tab&&Object.hasOwn(tabs,tab)&&isAccountPage()){
   const hash='#account/'+tab;
@@ -58,16 +59,21 @@ function signupStep1(){
   passwordView(phone);
  };
 }
+function connectPasswordGuide(form,id){
+ const input=form.elements.namedItem('password');
+ input.setAttribute('aria-describedby',id);
+ bindPasswordStrength(input,$(id));
+}
 function passwordView(phone){
  message('');
  view(authIntro('Secure your account','Choose a password and add an email for account recovery.','signup','Step 2 of 2 · Account security')+
  '<div class="sh-signup-summary"><span>Creating account for</span><strong>'+esc(pendingName)+'</strong><small>'+esc(phone)+'</small></div>'+
  '<form id="shSignup2" class="sh-auth-form">'+field('email','Email address','email','maxlength="180" autocomplete="email" placeholder="name@example.com"')+
- passInput('password','Create password','new-password')+passInput('confirm','Confirm password','new-password')+
- '<p class="sh-form-hint" id="shPasswordStrength" aria-live="polite">Use at least 8 characters; a longer, unique password is safer.</p><p class="sh-form-hint">Email verification is required.</p>'+
+ passInput('password','Create password','new-password')+passwordStrengthMarkup('shSignupStrength')+passInput('confirm','Confirm password','new-password')+
+ '<p class="sh-form-hint">Email verification is required.</p>'+
  formButton('Create my account →')+'</form><button type="button" class="sh-auth-back" id="shBackAccount">← Back to personal details</button>');
  bindTabs();bindPassword();$('shBackAccount').onclick=signupStep1;
- const strengthInput=$('shSignup2').querySelector('[name=password]');strengthInput.addEventListener('input',()=>{const v=strengthInput.value,n=[/[a-z]/.test(v),/[A-Z]/.test(v),/[0-9]/.test(v),/[^a-zA-Z0-9]/.test(v)].filter(Boolean).length;const label=!v?'Use at least 8 characters; a longer, unique password is safer.':v.length<8?'Too short — use at least 8 characters.':v.length>=12&&n>=3?'Strength: strong':v.length>=10&&n>=2?'Strength: moderate':'Strength: weak — use a longer, unique password.';$('shPasswordStrength').textContent=label;});
+ connectPasswordGuide($('shSignup2'),'shSignupStrength');
  $('shSignup2').onsubmit=async e=>{
   e.preventDefault();const form=e.currentTarget,f=new FormData(form);
   const pass=String(f.get('password')||''),confirmation=String(f.get('confirm')||'');
@@ -343,15 +349,17 @@ function scheduleWatchSync(){
 window.addEventListener('sh:saved-items',scheduleWatchSync);
 const divisions=['Barishal','Chattogram','Dhaka','Khulna','Mymensingh','Rajshahi','Rangpur','Sylhet'];
 const addressKeys={division:'Division',district:'District',thana:'Thana',area:'Area',line:'Line',landmark:'Landmark'};
+const addressFieldId=(prefix,key)=>key==='line'&&prefix==='k'?'kAddr':prefix+addressKeys[key];
 function addressFields(prefix,structured={},legacy=''){
  const address=structured&&Object.keys(addressKeys).some(key=>structured[key])?structured:{line:legacy};
  const name=key=>prefix+addressKeys[key];
- const id=key=>key==='line'&&prefix==='k'?'kAddr':name(key);
- const input=(key,label,hint,limit)=>'<div class="sh-address-field fld"><label for="'+id(key)+'">'+label+'</label><input id="'+id(key)+'" name="'+name(key)+'" value="'+esc(address[key]||'')+'" placeholder="'+hint+'" maxlength="'+limit+'"></div>';
- return '<div class="sh-address-grid"><div class="sh-address-field"><label for="'+id('division')+'">Division</label><select id="'+id('division')+'" name="'+name('division')+'"><option value="">Select division</option>'+divisions.map(division=>'<option'+(address.division===division?' selected':'')+'>'+division+'</option>').join('')+'</select></div>'+
- input('district','District','e.g. Dhaka',60)+input('thana','Thana / Upazila','e.g. Dhanmondi',70)+input('area','Area / Village','e.g. Satmasjid Road',80)+
- '<div class="sh-address-field sh-address-wide fld"><label for="'+id('line')+'">House, road and address details</label><textarea id="'+id('line')+'" name="'+name('line')+'" rows="3" maxlength="400" placeholder="House or building, road, block or village">'+esc(address.line||'')+'</textarea></div>'+
- input('landmark','Landmark or delivery point (optional)','e.g. Near the main gate',100)+'</div>';
+ const id=key=>addressFieldId(prefix,key);
+ const labelFor=(key,label,required)=>'<label for="'+id(key)+'">'+label+(required?' <span class="sh-required" aria-hidden="true">*</span>':' <span class="sh-optional">(optional)</span>')+'</label>';
+ const input=(key,label,hint,limit,required)=>'<div class="sh-address-field fld">'+labelFor(key,label,required)+'<input id="'+id(key)+'" name="'+name(key)+'" value="'+esc(address[key]||'')+'" placeholder="'+hint+'" maxlength="'+limit+'"'+(required?' required':'')+'></div>';
+ return (prefix==='k'?'':'<p class="sh-field-guide"><span aria-hidden="true">*</span> Required fields</p>')+'<div class="sh-address-grid"><div class="sh-address-field fld">'+labelFor('division','Division',true)+'<select id="'+id('division')+'" name="'+name('division')+'" required><option value="">Select division</option>'+divisions.map(division=>'<option'+(address.division===division?' selected':'')+'>'+division+'</option>').join('')+'</select></div>'+
+ input('district','District','e.g. Dhaka',60,true)+input('thana','Thana / Upazila','e.g. Dhanmondi',70,true)+input('area','Area / Village','e.g. West Dhanmondi',80,false)+
+ '<div class="sh-address-field sh-address-wide fld">'+labelFor('line','House, road or village details',true)+'<textarea id="'+id('line')+'" name="'+name('line')+'" rows="3" minlength="4" maxlength="400" placeholder="House and road, block, or village and local directions" required>'+esc(address.line||'')+'</textarea></div>'+
+ input('landmark','Landmark or delivery point','e.g. Near the main gate',100,false)+'</div>';
 }
 function readAddress(form,prefix){
  return Object.fromEntries(Object.entries(addressKeys).map(([key,name])=>[key,String(form.elements.namedItem(prefix+name)?.value||'').trim()]));
@@ -359,6 +367,39 @@ function readAddress(form,prefix){
 function formatAddress(address){
  if(!address)return '';
  return [address.line,address.area,address.thana,address.district,address.division,address.landmark?'Landmark: '+address.landmark:''].filter(Boolean).join(', ');
+}
+function addressError(address,prefix){
+ const error=(key,message)=>({id:addressFieldId(prefix,key),message});
+ if(!divisions.includes(address.division))return error('division','Select your division.');
+ if(!address.district)return error('district','Enter your district.');
+ if(!address.thana)return error('thana','Enter your thana or upazila.');
+ if(address.line.length<4)return error('line','Enter at least four characters of house, road or village details.');
+ if(formatAddress(address).length>400)return error('line','Shorten your full address to 400 characters or fewer.');
+ return null;
+}
+function savedAddresses(){
+ if(profile?.saved_delivery_addresses?.length)return profile.saved_delivery_addresses;
+ if(!profile?.preferred_address)return [];
+ const address=profile.delivery_address;
+ return [{id:'legacy',label:'Saved address',formatted:profile.preferred_address,address:address&&Object.keys(address).length?address:{line:profile.preferred_address}}];
+}
+function checkoutAddresses(){
+ const addresses=savedAddresses();
+ if(!addresses.length)return '';
+ return '<div class="fld"><label for="kSavedAddress">Saved delivery address</label><select id="kSavedAddress">'+addresses.map((item,index)=>'<option value="'+esc(item.id)+'">'+esc(item.label+(index===0?' (default)':'')+' · '+item.formatted.slice(0,65))+'</option>').join('')+'<option value="">Enter a different address</option></select><small>Any edits here apply only to this order.</small></div>';
+}
+function bindCheckoutAddresses(form){
+ const select=form.querySelector('#kSavedAddress');
+ if(!select)return;
+ select.onchange=()=>{
+  const address=savedAddresses().find(item=>item.id===select.value)?.address;
+  for(const [key,name] of Object.entries(addressKeys)){
+   const field=form.elements.namedItem('k'+name);
+   if(field)field.value=address?.[key]||'';
+  }
+  form.querySelectorAll('.fld.bad').forEach(field=>field.classList.remove('bad'));
+  const error=form.querySelector('#kErr');if(error)error.textContent='';
+ };
 }
 function saveFeedback(form,text,error=false){
  const status=form.querySelector('[role=status]');
@@ -396,27 +437,53 @@ async function loadActivity(host){
   host.innerHTML=data?.length?'<ul class="sh-profile-activity">'+data.map(item=>'<li><strong>'+esc(item.fields.map(key=>labels[key]).filter(Boolean).join(', '))+'</strong><time datetime="'+esc(item.changed_at)+'">'+esc(orderDate(item.changed_at))+'</time></li>').join('')+'</ul>':'<p>No profile changes recorded yet.</p>';
  }catch{host.textContent='Could not load recent changes. Reopen Profile to try again.'}
 }
+async function manageAddress(action,id=null,label=null,address=null){
+ const owner=signedUser.id;
+ const {data,error}=await db.rpc('sh_manage_delivery_address',{p_action:action,p_id:id,p_label:label,p_address:address}).single();
+ if(error)throw Error(['22023','42501'].includes(error.code)?error.message:'Could not update your saved addresses. Try again.');
+ if(!data)throw Error('Could not confirm the update. Reload My Account and try again.');
+ if(signedUser?.id!==owner)return;
+ profile=data;
+ window.dispatchEvent(new Event('sh:account'));
+}
 function addressView(){
  if(!profileExists){
-  panel('<h3>Delivery address</h3><p>Add your name and mobile number in Profile first. You can then save a delivery address for future orders.</p><a class="sh-account-secondary" href="#account/profile">Go to Profile</a>');
+  panel('<h3>Delivery addresses</h3><p>Save your name and mobile number in Profile first.</p><a class="sh-account-secondary" href="#account/profile">Go to Profile</a>');
   return;
  }
- const saved=profile?.preferred_address||'';
- panel('<div class="sh-profile-heading"><h3>Delivery address</h3><button id="shEditAddress" class="sh-account-secondary" type="button">'+(saved?'Edit address':'Add address')+'</button></div><p>Use this address at checkout or choose a different one for an individual order.</p><div class="sh-profile-summary"><strong>Saved address</strong><p>'+esc(saved||'No delivery address saved yet.')+'</p></div>');
- $('shEditAddress').onclick=editAddressView;
+ const list=savedAddresses();
+ panel('<div class="sh-profile-heading"><h3>Delivery addresses</h3><button id="shEditAddress" class="sh-account-secondary" type="button"'+(list.length>=10?' disabled':'')+'>Add address</button></div><p>Save up to 10 addresses. Your default appears first at checkout, where you can choose a different one.</p>'+
+ (list.length?list.map((item,index)=>'<article class="sh-profile-summary"><div class="sh-profile-heading"><strong>'+esc(item.label)+'</strong>'+(index===0?'<span class="sh-default-address">Default</span>':'')+'</div><p>'+esc(item.formatted)+'</p><div class="sh-order-actions"><button type="button" class="sh-account-secondary" data-address-action="edit" data-address-id="'+esc(item.id)+'">Edit address</button>'+(index?'<button type="button" class="sh-account-secondary" data-address-action="default" data-address-id="'+esc(item.id)+'">Make default</button>':'')+'<button type="button" class="sh-account-secondary" data-address-action="delete" data-address-id="'+esc(item.id)+'">Remove</button></div></article>').join(''):'<p>No delivery addresses saved yet.</p>'));
+ $('shEditAddress').onclick=()=>editAddressView();
+ const host=$('shAccountPanel');
+ host.querySelectorAll('[data-address-action]').forEach(button=>button.onclick=async()=>{
+  const item=list.find(entry=>entry.id===button.dataset.addressId);
+  if(!item)return;
+  const action=button.dataset.addressAction;
+  if(action==='edit')return editAddressView(item);
+  if(action==='delete'&&!window.confirm('Remove this saved address from your account?'))return;
+  const controls=Array.from(host.querySelectorAll('button')).filter(control=>!control.disabled);
+  controls.forEach(control=>control.disabled=true);
+  message(action==='delete'?'Removing address…':'Updating default…');
+  try{
+   await manageAddress(action,item.id);
+   if(currentTab==='address'&&button.isConnected){addressView();message(action==='delete'?'Address removed.':'Default address updated.');$('shEditAddress')?.focus()}
+  }catch(error){if(button.isConnected)message(error.message,true)}
+  finally{controls.forEach(control=>control.disabled=false)}
+ });
 }
-function editAddressView(){
- panel('<h3>Edit delivery address</h3><p>Select a division and enter your district, thana and local address. Add a landmark if it helps the courier find you.</p><form id="shAddressForm">'+addressFields('account',profile?.delivery_address,profile?.preferred_address)+formButton('Save delivery address')+' <button id="shCancelAddress" type="button" class="sh-account-secondary">Cancel</button>'+formStatus+'</form>');
+function editAddressView(item){
+ message('');
+ panel('<h3>'+(item?'Edit delivery address':'Add delivery address')+'</h3><p>Enter enough detail for the courier to find you.</p><form id="shAddressForm" novalidate><label for="shAddressLabel">Address label <span class="sh-optional">(optional)</span><input id="shAddressLabel" maxlength="40" placeholder="Home, office, or another name" value="'+esc(item?.label||'')+'"></label>'+addressFields('account',item?.address)+formButton('Save address')+' <button id="shCancelAddress" type="button" class="sh-account-secondary">Cancel</button>'+formStatus+'</form>');
  $('shCancelAddress').onclick=()=>{addressView();$('shEditAddress')?.focus()};
- $('accountDivision')?.focus();
+ $('shAddressLabel')?.focus();
  $('shAddressForm').onsubmit=async e=>{
   e.preventDefault();
-  const form=e.currentTarget,address=readAddress(form,'account'),formatted=formatAddress(address);
-  if(formatted&&(!address.line||formatted.length<10))return saveFeedback(form,'Enter your house, road or other details needed to find the address.',true);
-  if(formatted.length>400)return saveFeedback(form,'The full address is too long. Shorten it to 400 characters or fewer.',true);
-  await submitAccountChange(form,'Saving…',formatted?'Delivery address saved.':'Saved delivery address cleared.',async()=>{
-   await saveCustomerProfile({delivery_address:formatted?address:{}});
-   if(form.isConnected){addressView();message(formatted?'Delivery address saved.':'Saved delivery address cleared.');$('shEditAddress')?.focus()}
+  const form=e.currentTarget,address=readAddress(form,'account'),invalid=addressError(address,'account');
+  if(invalid){$(invalid.id)?.focus();return saveFeedback(form,invalid.message,true)}
+  await submitAccountChange(form,'Saving…','Address saved.',async()=>{
+   await manageAddress('save',item?.id,$('shAddressLabel').value.trim(),address);
+   if(form.isConnected){addressView();message('Address saved.');$('shEditAddress')?.focus()}
   });
  };
 }
@@ -445,8 +512,9 @@ function editProfileView(){
  };
 }
 function securityView(){
- panel('<h3>Security</h3><p>Change the password you use to sign in.</p><form id="shPasswordForm">'+passInput('password','New password','new-password')+passInput('confirm','Confirm new password','new-password')+formButton('Update password')+formStatus+'</form>');
+ panel('<h3>Security</h3><p>Change the password you use to sign in.</p><form id="shPasswordForm">'+passInput('password','New password','new-password')+passwordStrengthMarkup('shSecurityStrength')+passInput('confirm','Confirm new password','new-password')+formButton('Update password')+formStatus+'</form>');
  bindPassword();
+ connectPasswordGuide($('shPasswordForm'),'shSecurityStrength');
  $('shPasswordForm').onsubmit=e=>{
   e.preventDefault();const form=e.currentTarget,fields=new FormData(form),password=String(fields.get('password')||'');
   if(password!==fields.get('confirm'))return saveFeedback(form,'Passwords do not match.',true);

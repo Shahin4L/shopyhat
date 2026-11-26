@@ -971,7 +971,7 @@ main{overflow:clip}
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./about-enhanced.css?v=20261122b">
 <link rel="stylesheet" href="./storefront-experience.css?v=20261126-about-playlist">
-<link rel="stylesheet" href="./customer-account.css?v=20261126-profile-edit">
+<link rel="stylesheet" href="./customer-account.css?v=20261126-address-book">
 </head>
 <body>
 
@@ -1978,10 +1978,12 @@ function openCheckout(){
     <h2>Almost yours<span class="title-accent">.</span></h2>
     <p class="checkout-intro">No account needed. Enter your delivery details and review your total before placing your order.</p>
     <h4>01 &nbsp; Delivery details</h4>
-    <div class="fld"><label for="kName">Full name</label><input id="kName" autocomplete="name" value="${esc(saved.name||"")}"></div>
-    <div class="fld"><label for="kPhone">Phone number</label><input id="kPhone" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" value="${esc(saved.phone||"")}"></div><div class="fld"><label for="kEmail">Email for order updates (optional)</label><input id="kEmail" type="email" autocomplete="email" maxlength="254" value="${esc(saved.email||"")}"><small>We’ll use this address for order and payment confirmations.</small></div>
-    <div class="fld"><label for="kZone">Delivery zone and fee</label><select id="kZone"><option value="dhaka">Inside Dhaka, ${money(CONFIG.delivery.dhaka)}</option><option value="outside">Outside Dhaka, ${money(CONFIG.delivery.outside)}</option></select></div>
-    ${window.SHOPYHAT_CUSTOMER?.addressFields('k',saved.addressParts,saved.addr)||`<div class="fld"><label for="kAddr">Full address</label><textarea id="kAddr" rows="3" maxlength="400" placeholder="House, road, area, thana, district">${esc(saved.addr||"")}</textarea></div>`}
+    <p class="sh-field-guide"><span aria-hidden="true">*</span> Required fields</p>
+    <div class="fld"><label for="kName">Full name <span class="sh-required" aria-hidden="true">*</span></label><input id="kName" required autocomplete="name" value="${esc(saved.name||"")}"></div>
+    <div class="fld"><label for="kPhone">Phone number <span class="sh-required" aria-hidden="true">*</span></label><input id="kPhone" required inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" value="${esc(saved.phone||"")}"></div><div class="fld"><label for="kEmail">Email for order updates (optional)</label><input id="kEmail" type="email" autocomplete="email" maxlength="254" value="${esc(saved.email||"")}"><small>We’ll use this address for order and payment confirmations.</small></div>
+    <div class="fld"><label for="kZone">Delivery zone and fee <span class="sh-required" aria-hidden="true">*</span></label><select id="kZone" required><option value="dhaka">Inside Dhaka, ${money(CONFIG.delivery.dhaka)}</option><option value="outside">Outside Dhaka, ${money(CONFIG.delivery.outside)}</option></select></div>
+    ${window.SHOPYHAT_CUSTOMER?.checkoutAddresses?.()||''}
+    ${window.SHOPYHAT_CUSTOMER?.addressFields('k',saved.addressParts,saved.addr)||`<div class="fld"><label for="kAddr">Full address (required)</label><textarea id="kAddr" required rows="3" maxlength="400" placeholder="House, road, area, thana, district">${esc(saved.addr||"")}</textarea></div>`}
     <div class="fld"><label for="kNote">Order note (optional)</label><input id="kNote" placeholder="Anything we should know?"></div>
     <h4>02 &nbsp; Payment method</h4>
      ${pay.map((m,i)=>`<label class="pay-choice opt ${!m.enabled?'unavailable':''}"><input type="radio" name="pay" value="${m.id}" ${i?'':'checked'} ${m.enabled?'':'disabled'}><span class="pay-symbol ${m.id}">${m.symbol}</span><span><span class="pay-title">${m.t}</span><span class="pay-desc">${m.s}</span></span></label>`).join("")}
@@ -1998,6 +2000,7 @@ function openCheckout(){
     <p class="checkout-footnote">Your delivery charge is included in the total shown in the order summary.</p>
   </form>
   <div class="s"><div class="summary-heading"><span class="summary-icon" aria-hidden="true">◈</span><div><span class="summary-kicker">YOUR SELECTION</span><h2 style="font-size:28px">Order summary</h2></div></div><div id="coSum"></div><div class="sh-checkout-promo"><label for="kPromo">Have a promo code?</label><div class="sh-checkout-promo-row"><input id="kPromo" type="text" maxlength="32" placeholder="Enter code" value="${esc(lastCoupon)}" autocomplete="off"><button type="button" id="kPromoBtn">Apply</button><button type="button" id="kPromoClear" aria-label="Remove promo code" title="Remove promo code">×</button></div><p id="kPromoMsg" role="status" class="sh-checkout-promo-message">${lastCoupon?(couponInfo(subtotal()).ok?"Promo applied":"Verify promo before placing your order"):""}</p></div><p class="summary-hint">Confirm your selected colours, quantities and delivery area before placing your order.</p></div>`;
+  window.SHOPYHAT_CUSTOMER?.bindCheckoutAddresses?.($("#coForm"));
   renderSummary();openModal("coModal");
   if(CONFIG.turnstileSiteKey){
     const host=document.querySelector("#coBox .cf-turnstile");
@@ -2071,7 +2074,9 @@ async function submitOrder(e){
  if(name.length<2)return bad("#kName","Enter your full name.");
  if(!PHONE_RE.test(phone))return bad("#kPhone","Enter a valid Bangladeshi mobile number.");
  if(email&&!$("#kEmail").checkValidity())return bad("#kEmail","Enter a valid email address.");
- if(!addressLine||addr.length<10)return bad("#kAddr","Enter your house, road or other details needed to find the address.");
+ const addressIssue=addressParts?window.SHOPYHAT_CUSTOMER?.addressError?.(addressParts,"k"):null;
+ if(addressIssue)return bad("#"+addressIssue.id,addressIssue.message);
+ if(!addressParts&&addressLine.length<10)return bad("#kAddr","Enter your full delivery address, including district and division.");
  if(addr.length>400)return bad("#kAddr","The full address is too long. Shorten it to 400 characters or fewer.");
  if(pay!=="cod"){
    const payNo=pay==="bkash"?CONFIG.bkash:CONFIG.nagad;
@@ -2472,6 +2477,6 @@ boot();
 <script src="./visitor-analytics.js" defer></script>
 <script src="./brand-about.js?v=20261122b" defer></script>
 <script src="./storefront-experience.js?v=20261126-about-playlist" defer></script>
-<script type="module" src="./customer-account.js?v=20261126-profile-edit"></script>
+<script type="module" src="./customer-account.js?v=20261126-address-book"></script>
 </body>
 </html>
