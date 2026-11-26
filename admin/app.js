@@ -2,7 +2,7 @@ import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,CHECKOUT_URL} from './config.js';
 import {setupBrandManager} from './brand.js';
 import {setupCatalogManager} from './catalog.js';
-import {setupExperienceStudio} from './experience.js?v=20261127-about-preview';
+import {setupExperienceStudio} from './experience.js?v=20261127-about-remove';
 import {setupPromotions} from './promotions.js';
 import {setupResellerOperations} from './resellers.js?v=20261125-cancel-zone';
 const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
