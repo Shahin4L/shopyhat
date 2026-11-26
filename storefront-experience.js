@@ -438,7 +438,7 @@ function decorate(){
  const storyAnchor=document.getElementById('shAboutMedia')||aboutIntro;
  const sample={title:'Rooted in Tradition. Styled for Today.',description:'Fashion is a personal expression of who we are. At SHOPYHAT, we celebrate the beauty of Bengali traditions alongside contemporary style. From elegant sarees to versatile three-piece sets and hijabs, our vision is to make discovering your own style a simple, enjoyable experience.',images:['saree','hijab','campaign'].map(x=>'/assets/hero/shopyhat-cinematic-'+x+'.png')};
  const stories=Array.isArray(cfg.about_stories)?cfg.about_stories:[sample];
- const photos=Array.isArray(cfg.about_photos)?cfg.about_photos.filter(x=>x&&safeMedia(x.url)):[];if(!photos.length&&aboutPhoto)photos.push({url:aboutPhoto,title:'',description:''});
+ const photos=Array.isArray(cfg.about_photos)?cfg.about_photos.filter(x=>x&&safeMedia(x.url)):[];if(!Array.isArray(cfg.about_photos)&&aboutPhoto)photos.push({url:aboutPhoto,title:'',description:''});
  function renderAboutGallery(id,heading,items,anchor){
  if(!anchor)return null;
  let section=document.getElementById(id);
@@ -448,14 +448,14 @@ function decorate(){
  for(const item of items){
  if(!item)continue;
  const article=el('article');article.style.cssText='border:1px solid #d8c6b5;border-radius:18px;overflow:hidden;margin:16px 0;padding:16px';
- if(item.title)article.append(el('h3','',item.title));if(item.description){const p=el('p','',item.description);p.style.whiteSpace='pre-line';article.append(p)}
+ 
  const images=(item.images||[item]).map(x=>typeof x==='string'?{url:x}:x).filter(x=>x&&safeMedia(x.url));
  if(images.length){let i=0;const frame=el('img');frame.loading='lazy';frame.style.cssText='display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#21150e;border-radius:12px';
  const title=el('h4'),copy=el('p'),count=el('span');copy.style.whiteSpace='pre-line';count.setAttribute('aria-live','polite');
  const nav=el('div');nav.style.cssText='display:flex;align-items:center;justify-content:center;gap:16px;padding:8px';
  const prev=el('button','','‹'),next=el('button','','›');for(const btn of [prev,next]){btn.type='button';btn.style.cssText='width:44px;height:44px;border-radius:50%;background:#21150e;color:white;border:1px solid #a98a72'}prev.setAttribute('aria-label','Previous photo');next.setAttribute('aria-label','Next photo');
  const show=()=>{const x=images[i];frame.src=safeMedia(x.url);frame.alt=x.title||item.title||'SHOPYHAT';title.textContent=item.images?x.title||'':'';copy.textContent=item.images?x.description||'':'';title.hidden=!title.textContent;copy.hidden=!copy.textContent;count.textContent=(i+1)+' / '+images.length};
- prev.onclick=()=>{i=(i+images.length-1)%images.length;show()};next.onclick=()=>{i=(i+1)%images.length;show()};nav.append(prev,count,next);nav.hidden=images.length<2;article.append(frame,nav,title,copy);show()}
+ prev.onclick=()=>{i=(i+images.length-1)%images.length;show()};next.onclick=()=>{i=(i+1)%images.length;show()};nav.append(prev,count,next);nav.hidden=images.length<2;article.append(frame,nav,title,copy);show()}if(item.title)article.append(el('h3','',item.title));if(item.description){const p=el('p','',item.description);p.style.whiteSpace='pre-line';article.append(p)}
  section.append(article)}
  return section;
  }
