@@ -452,7 +452,30 @@ function decorate(){
  return section;
  }
  const gallery=renderAboutGallery('shAboutPhotos','Our Photo Gallery',photos,storyAnchor);
- renderAboutGallery('shInsideStory','Inside SHOPYHAT',stories,gallery||storyAnchor);
+
+ const anchor=gallery||storyAnchor;
+ if(anchor){
+ let section=document.getElementById('shInsideStory');
+ const slides=stories.filter(Boolean).flatMap(item=>{const images=(Array.isArray(item.images)?item.images:[]).map(x=>typeof x==='string'?{url:x}:x).filter(x=>x&&safeMedia(x.url));return images.length?images.map(photo=>({item,photo})):item.title||item.description?[{item,photo:null}]:[]});
+ if(!slides.length)section?.remove();
+ else {
+ if(!section){section=el('section');section.id='shInsideStory';section.style.cssText='max-width:1040px;margin:36px auto 48px;padding:0 16px';anchor.after(section)}
+ const sig='carousel-v1'+JSON.stringify(slides);
+ if(section.dataset.signature!==sig){
+ section.dataset.signature=sig;section.replaceChildren(el('h2','','Inside SHOPYHAT'),el('p','','Our stories. Our inspiration. Our identity.'));
+ const article=el('article');article.style.cssText='border:1px solid #d8c6b5;border-radius:18px;padding:clamp(12px,3vw,28px);overflow:hidden';
+ const title=el('h3'),body=el('p'),pt=el('h4'),pc=el('p'),counter=el('span');body.style.whiteSpace=pc.style.whiteSpace='pre-line';counter.setAttribute('aria-live','polite');
+ const stage=el('div');stage.style.cssText='position:relative';const img=el('img');img.style.cssText='display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#21150e;border-radius:12px';
+ const nav=el('div');nav.style.cssText='display:flex;align-items:center;justify-content:center;gap:12px;padding:3px 8px;border-radius:999px;background:#21150ed9;color:white;position:absolute;bottom:8px;left:50%;transform:translateX(-50%);white-space:nowrap';
+ const prev=el('button','','‹'),next=el('button','','›');for(const btn of [prev,next]){btn.type='button';btn.style.cssText='width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:white;font-size:24px'}prev.setAttribute('aria-label','Previous story');next.setAttribute('aria-label','Next story');
+ let i=0;const show=()=>{const {item,photo}=slides[i];for(const [node,value] of [[title,item.title],[body,item.description],[pt,photo?.title],[pc,photo?.description]]){node.textContent=value||'';node.hidden=!value}img.hidden=!photo;img.style.display=photo?'block':'none';if(photo){img.src=safeMedia(photo.url);img.alt=photo.title||item.title||'SHOPYHAT'}else img.removeAttribute('src');nav.style.position=photo?'absolute':'relative';nav.style.bottom=photo?'8px':'auto';nav.style.width='max-content';nav.hidden=slides.length<2;nav.style.display=slides.length<2?'none':'flex';counter.textContent=(i+1)+' / '+slides.length};
+ const move=n=>{i=(i+n+slides.length)%slides.length;show()};prev.onclick=()=>move(-1);next.onclick=()=>move(1);
+ let start=null;stage.style.touchAction='pan-y';stage.addEventListener('touchstart',e=>{start=e.touches[0].clientX},{passive:true});stage.addEventListener('touchend',e=>{if(start!==null){const dx=e.changedTouches[0].clientX-start;if(Math.abs(dx)>50)move(dx<0?1:-1)}start=null},{passive:true});stage.addEventListener('touchcancel',()=>{start=null});
+ nav.append(prev,counter,next);stage.append(img,nav);article.append(title,body,stage,pt,pc,el('p','','Your Choice, Our Gift.'));section.append(article);show();
+ }
+ }
+ }
+
  const hero=document.querySelector('#p-home .hero');if(!hero)return;
  hero.classList.toggle('sh-cinematic',cfg.cinematic!==false);
  const imageURL=safeMedia(cfg.hero_image_url||'./assets/shopyhat-cinematic-art.svg');hero.classList.toggle('sh-has-image',!!imageURL);if(imageURL)hero.style.setProperty('--sh-hero-image','url("'+imageURL.replaceAll('"','%22')+'")');else hero.style.removeProperty('--sh-hero-image');
