@@ -35,28 +35,26 @@ function nav(){
 }
 function populateMega(){
  const host=document.getElementById('shMegaGrid');if(!host)return;
- const roots=typeof activeRoots==='function'?activeRoots():[];
- const cats=[{name:'Sarees',match:'saree'},{name:'Three-piece',match:'three'},{name:'Hijab',match:'hijab'},{name:'Accessories',match:'accessor'}];
- // Prefer actual published subcategories. A lone root must not produce a huge tile.
- const children=roots.flatMap(root=>typeof activeChildren==='function'?activeChildren(root.id).map(c=>({name:c.name,match:c.slug,slug:root.slug+'/'+c.slug,parent:root.slug})):[]);
- const picks=(children.length?children:roots.length>1?roots.map(c=>({name:c.name,match:c.slug,slug:c.slug})):cats).slice(0,8);
- host.style.removeProperty('grid-template-columns');
- host.replaceChildren();
- picks.forEach(c=>{
-  const a=el('a','sh-mega-card'),photo=el('div','sh-photo');
-  const needle=String(c.match||'').toLowerCase(),parent=String(c.parent||'').toLowerCase();
-  const candidates=list().filter(x=>image(x));
-  const p=candidates.find(x=>String(x.subcat||'').toLowerCase()===needle)||candidates.find(x=>
-    String(x.cat||'').toLowerCase()===needle||
-    String(x.catName||'').toLowerCase().includes(needle)||
-    (parent&&String(x.cat||'').toLowerCase()===parent&&String(x.name||'').toLowerCase().includes(needle))
-  )||candidates[0]; // Use an existing product photo if this collection has no matching product yet.
-  a.href='#shop/'+(c.slug||p?.cat||c.match).split('/').map(encodeURIComponent).join('/');
-  if(p&&image(p)){const img=el('img');img.src=image(p);img.alt=c.name;img.loading='lazy';img.onerror=()=>{img.remove();photo.textContent=c.name};photo.append(img)}
-  else photo.textContent=c.name;
-  a.append(photo,el('span','',c.name));host.append(a);
- });
+ const bn=document.documentElement.lang==='bn',tr=(en,b)=>bn?b:en;
+ host.style.removeProperty('grid-template-columns');host.replaceChildren();
+ const all=el('a','sh-mega-card',tr('View all products','সব পণ্য দেখুন'));all.href='#shop';host.append(all);
+ if(window.SHOPYHAT_MEGA_CATALOG!=='ready'){host.append(el('div','sh-mega-card',window.SHOPYHAT_MEGA_CATALOG==='error'?tr('Collections temporarily unavailable','কালেকশন সাময়িকভাবে অনুপলব্ধ'):tr('Loading collections…','কালেকশন লোড হচ্ছে…')));return}
+ const products=list(),roots=typeof activeRoots==='function'?activeRoots():[];
+ const picks=roots.flatMap(root=>{const children=typeof activeChildren==='function'?activeChildren(root.id):[];return children.length?[{name:root.name,name_bn:root.name_bn,slug:root.slug,cat:root.slug},...children.map(c=>({name:c.name,name_bn:c.name_bn,slug:root.slug+'/'+c.slug,cat:root.slug,sub:c.slug}))]:[{name:root.name,name_bn:root.name_bn,slug:root.slug,cat:root.slug}]});
+ for(const p of products){if(!picks.some(c=>c.cat===p.cat))picks.push({name:p.catName||p.cat,slug:p.cat,cat:p.cat})}
+ const used=new Set();
+ picks.sort((a,b)=>Number(!!b.sub)-Number(!!a.sub));
+ for(const c of picks){
+  const matches=products.filter(p=>p.cat===c.cat&&(!c.sub||p.subcat===c.sub));if(!matches.length)continue;
+  const name=bn&&c.name_bn?c.name_bn:c.name,a=el('a','sh-mega-card'),photo=el('div','sh-photo');
+  a.href='#shop/'+c.slug.split('/').map(encodeURIComponent).join('/');
+  const urls=matches.map(image).filter(Boolean),url=urls.find(u=>!used.has(u));
+  if(url){used.add(url);const img=el('img');img.src=url;img.alt=name;img.loading='lazy';img.onerror=()=>{img.remove();photo.textContent=name};photo.append(img)}else photo.textContent=name;
+  a.append(photo,el('span','',name));host.append(a);
+ }
+ if(host.children.length===1)host.append(el('div','sh-mega-card',tr('No published collections yet','এখনো কোনো প্রকাশিত কালেকশন নেই')));
 }
+window.addEventListener('sh:mega-catalog',populateMega);
 function suggest(q,host){q=q.trim().toLowerCase();host.replaceChildren();
  if(q.length<2){host.hidden=true;return}
  const matches=list().filter(p=>[p.name,p.catName,p.nameBn,p.desc].filter(Boolean).join(' ').toLowerCase().includes(q)).slice(0,6);
