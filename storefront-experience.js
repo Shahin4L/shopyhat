@@ -231,6 +231,63 @@ function syncSlider(){
  setSlide(0);startSlideTimer();
 }
 
+let aboutPlaybackCleanup;
+function mountAboutVideo(media){
+ const player=el('div','sh-about-player');
+ const sound=el('button','sh-about-sound');
+ sound.type='button';
+ media.controls=true;
+ media.playsInline=true;
+ media.muted=true;
+ media.defaultMuted=true;
+ media.preload='metadata';
+
+ const updateSound=()=>{
+  const bn=document.documentElement.lang==='bn';
+  sound.textContent=media.muted?(bn?'সাউন্ড চালু করুন':'Sound On'):(bn?'সাউন্ড বন্ধ করুন':'Sound Off');
+ };
+ updateSound();
+ media.addEventListener('volumechange',updateSound);
+ sound.addEventListener('click',()=>{
+  media.muted=!media.muted;
+  if(!media.muted){
+   if(media.volume===0)media.volume=1;
+   media.play().catch(()=>{media.muted=true;updateSound()});
+  }
+  updateSound();
+ });
+ player.append(media,sound);
+
+ let shouldPlay=true;
+ let inView=false;
+ const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+ const syncPlayback=()=>{
+  if(!player.isConnected)return;
+  if(!inView||document.hidden){
+   if(!media.paused){shouldPlay=true;media.pause()}
+   return;
+  }
+  if(shouldPlay&&!reducedMotion.matches){
+   shouldPlay=false;
+   media.play().catch(()=>{});
+  }
+ };
+ const observer=new IntersectionObserver(([entry])=>{
+  inView=entry.isIntersecting&&entry.intersectionRatio>=.35;
+  syncPlayback();
+ },{threshold:.35});
+ observer.observe(player);
+ document.addEventListener('visibilitychange',syncPlayback);
+ const language=new MutationObserver(updateSound);
+ language.observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+ aboutPlaybackCleanup=()=>{
+  observer.disconnect();
+  language.disconnect();
+  document.removeEventListener('visibilitychange',syncPlayback);
+  media.pause();
+ };
+ return player;
+}
 function decorate(){
  applyDesign();
  const aboutIntro=document.querySelector('#p-about .about-v2-intro');
@@ -239,13 +296,24 @@ function decorate(){
  if(aboutIntro&&aboutURL&&['image','video'].includes(aboutType)){
   if(!aboutMedia){aboutMedia=el('section');aboutMedia.id='shAboutMedia';aboutMedia.style.cssText='margin:28px auto 48px;max-width:1040px';aboutIntro.after(aboutMedia)}
   const sig=aboutType+'|'+aboutURL;
-  if(aboutMedia.dataset.signature!==sig){aboutMedia.replaceChildren();aboutMedia.dataset.signature=sig;
+  if(aboutMedia.dataset.signature!==sig){
+   aboutPlaybackCleanup?.();
+   aboutPlaybackCleanup=undefined;
+   aboutMedia.replaceChildren();
+   aboutMedia.dataset.signature=sig;
    const heading=el('h2','','Discover SHOPYHAT');heading.style.cssText='margin:0 0 18px;font-size:clamp(24px,4vw,38px)';
-   const media=el(aboutType==='video'?'video':'img');media.src=aboutURL;media.style.cssText='display:block;width:100%;max-height:620px;object-fit:contain;background:#21150e;border-radius:16px';
-   if(aboutType==='video'){media.controls=true;media.playsInline=true;media.preload='metadata'}else{media.alt='SHOPYHAT fashion and brand story';media.loading='lazy'}
-   aboutMedia.append(heading,media);
+   const media=el(aboutType==='video'?'video':'img');
+   media.style.cssText='display:block;width:100%;max-height:620px;aspect-ratio:16/9;object-fit:contain;background:#21150e;border-radius:16px';
+   if(aboutType==='image'){media.alt='SHOPYHAT fashion and brand story';media.loading='lazy'}
+   const player=aboutType==='video'?mountAboutVideo(media):media;
+   media.src=aboutURL;
+   aboutMedia.append(heading,player);
   }
- }else aboutMedia?.remove();
+ }else if(aboutMedia){
+  aboutPlaybackCleanup?.();
+  aboutPlaybackCleanup=undefined;
+  aboutMedia.remove();
+ }
  const hero=document.querySelector('#p-home .hero');if(!hero)return;
  hero.classList.toggle('sh-cinematic',cfg.cinematic!==false);
  const imageURL=safeMedia(cfg.hero_image_url||'./assets/shopyhat-cinematic-art.svg');hero.classList.toggle('sh-has-image',!!imageURL);if(imageURL)hero.style.setProperty('--sh-hero-image','url("'+imageURL.replaceAll('"','%22')+'")');else hero.style.removeProperty('--sh-hero-image');

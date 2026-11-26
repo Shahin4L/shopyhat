@@ -200,74 +200,51 @@ html,body{max-width:100%;overflow-x:clip}
 #p-home .sh-cinematic:has(.sh-hero-video):after{background:linear-gradient(90deg,#100704e0,#160907a0 45%,#16090733)}
 @media (max-width: 650px) {
  #p-home .sh-cinematic,
- #p-home .sh-has-rotation {
-  --sh-mobile-scene: min(56.25vw, 366px);
-  min-height: 0;
-  background: #130a07 !important;
- }
-
- /* Match the wide media frame to the phone width and blend it into the copy. */
+ #p-home .sh-has-rotation { min-height: 0; background: #130a07 !important; }
  #p-home .sh-cinematic .wrap,
  #p-home .sh-has-rotation .wrap {
-  min-height: 0;
+  min-height: clamp(365px, 108vw, 490px);
   max-height: none;
   grid-template-columns: minmax(0, 1fr);
-  padding: calc(var(--sh-mobile-scene) - 20px) clamp(16px, 5vw, 28px) 22px;
+  align-content: end;
   gap: 0;
+  padding: clamp(114px, 34vw, 175px) clamp(16px, 5vw, 28px) 43px;
  }
- #p-home .sh-has-rotation:has(.sh-slider-controls) .wrap { padding-bottom: 64px; }
+ #p-home .sh-has-rotation:has(.sh-slider-controls) .wrap { padding-bottom: 76px; }
  #p-home .sh-cinematic #heroArt,
  #p-home .sh-has-rotation #heroArt { display: none; }
 
  #p-home .sh-cinematic.sh-has-image:before {
-  inset: 0 0 auto;
-  height: var(--sh-mobile-scene);
-  background: var(--sh-hero-image) center top / contain no-repeat;
+  background: var(--sh-hero-image) var(--sh-hero-position, center) / cover no-repeat;
+ }
+ #p-home .sh-has-rotation .sh-slider-backdrop,
+ #p-home .sh-cinematic .sh-hero-video {
+  object-fit: cover;
+  object-position: var(--sh-hero-position, center);
+ }
+ /* The campaign portraits place the models on the right of the wide source. */
+ #p-home .sh-has-rotation img.sh-slider-backdrop[src*="/assets/hero/shopyhat-cinematic-"] {
+  object-position: 86% top;
  }
  #p-home .sh-cinematic:after,
  #p-home .sh-cinematic:has(.sh-hero-video):after,
  #p-home .sh-has-rotation .sh-slider-stage:after {
-  background: linear-gradient(180deg, transparent 66%, #130a0759 82%, #130a07 100%);
- }
- #p-home .sh-cinematic:after,
- #p-home .sh-cinematic:has(.sh-hero-video):after,
- #p-home .sh-cinematic .sh-hero-video,
- #p-home .sh-has-rotation .sh-slider-stage {
-  inset: 0 0 auto;
-  height: var(--sh-mobile-scene);
- }
- #p-home .sh-has-rotation .sh-slider-backdrop,
- #p-home .sh-cinematic .sh-hero-video {
-  object-fit: contain;
-  object-position: center top;
+  background: linear-gradient(90deg, #130a07a8, transparent 90%),
+              linear-gradient(0deg, #130a07 0%, #130a07bf 30%, #130a0733 65%, transparent 100%);
  }
  #p-home .sh-cinematic:has(.sh-hero-video):after { z-index: 0; }
 
  #p-home .sh-cinematic h1,
- #p-home .sh-has-rotation h1 {
-  font-size: clamp(30px, 8.1vw, 46px);
-  line-height: 1.05;
-  margin: 0 0 8px;
- }
+ #p-home .sh-has-rotation h1 { font-size: clamp(30px, 8.1vw, 46px); line-height: 1.05; margin: 0 0 8px; }
  #p-home .sh-cinematic .sh-eyebrow,
- #p-home .sh-has-rotation .sh-eyebrow {
-  margin-bottom: 8px;
-  font-size: 10px;
-  letter-spacing: .15em;
- }
+ #p-home .sh-has-rotation .sh-eyebrow { margin-bottom: 8px; font-size: 10px; letter-spacing: .15em; }
  #p-home .sh-cinematic .wrap p,
- #p-home .sh-has-rotation .wrap p {
-  margin: 0 0 13px;
-  font-size: 13px;
-  line-height: 1.45;
- }
- #p-home .sh-cinematic .btns .btn,
- #p-home .sh-has-rotation .btns .btn { padding: 10px 12px; min-height: 42px; }
+ #p-home .sh-has-rotation .wrap p { margin: 0 0 13px; font-size: 13px; line-height: 1.45; }
  #p-home .sh-cinematic .btns,
  #p-home .sh-has-rotation .btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
- #p-home .sh-cinematic .btns a,
- #p-home .sh-has-rotation .btns a { display: grid; place-items: center; text-align: center; line-height: 1.25; }
- #p-home .sh-has-rotation .sh-slider-controls { bottom: 15px; gap: 8px; padding: 4px 8px; }
+ #p-home .sh-cinematic .btns .btn,
+ #p-home .sh-has-rotation .btns .btn { display: grid; place-items: center; padding: 10px 12px; min-height: 42px; text-align: center; line-height: 1.25; }
+ #p-home .sh-has-rotation .sh-slider-controls { bottom: 19px; gap: 8px; padding: 4px 8px; }
  #p-home .sh-slider-arrow { width: 32px; height: 32px; font-size: 22px; }
  #p-home .sh-slider-dots { gap: 5px; }
  #p-home .sh-slider-dot { width: 16px; height: 24px; position: relative; background: transparent; }
@@ -297,3 +274,20 @@ html,body{max-width:100%;overflow-x:clip}
   box-shadow: none;
  }
 }
+
+.sh-about-player { position: relative; isolation: isolate; }
+.sh-about-sound {
+ position: absolute;
+ top: 12px;
+ right: 12px;
+ z-index: 1;
+ min-height: 44px;
+ padding: 9px 16px;
+ border: 1px solid #ffffff80;
+ border-radius: 999px;
+ background: #17100eee;
+ color: #fff;
+ font-size: 13px;
+ font-weight: 700;
+}
+.sh-about-sound:focus-visible { outline: 2px solid #ffae69; outline-offset: 2px; }
