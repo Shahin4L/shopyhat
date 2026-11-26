@@ -205,7 +205,8 @@ export function setupExperienceStudio({db,roleCan,notify}){
    '<label>Video HTTPS URL<input type="url" data-video-field="url" value="'+esc(video.url)+'" placeholder="https://..."></label><label>Video context<textarea maxlength="1200" rows="4" data-video-field="description">'+esc(video.description||'')+'</textarea></label></div>'+
    '<div class="editor-actions"><button class="btn small" type="button" data-video-action="up" '+(i===0?'disabled':'')+' aria-label="Move video '+(i+1)+' up">↑</button>'+
    '<button class="btn small" type="button" data-video-action="down" '+(i===aboutVideos.length-1?'disabled':'')+' aria-label="Move video '+(i+1)+' down">↓</button>'+
-   '<button class="btn small" type="button" data-video-action="remove" aria-label="Remove video '+(i+1)+'">Remove</button></div></div>').join('');
+   '<button class="btn small" type="button" data-video-action="remove" aria-label="Remove video '+(i+1)+'" style="color:#b42318;border:1px solid #b42318">Remove video</button></div></div>').join('');
+  if(!aboutVideos.length)list.innerHTML='<p class="muted" role="status">No videos in playlist. Add or upload a video to get started. Published videos remain live until Save & Publish.</p>';
   $('shAboutVideoAdd').disabled=aboutVideos.length>=aboutVideoLimit;
  }
  function bindAboutVideos(){
@@ -228,14 +229,18 @@ export function setupExperienceStudio({db,roleCan,notify}){
    if(!button||activeUploads||publishing||!settingsLoaded)return;
    const index=Number(button.closest('[data-video-index]').dataset.videoIndex);
    const action=button.dataset.videoAction;
-   if(action==='remove')aboutVideos.splice(index,1);
+   if(action==='remove'){
+    if(!aboutVideos[index])return;
+    if(!window.confirm('Remove this video and its title/context from the playlist? The original file will be retained. Save & Publish to apply.'))return;
+    aboutVideos.splice(index,1);
+   }
    else{
     const target=index+(action==='up'?-1:1);
     if(!aboutVideos[target])return;
     [aboutVideos[index],aboutVideos[target]]=[aboutVideos[target],aboutVideos[index]];
    }
    renderAboutVideos();
-   markDraft('About video playlist updated. Publish to apply.','about');
+   markDraft(action==='remove'?'Video removed from draft. Save & Publish to update the website.':'About video playlist updated. Publish to apply.','about');
   });
  }
  function previewConfig(){
@@ -489,7 +494,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   config.about_media_type=f.elements.about_media_type.value==='image'?'image':'none';
   config.about_videos=aboutVideos.map(video=>({url:video.url.trim(),title:video.title.trim().slice(0,80),description:String(video.description||'').trim().slice(0,1200)}));
   if(config.about_videos.some(video=>!isAboutURL(video.url)))return notify('shExperienceMsg','Enter a valid HTTPS URL for each About video, or remove the empty row.',true);
-  config.about_media_url=f.elements.about_media_url.value.trim();
+  config.about_media_url=config.about_media_type==='image'?f.elements.about_media_url.value.trim():'';
   if(config.about_media_type!=='none'&&!/^https:\/\//i.test(config.about_media_url))return notify('shExperienceMsg','Upload About media or provide a valid HTTPS URL.',true);
   if(config.hero_media_mode==='video'&&!config.video_url)return notify('shExperienceMsg','Upload a video or enter a video URL before selecting video mode.',true);
   for(const [key,,options] of designSelects)config[key]=options.includes(f.elements[key].value)?f.elements[key].value:options[0];
