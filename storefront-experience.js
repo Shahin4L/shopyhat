@@ -284,7 +284,7 @@ function syncSlider(){
 let aboutPlaybackCleanup;
 function getAboutVideos(config){
  const legacy=config.about_media_type==='video'?[{url:config.about_media_url,title:''}]:[];
- const list=Array.isArray(config.about_videos)?config.about_videos:legacy;
+ const list=Array.isArray(config.about_videos)&&config.about_videos.length?config.about_videos:legacy;
  return list.filter(v=>v&&safeMedia(v.url)).slice(0,6).map(v=>({
   url:safeMedia(v.url),
   title:typeof v.title==='string'?v.title.trim().slice(0,80):'',
