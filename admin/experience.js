@@ -52,7 +52,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   return '';
  }
  function markDraft(message='Changes ready to preview. Click Save & Publish Experience to update the live site.',view){
-  notify('shExperienceMsg',message);refreshPreview(view);
+  notify('shExperienceMsg',message);if(view==='about')notify('shAboutStudioMsg','Unsaved changes — Save & Publish to update the website.');refreshPreview(view);
  }
  function photoSlides(photo){
   const slides=heroSlides.map(slide=>({...slide}));
@@ -206,7 +206,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
  items.forEach((item,i)=>{
  const row=document.createElement('div');row.style.cssText='border:1px solid #ccc;border-radius:12px;padding:12px;margin:12px 0';
  const field=(name,key,multi=false)=>{const l=document.createElement('label');l.textContent=name;const input=document.createElement(multi?'textarea':'input');input.value=item[key]||'';if(story&&(key==='title'||key==='description'))input.required=true;input.oninput=()=>{item[key]=input.value;markDraft(undefined,'about')};l.append(input);row.append(l)};
- field('Title','title');field('Description / body','description',true);
+ field(story?'Title':'Photo title','title');field(story?'Description / body':'Photo description / context','description',true);
  const urls=story?item.images:[item.url];urls.forEach((entry,j)=>{const url=typeof entry==='string'?entry:entry?.url||'';if(story&&typeof entry==='string')item.images[j]={url,title:'',description:''};
  const img=document.createElement('img');img.style.cssText='width:100%;max-width:260px;object-fit:contain;display:block';if(url)img.src=url;row.append(img);
  const input=document.createElement('input');input.type='text';input.placeholder='Image URL ★';input.setAttribute('aria-label','Image URL (required)');input.value=url||'';input.onchange=()=>{if(story)item.images[j].url=input.value.trim();else item.url=input.value.trim();renderAboutContent();markDraft(undefined,'about')};row.append(input);
@@ -216,7 +216,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
  const upload=document.createElement('input');upload.type='file';upload.accept='image/jpeg,image/png,image/webp';upload.multiple=story;row.append(upload);
  const up=button('Upload / replace photo',async()=>{if(!upload.files.length)return;await runUpload(up,'shAboutMsg',async()=>{for(const selected of upload.files){if(!['image/jpeg','image/png','image/webp'].includes(selected.type)||selected.size>12*1024*1024)throw Error('Use JPG, PNG or WebP under 12 MB');const file=await optimizeHero(selected);const storage=db.storage.from('shopyhat-branding');const path='hero/about-'+crypto.randomUUID()+'.'+(file.type==='image/webp'?'webp':file.type==='image/png'?'png':'jpg');const {error}=await storage.upload(path,file,{contentType:file.type,upsert:false});if(error)throw error;const url=storage.getPublicUrl(path).data.publicUrl;if(story)item.images.push({url,title:'',description:''});else item.url=url;}renderAboutContent();markDraft(undefined,'about')})});row.append(up);
  if(story)row.append(button('Add image URL',()=>{item.images.push({url:'',title:'',description:''});renderAboutContent();markDraft(undefined,'about')}));
- if(story){const move=n=>{const k=i+n;if(k<0||k>=items.length)return;[items[i],items[k]]=[items[k],items[i]];renderAboutContent();markDraft(undefined,'about')};const up=button('Move story up',()=>move(-1)),down=button('Move story down',()=>move(1));up.disabled=i===0;down.disabled=i===items.length-1;row.append(up,down);}
+ {const move=n=>{const k=i+n;if(k<0||k>=items.length)return;[items[i],items[k]]=[items[k],items[i]];renderAboutContent();markDraft(undefined,'about')};const up=button('Move '+(story?'story':'photo')+' up',()=>move(-1)),down=button('Move '+(story?'story':'photo')+' down',()=>move(1));up.disabled=i===0;down.disabled=i===items.length-1;row.append(up,down);}
  row.append(button('Remove '+(story?'story':'photo'),()=>{if(confirm('Remove from draft? Original files will be retained.')){items.splice(i,1);renderAboutContent();markDraft(undefined,'about')}}));section.append(row);
  });section.append(button(story?'Add story':'Add photo',()=>{items.push(story?{title:'',description:'',images:[]}:{title:'',description:'',url:''});renderAboutContent();markDraft(undefined,'about')}));(story&&storyHost?storyHost:host).append(section);
  }
