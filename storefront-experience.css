@@ -575,3 +575,15 @@ html,body{max-width:100%;overflow-x:clip}
  #hdr .sh-mega-card .sh-photo{height:72px;max-height:72px}
  #hdr .sh-mega-card .sh-photo img{max-height:72px}
 }
+
+/* Restore Shop in the mobile hamburger navigation; keep submenu in normal flow. */
+@media(max-width:820px){
+ #hdr #mainNav .sh-menu-host{display:flex;flex-direction:column;align-items:stretch;width:100%;min-width:0}
+ #hdr #mainNav .sh-menu-trigger{width:100%;min-height:44px;text-align:left}
+ #hdr #mainNav .sh-mega:not([hidden]){display:block!important;position:static;width:100%;max-width:100%;max-height:45vh;box-sizing:border-box;margin-top:8px;overflow-y:auto}
+ #hdr #mainNav .sh-mega[hidden]{display:none!important}
+ #hdr #mainNav .sh-mega-grid{grid-template-columns:minmax(0,1fr)!important}
+ #hdr #mainNav .sh-mega-card{display:grid;grid-template-columns:64px minmax(0,1fr);align-items:center;gap:10px}
+ #hdr #mainNav .sh-mega-card .sh-photo{height:64px;max-height:64px}
+ #hdr #mainNav .sh-mega-card .sh-photo img{max-height:64px}
+}
