@@ -2460,8 +2460,10 @@ async function boot(){
   const raw=await fetchShopyhatCatalog();
   LS.set("sh_products_v2",raw);
   applyProducts(raw.map(parseProduct).filter(Boolean));
+  window.SHOPYHAT_MEGA_CATALOG="ready";window.dispatchEvent(new Event("sh:mega-catalog"));
   renderAll(!!cached);openDeepLink();
  }catch(error){
+  window.SHOPYHAT_MEGA_CATALOG="error";window.dispatchEvent(new Event("sh:mega-catalog"));
   console.warn("Catalog currently unavailable",error);
   if(!cached?.length){
     const msg='<div class="empty" style="grid-column:1/-1"><b>Unable to load products.</b><br>Refresh to retry.</div>';
@@ -2476,7 +2478,7 @@ boot();
 <script src="./customer-care.js?v=20261126-order-report" defer></script>
 <script src="./visitor-analytics.js" defer></script>
 <script src="./brand-about.js?v=20261122b" defer></script>
-<script src="./storefront-experience.js?v=20261127-gallery-v6" defer></script>
+<script src="./storefront-experience.js?v=20261127-mega-live" defer></script>
 <script type="module" src="./customer-account.js?v=20261126-bilingual"></script>
 <script defer src="/shared-interaction.js?v=20261127-ux9-notice"></script></body>
 </html>
