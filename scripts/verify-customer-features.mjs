@@ -6,6 +6,7 @@ const html=read('index.html'),account=read('customer-account.js'),css=read('cust
 const admin=read('admin/app.js'),resellers=read('admin/resellers.js');
 const partner=read('reseller/app.js'),partnerHTML=read('reseller/index.html');
 const checkout=read('supabase/functions/shopyhat-checkout/index.ts');
+const redirects=read('_redirects');
 const build=read('scripts/build.mjs'),reset=read('reset-password.html'),confirm=read('account-confirmed.html');
 new Function(account.replace(/^import .*?;\s*$/gm,''));
 new Function(partner.replace(/^import .*?;\s*$/gm,''));
@@ -20,12 +21,13 @@ assert(reset.includes('db.auth.updateUser({password:a})'),'Secure reset page mis
 assert(confirm.includes('email_confirmed_at'),'Optional confirmation callback page missing');
 assert(account.includes('authIntro(')&&account.includes('sh-auth-nav'),'Premium login/register tabs missing');
 assert(account.includes('data-toggle-password'),'Password visibility toggle missing');
-assert(account.includes('Continue as guest'),'Guest account escape missing');
+assert.match(html, /<a\b[^>]*\bhref="\/#shop"[^>]*>\s*← Continue shopping\s*<\/a>/, 'My Account must provide a route back to shopping without sign-in');
+assert.match(redirects, /^\/account\s+\/\s+200$/m, 'My Account must resolve on the deployed storefront');
 assert(!account.includes('if(!data.user?.email_confirmed_at)'),'Customer login must not require email confirmation');
 assert(!account.includes('signedUser=user?.email_confirmed_at?user:null'),'Account ownership must use valid session rather than email-confirmed flag');
 assert(checkout.includes("app_metadata?.account_type!=='reseller'"),'Checkout must exclude reseller sessions');
 assert(!checkout.includes('verified.data.user?.email_confirmed_at'),'Checkout should not require email-confirmed users');
-assert(account.includes("db.rpc('sh_customer_orders')"),'Authenticated customer order history missing');
+assert(account.includes("db.rpc('sh_customer_order_history'"),'Authenticated customer order history missing');
 assert(account.includes('sh_customer_watches'),'Cart/wishlist stock alerts missing');
 assert(account.includes("db.from('sh_customer_notifications')"),'Notification inbox missing');
 assert(partner.includes('sh_apply_reseller'),'Reseller application missing');

@@ -1,5 +1,6 @@
 import {readFileSync} from 'node:fs';
 import assert from 'node:assert/strict';
+import {execFileSync} from 'node:child_process';
 const text=path=>readFileSync(path,'utf8');
 const reseller=text('reseller/app.js'),resellerHTML=text('reseller/index.html');
 const admin=text('admin/resellers.js'),adminHTML=text('admin/index.html');
@@ -29,6 +30,6 @@ assert(adminHTML.includes('id="orderPaymentState"'),'Order payment status filter
 assert(workflow.includes("await cp('reseller'"),'Production build omits reseller portal');
 new Function(reseller.replace(/^import .*?;\s*$/gm,''));
 new Function(admin.replace(/^import[^\n]*\n/gm,'').replace(/^export /gm,''));
-new Function(studio.replace(/^export /gm,''));
+execFileSync(process.execPath,['--check','admin/experience.js'],{stdio:'inherit'});
 new Function(storefront);
 console.log('SHOPYHAT reseller credentials, registration, admin filters, storefront preview and New Arrivals integration checks passed.');
