@@ -372,7 +372,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
  .sh-experience-switches input{width:auto}
  @media(max-width:950px){#dashboard{padding-left:0}#dashboard>.nav{float:none;position:relative;left:auto;top:auto;width:100%;height:auto;max-height:none;display:flex;flex-direction:row;flex-wrap:wrap;border-radius:12px}#dashboard>.panel{margin-left:0}#dashboard>.nav .btn{width:auto;white-space:nowrap}.sh-side-group{flex-direction:row;flex-wrap:wrap}.sh-side-toggle{width:100%}.sh-experience-fields,.sh-experience-switches,.sh-design-grid{grid-template-columns:1fr}}
  `;document.head.append(style);
- const groupMap=[['Commerce',['products','orders','payments']],['Storefront',['experience','catalog','brand','reviews']],['Operations',['cases','insights','activity','users']]];
+ const groupMap=[['Commerce',['products','orders','payments']],['Storefront',['experience','about-studio','catalog','brand','reviews']],['Operations',['cases','insights','activity','users']]];
  const original=[...nav.querySelectorAll('[data-page]')];
  for(const [name,pages] of groupMap){
   const group=document.createElement('div');group.className='sh-side-group';group.id='shSide'+name;
