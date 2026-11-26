@@ -55,6 +55,7 @@ function populateMega(){
  if(host.children.length===1)host.append(el('div','sh-mega-card',tr('No published collections yet','এখনো কোনো প্রকাশিত কালেকশন নেই')));
 }
 window.addEventListener('sh:mega-catalog',populateMega);
+window.addEventListener('shopyhat:languagechange',populateMega);
 function suggest(q,host){q=q.trim().toLowerCase();host.replaceChildren();
  if(q.length<2){host.hidden=true;return}
  const matches=list().filter(p=>[p.name,p.catName,p.nameBn,p.desc].filter(Boolean).join(' ').toLowerCase().includes(q)).slice(0,6);
