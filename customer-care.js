@@ -26,7 +26,7 @@ const msg=(text,error=false)=>{const el=document.getElementById('careMsg');if(el
 const formatDate=value=>new Date(value).toLocaleDateString(bn()?'bn-BD':'en-BD',{year:'numeric',month:'short',day:'numeric',timeZone:'Asia/Dhaka'});
 const opts=()=>'<option value="">'+t('Choose a product','পণ্য নির্বাচন করুন')+'</option>'+products.map(p=>'<option value="'+esc(p.id)+'" '+(p.id===selectedProduct?'selected':'')+'>'+esc(productName(p))+'</option>').join('');
 const productHint=()=>productError?'<p class="care-error">'+t('Product list unavailable. Please retry.','পণ্যের তালিকা লোড হয়নি। আবার চেষ্টা করুন।')+' <button class="btn" id="careRetryCatalog" type="button">'+t('Retry','আবার চেষ্টা')+'</button></p>':!products.length?'<p class="care-hint">'+t('No active products found.','কোনো সক্রিয় পণ্য পাওয়া যায়নি।')+'</p>':'';
-function bindRetry(){const b=document.getElementById('careRetryCatalog');if(b)b.onclick=async()=>{try{products=await getCatalog();productError='';}catch(e){productError=e.message}render()}}
+function bindRetry(){const b=document.getElementById('careRetryCatalog');if(b)b.onclick=async()=>{try{products=await getCatalog();productError='';}catch(e){productError=e.message}if(!updateIssueProducts())render()}}
 async function loadReviewPhotos(){
  if(!reviews.length)return;
  try{
@@ -111,10 +111,20 @@ function linkedOrder(){
  if(!match)return '';
  try{const number=decodeURIComponent(match[1]);return /^[a-z0-9-]{1,120}$/i.test(number)?number:''}catch{return ''}
 }
+function updateIssueProducts(){
+ const product=document.getElementById('csProduct'),hint=document.getElementById('careIssueProductHint');
+ if(!product||!hint)return false;
+ const selected=product.value;
+ product.innerHTML=opts();
+ product.value=selected;
+ hint.innerHTML=productHint();
+ bindRetry();
+ return true;
+}
 function renderIssue(){
  const order=linkedOrder();
  host.innerHTML='<h2>'+t('Report a Problem','সমস্যা জানান')+'</h2><p class="care-intro">'+t('Explain the issue clearly and attach up to three photos/videos. Our team will review it and update your case.','সমস্যাটি স্পষ্ট করে লিখুন এবং সর্বোচ্চ তিনটি ছবি/ভিডিও দিন। আমাদের টিম যাচাই করে কেস আপডেট করবে।')+'</p><form id="careIssueForm" enctype="multipart/form-data">'+honeypot+
- productHint()+'<div class="care-grid"><div><label for="csName">'+t('Your Name *','আপনার নাম *')+'</label><input id="csName" name="customer_name" required minlength="2" maxlength="100" autocomplete="name"></div><div><label for="csPhone">'+t('Mobile Number *','মোবাইল নম্বর *')+'</label><input id="csPhone" name="phone" required inputmode="tel" placeholder="01XXXXXXXXX" maxlength="14" autocomplete="tel"></div>'+
+ '<div id="careIssueProductHint">'+(loading?'':productHint())+'</div><div class="care-grid"><div><label for="csName">'+t('Your Name *','আপনার নাম *')+'</label><input id="csName" name="customer_name" required minlength="2" maxlength="100" autocomplete="name"></div><div><label for="csPhone">'+t('Mobile Number *','মোবাইল নম্বর *')+'</label><input id="csPhone" name="phone" required inputmode="tel" placeholder="01XXXXXXXXX" maxlength="14" autocomplete="tel"></div>'+
  '<div><label for="csEmail">'+t('Email (optional)','ইমেইল (ঐচ্ছিক)')+'</label><input id="csEmail" name="contact_email" type="email" maxlength="160"></div><div><label for="csOrder">'+t('Order Number (if available)','অর্ডার নম্বর (থাকলে)')+'</label><input id="csOrder" name="order_number" maxlength="120" value="'+esc(order)+'" '+(order?'readonly':'')+'></div>'+
  '<div><label for="csProduct">'+t('Product (optional)','পণ্য (ঐচ্ছিক)')+'</label><select id="csProduct" name="product_id">'+opts()+'</select></div><div><label for="csCategory">'+t('Issue Category *','সমস্যার ধরন *')+'</label><select id="csCategory" name="category" required>'+['Damaged Item','Wrong Item','Missing Item','Delivery Delay','Payment Issue','Return / Exchange','Product Quality','Other'].map(x=>'<option value="'+esc(x)+'">'+esc(bn()?categoriesBN[x]:x)+'</option>').join('')+'</select></div></div>'+
  '<label for="csSubject">'+t('Issue Subject *','সমস্যার শিরোনাম *')+'</label><input id="csSubject" name="subject" required minlength="5" maxlength="160">'+
@@ -279,11 +289,7 @@ Promise.allSettled([getCatalog(),getReviews()]).then(async ([catalog,approved])=
  if(catalog.status==='fulfilled')products=catalog.value;else productError=catalog.reason?.message||'Product service unavailable';
  if(approved.status==='fulfilled')reviews=approved.value;else loadError=approved.reason?.message||'Reviews unavailable';
  loading=false;
- if(tab==='issue'&&document.getElementById('careIssueForm')){
-  const product=document.getElementById('csProduct'),selected=product.value;
-  product.innerHTML=opts();
-  product.value=selected;
- }else render();
+ if(!updateIssueProducts())render();
  refreshInlineReviews();if(approved.status==='fulfilled'){await loadReviewPhotos();refreshInlineReviews()}
 });
 render();
