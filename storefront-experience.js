@@ -288,6 +288,7 @@ function getAboutVideos(config){
  return list.filter(v=>v&&safeMedia(v.url)).slice(0,6).map(v=>({
   url:safeMedia(v.url),
   title:typeof v.title==='string'?v.title.trim().slice(0,80):'',
+  description:typeof v.description==='string'?v.description.trim().slice(0,1200):'',
  }));
 }
 function mountAboutVideo(media,videos,poster){
@@ -299,7 +300,7 @@ function mountAboutVideo(media,videos,poster){
  media.loop=videos.length===1;
  media.preload='metadata';
  if(poster)media.poster=poster;
- player.append(media);
+ const context=el('div');context.style.cssText='margin:0 0 18px;max-width:760px';const contextTitle=el('h3');const contextCopy=el('p');contextCopy.style.cssText='line-height:1.65;white-space:pre-line';context.append(contextTitle,contextCopy);player.append(context,media);
 
  const sound=el('button','btn line');
  sound.type='button';
@@ -345,6 +346,9 @@ function mountAboutVideo(media,videos,poster){
  };
  const showVideo=(index,manual=false)=>{
   active=(index+videos.length)%videos.length;
+  contextTitle.textContent=videos[active].title||(active===0?'Discover Fashion. Discover SHOPYHAT.':'SHOPYHAT Film '+(active+1));
+  contextCopy.textContent=videos[active].description||(active===0?'Fashion is more than what you wear — it is an expression of who you are. Since 2020, SHOPYHAT has been inspired by the beauty of tradition, contemporary fashion and individual style. Discover a world where elegance meets everyday living. Your Choice, Our Gift.':'');
+  contextCopy.hidden=!contextCopy.textContent;
   media.src=videos[active].url;
   if(select)select.value=String(active);
   shouldPlay=true;
