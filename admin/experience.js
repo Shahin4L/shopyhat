@@ -463,8 +463,8 @@ export function setupExperienceStudio({db,roleCan,notify}){
    form.elements.about_media_type.value=v.about_media_type==='image'?'image':'none';
    form.elements.about_media_url.value=v.about_media_type==='image'?v.about_media_url||'':'';
    const legacy=v.about_media_type==='video'&&v.about_media_url?[{url:v.about_media_url,title:''}]:[];
-   const saved=Array.isArray(v.about_videos)?v.about_videos:legacy;
-   aboutVideos=saved.slice(0,aboutVideoLimit).filter(video=>video&&typeof video.url==='string').map(video=>({url:video.url,title:String(video.title||''),description:String(video.description||'')}));
+   const saved=Array.isArray(v.about_videos)&&v.about_videos.length?v.about_videos:legacy;
+   aboutVideos=saved.slice(0,aboutVideoLimit).filter(video=>video&&typeof video.url==='string').map((video,i)=>({url:video.url,title:String(video.title||(i===0?"Discover Fashion. Discover SHOPYHAT.":'')),description:String(video.description||(i===0?"Fashion is more than what you wear — it is an expression of who you are. Since 2020, SHOPYHAT has been inspired by the beauty of tradition, contemporary fashion and individual style. Discover a world where elegance meets everyday living. Your Choice, Our Gift.":''))}));
    renderAboutVideos();
    setVideoPreview(/^https:\/\//i.test(v.video_url||'')?v.video_url:'');
    for(const [key,,opts,fallback] of designSelects)form.elements[key].value=opts.includes(v[key])?v[key]:fallback;
