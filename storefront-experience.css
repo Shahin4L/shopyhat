@@ -192,14 +192,14 @@ html,body{max-width:100%;overflow-x:clip}
 .sh-checkout-promo-message{min-height:19px;font-size:12px;margin:7px 0;color:#75533d;overflow-wrap:anywhere}
 @media(max-width:420px){.sh-checkout-promo-row{gap:5px}.sh-checkout-promo-row button{padding:8px 10px}}
 
-/* Mobile hero: display each complete banner instead of cropping wide photos. */
+/* Keep rotating media behind the headline at every viewport width. */
+#p-home .sh-has-rotation .sh-slider-stage{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+#p-home .sh-has-rotation .wrap{position:relative;z-index:2}
+#p-home .sh-has-rotation .sh-slider-controls{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:12;display:flex;align-items:center;gap:12px;padding:7px 12px;background:#120907e6;border:1px solid #eaa15d80;border-radius:34px}
+#p-home .sh-cinematic .sh-hero-video{z-index:-1;object-position:var(--sh-hero-position,center)}
+#p-home .sh-cinematic:has(.sh-hero-video):after{background:linear-gradient(90deg,#100704e0,#160907a0 45%,#16090733)}
 @media(max-width:650px){
- #p-home .sh-cinematic:has(.sh-slider-stage){display:flex;flex-direction:column;min-height:0!important;background:#1c100c}
- #p-home .sh-cinematic:has(.sh-slider-stage) .wrap{order:1;width:100%;min-height:0!important;max-height:none!important;padding-top:35px;padding-bottom:22px;grid-template-columns:minmax(0,1fr);gap:0}
- #p-home .sh-cinematic:has(.sh-slider-stage) #heroArt{display:none}
- #p-home .sh-cinematic .sh-slider-stage{position:relative;inset:auto;order:2;width:100%;height:auto;aspect-ratio:16/9;min-height:0;background:#20130e;overflow:hidden}
- #p-home .sh-cinematic .sh-slider-backdrop{object-fit:contain!important;object-position:center center!important}
- #p-home .sh-cinematic .sh-slider-stage:after{background:none!important}
- #p-home .sh-cinematic:has(.sh-slider-stage) .sh-slider-controls{position:relative;order:3;bottom:auto;left:auto;transform:none;margin:10px auto 16px}
- #p-home .sh-cinematic.sh-has-image:not(:has(.sh-slider-stage)):before{background-size:auto,contain;background-position:center,center bottom;background-repeat:no-repeat}
+ #p-home .sh-has-rotation .wrap{padding-bottom:92px}
+ #p-home .sh-has-rotation .sh-slider-backdrop{object-position:var(--sh-hero-position,center)}
+ #p-home .sh-has-rotation .sh-slider-stage:after{background:linear-gradient(90deg,#130704e8,#150808a8 55%,#17080552)}
 }

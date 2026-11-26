@@ -159,9 +159,13 @@ function setSlide(index,manual=false){
   lastRenderedSlideURL=url;
   const movie=stage.querySelector('video');
   if(slide.kind==='video'){
-   ++slideLoadSeq;
-   stage.querySelectorAll('img').forEach(img=>img.style.opacity='0');
-   if(movie){movie.style.opacity='1';if(movie.src!==url)movie.src=url;movie.play().catch(()=>{});}
+   const seq=++slideLoadSeq;
+   if(movie&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    movie.onplaying=()=>{if(seq===slideLoadSeq)movie.style.opacity='1'};
+    movie.onerror=()=>{movie.style.opacity='0'};
+    if(movie.src!==url)movie.src=url;
+    movie.play().catch(()=>{if(seq===slideLoadSeq)movie.style.opacity='0'});
+   }
   } else {
   if(movie){movie.pause();movie.style.opacity='0'}
   const pictures=[...stage.querySelectorAll('img')],prev=pictures[stageActive],nextIndex=1-stageActive,next=pictures[nextIndex];
@@ -196,6 +200,7 @@ function startSlideTimer(){
 function syncSlider(){
  const hero=document.querySelector('#p-home .hero');if(!hero)return;
  const slides=configuredSlides();
+ hero.classList.toggle('sh-has-rotation',slides.length>0);
  const sig=JSON.stringify([slides,cfg.hero_autoplay,cfg.hero_interval]);
  if(sig===lastSlideSignature){if(slides.length)setSlide(slideIndex);return}
  lastSlideSignature=sig;
@@ -246,7 +251,7 @@ function decorate(){
  const imageURL=safeMedia(cfg.hero_image_url||'./assets/shopyhat-cinematic-art.svg');hero.classList.toggle('sh-has-image',!!imageURL);if(imageURL)hero.style.setProperty('--sh-hero-image','url("'+imageURL.replaceAll('"','%22')+'")');else hero.style.removeProperty('--sh-hero-image');
  hero.classList.toggle('sh-no-ribbon',!cfg.show_ribbon);hero.classList.toggle('sh-no-cards',!cfg.show_floating_cards);
  let video=hero.querySelector('.sh-hero-video');const videoURL=cfg.hero_media_mode==='slides'||configuredSlides().length?'':safeMedia(cfg.video_url);
- if(videoURL&&cfg.cinematic!==false&&!(window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {if(!video){video=el('video','sh-hero-video');video.muted=true;video.autoplay=true;video.loop=true;video.playsInline=true;hero.prepend(video)}if(video.src!==videoURL)video.src=videoURL}else video?.remove();
+ if(videoURL&&cfg.cinematic!==false&&!(window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {if(!video){video=el('video','sh-hero-video');video.muted=true;video.autoplay=true;video.loop=true;video.playsInline=true;hero.prepend(video)}if(video.src!==videoURL){video.style.opacity='0';video.onplaying=()=>{video.style.opacity='1'};video.onerror=()=>{video.style.opacity='0'};video.src=videoURL}}else video?.remove();
  const h=hero.querySelector('h1');if(h&&cfg.headline){const words=String(cfg.headline).split(',');h.innerHTML='';h.setAttribute('aria-label',cfg.headline);words.forEach((w,i)=>{const sp=el('span'),em=el('i','',w.trim()+(i<words.length-1?',':''));sp.append(em);h.append(sp)})}
  const desc=hero.querySelector('.wrap p');if(desc&&cfg.subtitle)desc.textContent=cfg.subtitle;
  const buttons=hero.querySelectorAll('.btns a');if(buttons[0]&&cfg.primary_cta)buttons[0].textContent=cfg.primary_cta;
@@ -297,6 +302,11 @@ if(new URLSearchParams(location.search).get('studio_preview')==='1'){
   const allowed=['announcement','headline','subtitle','hero_image_url','video_url','hero_media_mode','about_media_type','about_media_url','campaign_text','hero_eyebrow','primary_cta','secondary_cta','search_placeholder','categories_title','arrivals_title','offers_title','story_title','cinematic','show_ribbon','show_floating_cards','show_new_arrivals','show_categories','show_campaigns','ui_font','heading_font','hero_alignment','hero_vertical','hero_image_position','product_card_side','body_font_size','heading_scale','content_width','section_spacing','hero_height','category_columns','accent_color','section_order','hero_slides','hero_autoplay','hero_interval'];
   for(const key of allowed){if(Object.prototype.hasOwnProperty.call(preview,key))cfg[key]=preview[key]}
   decorate();
+  if(event.data.view==='about')location.hash='#about';
+  const slideView=typeof event.data.view==='string'?event.data.view.match(/^slide:([0-7])$/):null;
+  if(event.data.view==='home'||event.data.view==='video'||slideView)location.hash='#home';
+  if(slideView)setSlide(Number(slideView[1]));
+  if(event.data.view==='video'&&configuredSlides().at(-1)?.kind==='video')setSlide(configuredSlides().length-1);
  });
 }
 
