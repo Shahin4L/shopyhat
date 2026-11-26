@@ -295,6 +295,39 @@ function mountAboutVideo(media,videos,poster){
  if(poster)media.poster=poster;
  player.append(media);
 
+ const sound=el('button','btn line');
+ sound.type='button';
+ sound.style.marginTop='12px';
+ player.append(sound);
+ const syncSound=()=>{
+  const audible=!media.muted&&media.volume>0;
+  const bangla=document.documentElement.lang==='bn';
+  sound.textContent=audible
+   ?(bangla?'সাউন্ড বন্ধ করুন':'Mute sound')
+   :(bangla?'সাউন্ড চালু করুন':'Play with sound');
+ };
+ sound.addEventListener('click',()=>{
+  if(!media.muted&&media.volume>0){
+   media.muted=true;
+   syncSound();
+   return;
+  }
+  if(media.volume===0)media.volume=1;
+  media.muted=false;
+  shouldPlay=false;
+  syncSound();
+  media.play().catch(error=>{
+   // Keep muted playback available if the browser rejected the sound request.
+   if(error.name!=='NotAllowedError'||media.muted)return;
+   media.muted=true;
+   syncSound();
+   media.play().catch(()=>{});
+  });
+ });
+ media.addEventListener('volumechange',syncSound);
+ window.addEventListener('shopyhat:languagechange',syncSound);
+ syncSound();
+
  let active=0;
  let shouldPlay=true;
  let inView=false;
@@ -348,6 +381,7 @@ function mountAboutVideo(media,videos,poster){
  aboutPlaybackCleanup=()=>{
   observer.disconnect();
   document.removeEventListener('visibilitychange',syncPlayback);
+  window.removeEventListener('shopyhat:languagechange',syncSound);
   media.pause();
  };
  return player;
