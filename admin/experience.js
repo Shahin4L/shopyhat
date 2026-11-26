@@ -207,14 +207,15 @@ export function setupExperienceStudio({db,roleCan,notify}){
  const row=document.createElement('div');row.style.cssText='border:1px solid #ccc;border-radius:12px;padding:12px;margin:12px 0';
  const field=(name,key,multi=false)=>{const l=document.createElement('label');l.textContent=name;const input=document.createElement(multi?'textarea':'input');input.value=item[key]||'';input.oninput=()=>{item[key]=input.value;markDraft(undefined,'about')};l.append(input);row.append(l)};
  field('Title','title');field('Description / body','description',true);
- const urls=story?item.images:[item.url];urls.forEach((url,j)=>{
+ const urls=story?item.images:[item.url];urls.forEach((entry,j)=>{const url=typeof entry==='string'?entry:entry?.url||'';if(story&&typeof entry==='string')item.images[j]={url,title:'',description:''};
  const img=document.createElement('img');img.style.cssText='width:100%;max-width:260px;object-fit:contain;display:block';if(url)img.src=url;row.append(img);
- const input=document.createElement('input');input.type='text';input.placeholder='Image URL';input.value=url||'';input.onchange=()=>{if(story)item.images[j]=input.value.trim();else item.url=input.value.trim();renderAboutContent();markDraft(undefined,'about')};row.append(input);
+ const input=document.createElement('input');input.type='text';input.placeholder='Image URL';input.value=url||'';input.onchange=()=>{if(story)item.images[j].url=input.value.trim();else item.url=input.value.trim();renderAboutContent();markDraft(undefined,'about')};row.append(input);
+ if(story){for(const [label,key] of [['Photo title','title'],['Photo context','description']]){const l=document.createElement('label');l.textContent=label;const f=document.createElement(key==='description'?'textarea':'input');f.value=item.images[j][key]||'';f.oninput=()=>{item.images[j][key]=f.value;markDraft(undefined,'about')};l.append(f);row.append(l)}}
  if(story)row.append(button('Remove image',()=>{item.images.splice(j,1);renderAboutContent();markDraft(undefined,'about')}));
  });
  const upload=document.createElement('input');upload.type='file';upload.accept='image/jpeg,image/png,image/webp';upload.multiple=story;row.append(upload);
- const up=button('Upload / replace photo',async()=>{if(!upload.files.length)return;await runUpload(up,'shAboutMsg',async()=>{for(const selected of upload.files){if(!['image/jpeg','image/png','image/webp'].includes(selected.type)||selected.size>12*1024*1024)throw Error('Use JPG, PNG or WebP under 12 MB');const file=await optimizeHero(selected);const storage=db.storage.from('shopyhat-branding');const path='hero/about-'+crypto.randomUUID()+'.'+(file.type==='image/webp'?'webp':file.type==='image/png'?'png':'jpg');const {error}=await storage.upload(path,file,{contentType:file.type,upsert:false});if(error)throw error;const url=storage.getPublicUrl(path).data.publicUrl;if(story)item.images.push(url);else item.url=url;}renderAboutContent();markDraft(undefined,'about')})});row.append(up);
- if(story)row.append(button('Add image URL',()=>{item.images.push('');renderAboutContent()}));
+ const up=button('Upload / replace photo',async()=>{if(!upload.files.length)return;await runUpload(up,'shAboutMsg',async()=>{for(const selected of upload.files){if(!['image/jpeg','image/png','image/webp'].includes(selected.type)||selected.size>12*1024*1024)throw Error('Use JPG, PNG or WebP under 12 MB');const file=await optimizeHero(selected);const storage=db.storage.from('shopyhat-branding');const path='hero/about-'+crypto.randomUUID()+'.'+(file.type==='image/webp'?'webp':file.type==='image/png'?'png':'jpg');const {error}=await storage.upload(path,file,{contentType:file.type,upsert:false});if(error)throw error;const url=storage.getPublicUrl(path).data.publicUrl;if(story)item.images.push({url,title:'',description:''});else item.url=url;}renderAboutContent();markDraft(undefined,'about')})});row.append(up);
+ if(story)row.append(button('Add image URL',()=>{item.images.push({url:'',title:'',description:''});renderAboutContent()}));
  row.append(button('Remove '+(story?'story':'photo'),()=>{if(confirm('Remove from draft? Original files will be retained.')){items.splice(i,1);renderAboutContent();markDraft(undefined,'about')}}));section.append(row);
  });section.append(button(story?'Add story':'Add photo',()=>{items.push(story?{title:'',description:'',images:[]}:{title:'',description:'',url:''});renderAboutContent();markDraft(undefined,'about')}));host.append(section);
  }
@@ -517,7 +518,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   for(const [key] of switches)config[key]=f.elements[key].checked;
   config.hero_media_mode=mediaModes.includes(f.elements.hero_media_mode.value)?f.elements.hero_media_mode.value:'auto';
   config.about_media_type=f.elements.about_media_type.value==='image'?'image':'none';
-  config.about_photos=aboutPhotos.filter(x=>x.url);config.about_stories=aboutStories.map(x=>({...x,images:x.images.filter(Boolean)}));
+  config.about_photos=aboutPhotos.filter(x=>x.url);config.about_stories=aboutStories.map(x=>({...x,images:x.images.filter(v=>typeof v==='string'?v: v?.url)}));
   config.about_videos=aboutVideos.map(video=>({url:video.url.trim(),title:video.title.trim().slice(0,80),description:String(video.description||'').trim().slice(0,1200)}));
   if(config.about_videos.some(video=>!isAboutURL(video.url)))return notify('shExperienceMsg','Enter a valid HTTPS URL for each About video, or remove the empty row.',true);
   config.about_media_url=config.about_media_type==='image'?f.elements.about_media_url.value.trim():'';
