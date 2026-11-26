@@ -399,6 +399,14 @@ function mountAboutVideo(media,videos,poster){
 function decorate(){
  applyDesign();
  const aboutIntro=document.querySelector('#p-about .about-v2-intro');
+ const profile=cfg.about_profile||{};
+ const applyProfile=(selector,value)=>{const node=document.querySelector(selector);if(!node)return;if(!node.dataset.shOriginal)node.dataset.shOriginal=node.innerHTML;if(value){node.textContent=value;node.style.whiteSpace='pre-line'}else node.innerHTML=node.dataset.shOriginal};
+ applyProfile('#p-about .about-v2-intro h2',profile.intro_title);
+ applyProfile('#p-about .about-v2-intro p',profile.intro_body);
+ applyProfile('#aboutHistoryTitle',profile.history_title);
+ const history=document.querySelector('#p-about .about-v2-history-copy');if(history){const paragraphs=[...history.querySelectorAll('p:not(.sh-profile-history)')];let custom=history.querySelector('.sh-profile-history');if(!custom){custom=el('p','sh-profile-history');history.append(custom)}custom.textContent=profile.history_body||'';custom.style.whiteSpace='pre-line';custom.hidden=!profile.history_body;paragraphs.forEach(p=>p.hidden=!!profile.history_body)}
+ ['vision','mission','goals'].forEach((key,i)=>applyProfile('#p-about .about-v2-purpose-grid article:nth-child('+(i+1)+') p',profile[key]));
+
  const videos=getAboutVideos(cfg);
  const aboutPhoto=cfg.about_media_type==='image'?safeMedia(cfg.about_media_url):'';
  let aboutMedia=document.getElementById('shAboutMedia');
