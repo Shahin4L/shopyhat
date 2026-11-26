@@ -2,7 +2,7 @@ import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,CHECKOUT_URL} from './config.js';
 import {setupBrandManager} from './brand.js';
 import {setupCatalogManager} from './catalog.js';
-import {setupExperienceStudio} from './experience.js?v=20261127-story-carousel';
+import {setupExperienceStudio} from './experience.js?v=20261127-about-studio';
 import {setupPromotions} from './promotions.js';
 import {setupResellerOperations} from './resellers.js?v=20261125-cancel-zone';
 const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
@@ -161,7 +161,7 @@ async function boot(){const {data:{user},error}=await db.auth.getUser();
  const r=await db.from('sh_staff').select('*').eq('email',(user.email||'').toLowerCase()).maybeSingle();
  if(r.error||!r.data?.active){await db.auth.signOut();show('login',true);show('dashboard',false);show('logout',false);return notice('loginMsg','This account is not an active SHOPYHAT staff member. Ask the owner to grant access.',true)}
  actor=user;role=r.data.role;$('profile').textContent=(r.data.display_name||user.email)+' · '+role;
- show('login',false);show('dashboard',true);show('logout',true);show('usersTab',role==='owner');show('addStaff',role==='owner');show('activityTab',roleCan('owner','manager'));show('insightsTab',roleCan('owner','manager'));show('brandTab',roleCan('owner','manager'));show('catalogTab',roleCan('owner','manager'));experience.mount();promos.mount();resellers.mount();show('experienceTab',roleCan('owner','manager'));show('promoTab',roleCan('owner','manager'));show('resellerTab',roleCan('owner','manager'));if(roleCan('owner','manager')){experience.reload();promos.reload();resellers.reload();}
+ show('login',false);show('dashboard',true);show('logout',true);show('usersTab',role==='owner');show('addStaff',role==='owner');show('activityTab',roleCan('owner','manager'));show('insightsTab',roleCan('owner','manager'));show('brandTab',roleCan('owner','manager'));show('catalogTab',roleCan('owner','manager'));experience.mount();promos.mount();resellers.mount();show('experienceTab',roleCan('owner','manager'));show('aboutStudioTab',roleCan('owner','manager'));show('promoTab',roleCan('owner','manager'));show('resellerTab',roleCan('owner','manager'));if(roleCan('owner','manager')){experience.reload();promos.reload();resellers.reload();}
  show('newProduct',roleCan('owner','manager'));show('bulkProducts',roleCan('owner','manager'));show('newOrder',roleCan('owner','manager','operator'));
  await refresh()}
 async function refresh(){notice('appMsg','Loading live data…');
@@ -188,7 +188,7 @@ async function refresh(){notice('appMsg','Loading live data…');
  if(failed.length){console.warn('Partial Admin data load',failed);notice('appMsg','Partial data loaded. '+failed.join(' | '),true)}
  else notice('appMsg','Last refreshed '+new Date().toLocaleTimeString('en-BD'));
 }
-function showPage(page){if(['activity','insights','brand','catalog','experience','promos','resellers'].includes(page)&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity','reviews','cases','insights','brand','catalog','experience','promos','resellers'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
+function showPage(page){if(['activity','insights','brand','catalog','experience','about-studio','promos','resellers'].includes(page)&&!roleCan('owner','manager'))return;activePage=page;for(const n of ['products','orders','payments','users','activity','reviews','cases','insights','brand','catalog','experience','about-studio','promos','resellers'])show('page-'+n,page===n);document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page))}
 window.SHOPYHAT_SHOW_PAGE=showPage;
 function cover(product){const gallery=images.filter(i=>i.product_id===product.id);const hosted=url=>String(url||'').includes('/storage/v1/object/public/shopyhat-products/');
  const base=gallery.filter(i=>!i.variant_id);const preferred=base.find(i=>hosted(i.image_url))||base[0]||gallery.find(i=>hosted(i.image_url))||gallery[0];return preferred?.image_url||''}
