@@ -2,7 +2,7 @@ import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,CHECKOUT_URL} from './config.js';
 import {setupBrandManager} from './brand.js';
 import {setupCatalogManager} from './catalog.js';
-import {setupExperienceStudio} from './experience.js?v=20261127-about-v4';
+import {setupExperienceStudio} from './experience.js?v=20261127-feedback-v5';
 import {setupPromotions} from './promotions.js';
 import {setupResellerOperations} from './resellers.js?v=20261125-cancel-zone';
 const db=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
@@ -18,7 +18,11 @@ const promos=setupPromotions({db,roleCan,notify:(id,msg,error)=>notice(id,msg,er
 const resellers=setupResellerOperations({db,roleCan,notify:(id,msg,error)=>notice(id,msg,error)});
 const imageUrl=v=>{const s=String(v||'');const m=s.match(/drive\.google\.com\/file\/d\/([\w-]+)/)||s.match(/[?&]id=([\w-]+)/);return m&&s.includes('google.com')?'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000':s};
 let actor=null,role='',products=[],variants=[],images=[],orders=[],orderItems=[],payments=[],staff=[],audit=[],reviews=[],cases=[],caseMedia=[],caseUpdates=[],caseReplies=[],dailyStats=[],archiveHealth=null,reviewMedia=[],archiveRequests=[],activePage='products';
-function notice(id,message,error=false){$(id).textContent=message;$(id).classList.toggle('error',!!error)}
+function notice(id,message,error=false){const node=$(id);if(!node)return;node.textContent=message;node.classList.toggle('error',!!error);node.setAttribute('role',error?'alert':'status');if(!message)return;if(error||/success|saved|published|updated|deleted|removed|created|approved|completed|failed/i.test(message)){let toast=$('shAdminToast');if(!toast){toast=document.createElement('div');toast.id='shAdminToast';toast.style.cssText='position:fixed;bottom:24px;right:16px;max-width:min(380px,90vw);z-index:99999;padding:14px 18px;border-radius:12px;color:white;box-shadow:0 6px 24px #0003';document.body.append(toast)}toast.style.background=error?'#a52222':'#245b43';toast.setAttribute('role',error?'alert':'status');toast.textContent=message;toast.hidden=false;clearTimeout(toast.dismiss);toast.dismiss=setTimeout(()=>toast.hidden=true,5500)}} 
+const feedbackStyle=document.createElement('style');feedbackStyle.textContent='button{transition:transform .12s,opacity .15s}button:active:not(:disabled){transform:scale(.96)}button[aria-busy=true]{cursor:wait;opacity:.7}button[aria-busy=true]::after{content:"";display:inline-block;width:12px;height:12px;margin-left:8px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:shspin .7s linear infinite}@keyframes shspin{to{transform:rotate(360deg)}}.sh-required-star{color:#b42318;font-weight:800;margin-left:4px}';document.head.append(feedbackStyle);
+function markRequired(){document.querySelectorAll('input[required],select[required],textarea[required]').forEach(field=>{const label=field.closest('label')||(field.id?document.querySelector('label[for="'+CSS.escape(field.id)+'"]'):null);if(label&&!label.querySelector('.sh-required-star')){const star=document.createElement('span');star.className='sh-required-star';star.textContent=' ★';star.title='Required field';label.insertBefore(star,field.parentNode===label?field:null)}})}
+let requiredQueued=false;new MutationObserver(()=>{if(!requiredQueued){requiredQueued=true;requestAnimationFrame(()=>{requiredQueued=false;markRequired()})}}).observe(document.body,{childList:true,subtree:true});markRequired();
+
 function show(id,on){$(id).classList.toggle('hidden',!on)}
 function drawer(title,html){$('drawerTitle').textContent=title;$('drawerBody').innerHTML=html;notice('drawerMsg','');show('overlay',true)}
 function closeDrawer(){show('overlay',false)}
