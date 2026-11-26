@@ -394,10 +394,22 @@ function mountAboutVideo(media,videos,poster){
  };
  return player;
 }
+const journeyDefaults={"journey_title":"Our Journey","journey_title_bn":"আমাদের যাত্রা","planning_date":"2020-08-01","launch_date":"2020-08-28","planning_title":"The Vision","planning_title_bn":"পরিকল্পনার শুরু","launch_title":"The Launch","launch_title_bn":"অনলাইন যাত্রা","planning_description":"The beginning of our journey.","planning_description_bn":"আমাদের যাত্রার সূচনা।","launch_description":"SHOPYHAT officially went online.","launch_description_bn":"SHOPYHAT আনুষ্ঠানিকভাবে অনলাইনে যাত্রা শুরু করে।","promise_label":"Our Brand Promise","promise_label_bn":"আমাদের ব্র্যান্ডের প্রতিশ্রুতি","promise_text":"Your Choice, Our Gift.","promise_text_bn":"আপনার পছন্দ, আমাদের উপহার।"};
+function renderJourney(profile){
+ const host=document.querySelector('#p-about .about-v2-facts');if(!host)return;
+ const data={...journeyDefaults,...profile},bn=document.documentElement.lang==='bn',get=k=>String((bn?data[k+'_bn']:data[k])||data[k]||journeyDefaults[k]||'');
+ const sig=JSON.stringify([data,bn]);if(host.dataset.journeySignature===sig)return;host.dataset.journeySignature=sig;
+ host.style.cssText='display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:16px;border:1px solid #b58b5855;border-radius:12px;text-align:left';
+ const title=el('h3','',get('journey_title'));title.style.cssText='margin:0;font-size:20px;color:inherit';
+ const row=el('div');row.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:14px';
+ for(const key of ['planning','launch']){const item=el('div');item.style.cssText='min-width:0;border-top:1px solid #b58b58;padding-top:10px;overflow-wrap:anywhere';const date=el('time');const raw=data[key+'_date'];date.dateTime=raw;const dt=new Date(raw+'T00:00:00Z');date.textContent=Number.isNaN(dt.getTime())?raw:new Intl.DateTimeFormat(bn?'bn-BD':'en-GB',{day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}).format(dt);date.style.cssText='display:block;font-size:12px;color:inherit';const label=el('strong','',get(key+'_title'));label.style.cssText='display:block;margin:5px 0;font-size:15px';const desc=el('div','',get(key+'_description'));desc.style.cssText='font-size:13px;line-height:1.5';item.append(date,label,desc);row.append(item)}
+ const promise=el('div');promise.style.cssText='border-top:1px solid #b58b5855;padding-top:12px';const eyebrow=el('div','',get('promise_label'));eyebrow.style.cssText='font-size:11px;letter-spacing:.08em';const slogan=el('strong','',get('promise_text'));slogan.style.cssText='display:block;font-size:clamp(17px,2.5vw,24px);line-height:1.35;overflow-wrap:anywhere';promise.append(eyebrow,slogan);host.replaceChildren(title,row,promise);
+}
+window.addEventListener('shopyhat:languagechange',()=>renderJourney(cfg.about_profile||{}));
 function decorate(){
  applyDesign();
  const aboutIntro=document.querySelector('#p-about .about-v2-intro');
- const profile=cfg.about_profile||{};
+ const profile=cfg.about_profile||{};renderJourney(profile);
  const applyProfile=(selector,value)=>{const node=document.querySelector(selector);if(!node)return;if(!node.dataset.shOriginal)node.dataset.shOriginal=node.innerHTML;if(value){node.textContent=value;node.style.whiteSpace='pre-line'}else node.innerHTML=node.dataset.shOriginal};
  applyProfile('#p-about .about-v2-intro h2',profile.intro_title);
  applyProfile('#p-about .about-v2-intro p',profile.intro_body);
