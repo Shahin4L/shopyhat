@@ -171,7 +171,7 @@ async function openMediaLibrary(product){
  }
 }
 async function downloadMedia(photo,button){
- const initial=button.textContent;button.disabled=true;button.textContent='Preparing…';
+ const initial=(window.SHOPYHAT_I18N?.sourceText(button)||button.textContent);button.disabled=true;button.textContent='Preparing…';
  try{
   const {data:{session},error}=await db.auth.getSession();
   if(error||!session?.access_token)throw Error('Please sign in again to download.');
@@ -204,9 +204,9 @@ $('requestForm').elements.zone.addEventListener('change',updateRequestSummary);
 $('refreshRequests').onclick=()=>loadDashboard();
 $('requestList').addEventListener('click',async event=>{
  const button=event.target.closest('[data-cancel-request]');if(!button)return;
- const reason=prompt('Optional: why does the customer want to cancel? (up to 250 characters)','');if(reason===null)return;
+ const reason=prompt(window.SHOPYHAT_I18N?.text('Optional: why does the customer want to cancel? (up to 250 characters)')||'Optional: why does the customer want to cancel? (up to 250 characters)','');if(reason===null)return;
  if(reason.trim().length>250)return message('Cancellation reason must be 250 characters or fewer.',true);
- if(!confirm('Send this cancellation request to SHOPYHAT? The order is not cancelled until admin approves.'))return;
+ if(!confirm(window.SHOPYHAT_I18N?.text('Send this cancellation request to SHOPYHAT? The order is not cancelled until admin approves.')||'Send this cancellation request to SHOPYHAT? The order is not cancelled until admin approves.'))return;
  button.disabled=true;button.textContent='Sending…';
  try{const {error}=await db.rpc('sh_reseller_request_cancel',{p_request:button.dataset.cancelRequest,p_reason:reason.trim()});if(error)throw error;await loadDashboard();message('Cancellation request sent. Waiting for SHOPYHAT to review it.');}
  catch(error){message(error.message||'Unable to send cancellation request.',true);button.disabled=false;button.textContent='Request cancellation'}

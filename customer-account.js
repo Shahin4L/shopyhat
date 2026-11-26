@@ -185,7 +185,7 @@ function render(){
  if(!signedUser){currentTab='';loginView();return}
  view('<div class="sh-account-greeting"><h2 id="shAccountGreeting">Hello, '+esc(profile?.full_name||'Customer')+'</h2><p id="shAccountContact">'+esc(accountContact())+'</p></div><div class="sh-account-layout"><aside class="sh-account-menu"><nav aria-label="Account sections">'+Object.entries(tabs).map(([key,label])=>'<a href="#account/'+key+'" data-account-tab="'+key+'">'+label+'</a>').join('')+'</nav><button class="sh-text-button" id="shSignOut" type="button">Sign out</button></aside><div id="shAccountPanel"></div></div>');
  $('shSignOut').onclick=async e=>{
-  const button=e.currentTarget, label=button.textContent;
+  const button=e.currentTarget, label=(window.SHOPYHAT_I18N?.sourceText(button)||button.textContent);
   button.disabled=true;button.textContent='Signing out…';
   try{
    const {error}=await db.auth.signOut();
@@ -407,7 +407,7 @@ function saveFeedback(form,text,error=false){
  status.classList.toggle('error',error);
 }
 async function submitAccountChange(form,working,success,task){
- const button=form.querySelector('[type=submit]'),cancel=form.querySelector('#shCancelProfile,#shCancelAddress'),label=button.textContent;
+ const button=form.querySelector('[type=submit]'),cancel=form.querySelector('#shCancelProfile,#shCancelAddress'),label=(window.SHOPYHAT_I18N?.sourceText(button)||button.textContent);
  button.disabled=true;button.textContent=working;
  if(cancel)cancel.disabled=true;
  saveFeedback(form,working);
@@ -461,7 +461,7 @@ function addressView(){
   if(!item)return;
   const action=button.dataset.addressAction;
   if(action==='edit')return editAddressView(item);
-  if(action==='delete'&&!window.confirm('Remove this saved address from your account?'))return;
+  if(action==='delete'&&!window.confirm(window.SHOPYHAT_I18N?.text('Remove this saved address from your account?')||'Remove this saved address from your account?'))return;
   const controls=Array.from(host.querySelectorAll('button')).filter(control=>!control.disabled);
   controls.forEach(control=>control.disabled=true);
   message(action==='delete'?'Removing address…':'Updating default…');

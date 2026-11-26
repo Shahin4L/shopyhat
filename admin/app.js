@@ -621,7 +621,7 @@ function editPhotos(productId,variantId){
  await refresh();editPhotos(productId,variantId);notice('drawerMsg','Photos added.')}
  catch(e){notice('drawerMsg',e.message,true)}};
 }
-async function deletePhoto(id){if(!roleCan('owner','manager'))return;if(!confirm('Remove this image from the product gallery?'))return;const i=images.find(x=>x.id===id);if(!i)return;
+async function deletePhoto(id){if(!roleCan('owner','manager'))return;if(!confirm(window.SHOPYHAT_I18N?.text('Remove this image from the product gallery?')||'Remove this image from the product gallery?'))return;const i=images.find(x=>x.id===id);if(!i)return;
  const r=await db.from('sh_product_images').delete().eq('id',id);if(r.error)return notice('drawerMsg',r.error.message,true);
  // Clean up Supabase-hosted files only when no other gallery references that URL.
  const base=SUPABASE_URL+'/storage/v1/object/public/shopyhat-products/';
@@ -654,7 +654,7 @@ async function editOrder(id){
   df.elements.zone.onchange=preview;preview();
   df.onsubmit=async e=>{e.preventDefault();const f=new FormData(df);let phone=String(f.get('phone')||'').trim().replace(/[\s-]/g,'');if(phone.startsWith('+88'))phone=phone.slice(3);else if(phone.startsWith('88'))phone=phone.slice(2);
    if(!/^01[3-9][0-9]{8}$/.test(phone)){status.textContent='Enter a valid Bangladesh mobile number.';return}
-   if(String(f.get('zone'))!==o.zone&&!confirm('Changing the delivery zone may change the delivery charge and order total. Continue?'))return;
+   if(String(f.get('zone'))!==o.zone&&!confirm(window.SHOPYHAT_I18N?.text('Changing the delivery zone may change the delivery charge and order total. Continue?')||'Changing the delivery zone may change the delivery charge and order total. Continue?'))return;
    const button=df.querySelector('[type=submit]');button.disabled=true;status.textContent='Saving…';
    try{const {data,error}=await db.rpc('sh_admin_update_order_delivery_v2',{p_order:o.id,p_name:String(f.get('name')||'').trim(),p_phone:phone,p_address:String(f.get('address')||'').trim(),p_zone:String(f.get('zone')||''),p_email:String(f.get('email')||'').trim()});if(error)throw error;await refresh();await editOrder(o.id);notice('drawerMsg','Customer and delivery details updated. Order total: '+money(data.total)+'.');}
    catch(error){status.textContent=error.message||'Could not save customer details.'}finally{button.disabled=false}
@@ -666,7 +666,7 @@ async function editOrder(id){
  const r=await db.from('sh_orders').update(changes).eq('id',id);if(r.error)return notice('drawerMsg',r.error.message,true);
  await refresh();editOrder(id);notice('drawerMsg','Order saved.')};
  document.querySelectorAll('#drawerBody [data-mail-retry]').forEach(button=>button.onclick=async()=>{
-  if(!confirm('Retry the email rejected by the provider?'))return;
+  if(!confirm(window.SHOPYHAT_I18N?.text('Retry the email rejected by the provider?')||'Retry the email rejected by the provider?'))return;
   button.disabled=true;
   try{const {error}=await db.rpc('sh_admin_retry_order_mail',{p_id:button.dataset.mailRetry});if(error)throw error;await editOrder(id);notice('drawerMsg','Email queued for retry.');}
   catch(error){button.disabled=false;notice('drawerMsg',error.message||'Could not retry email.',true)}
@@ -674,7 +674,7 @@ async function editOrder(id){
  $('printInvoice').onclick=()=>printInvoice(o,items.data);
   const codButton=$('markCodCollected');
   if(codButton)codButton.onclick=async()=>{
-   if(!confirm('Confirm that the courier has handed over the actual COD payment for this delivered order?'))return;
+   if(!confirm(window.SHOPYHAT_I18N?.text('Confirm that the courier has handed over the actual COD payment for this delivered order?')||'Confirm that the courier has handed over the actual COD payment for this delivered order?'))return;
    codButton.disabled=true;
    try{
     const r=await db.from('sh_orders').update({payment_status:'Collected - COD'}).eq('id',o.id).eq('status','Delivered').eq('payment_method','COD').select('id');
@@ -699,7 +699,7 @@ function reviewPayment(id){
  drawer('Review Payment',`<p class="audit-meta">${metaLabel('sh_payments',p)}</p><p>Order: <b>${esc(o?.order_number||'—')}</b></p><p>Method: ${esc(p.method)} · ${money(p.amount)}<br>Transaction: <b>${esc(p.transaction_id)}</b><br>Sender last 4: ${esc(p.sender_last4)}</p>
  <p class="badge">Check the actual bKash/Nagad transaction history before marking a payment verified.</p>
  <form id="paymentForm"><label>Review Result</label><select name="status">${['Pending Verification','Review Required','Verified - Paid','Refund Pending','Refunded','Rejected'].map(x=>'<option '+(p.status===x?'selected':'')+'>'+x+'</option>').join('')}</select><button class="btn primary" type="submit">Save Review</button></form>`);
- $('paymentForm').onsubmit=async e=>{e.preventDefault();const status=formData('paymentForm').status;if(status==='Verified - Paid'&&!confirm('I checked the transaction in the payment provider account. Confirm verified?'))return;
+ $('paymentForm').onsubmit=async e=>{e.preventDefault();const status=formData('paymentForm').status;if(status==='Verified - Paid'&&!confirm(window.SHOPYHAT_I18N?.text('I checked the transaction in the payment provider account. Confirm verified?')||'I checked the transaction in the payment provider account. Confirm verified?'))return;
  const r=await db.from('sh_payments').update({status}).eq('id',id);
  if(r.error)return notice('drawerMsg',r.error.message,true);await refresh();closeDrawer()};
 }
