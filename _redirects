@@ -1,2 +1,4 @@
 /reseller /reseller/ 301
 /admin /admin/ 301
+/account/ /account 301
+/account / 200

@@ -1,0 +1,1 @@
+alter table public.sh_customer_profiles add column if not exists delivery_address jsonb not null default '{}'::jsonb check (jsonb_typeof(delivery_address) = 'object' and octet_length(delivery_address::text) <= 2400);
