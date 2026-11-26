@@ -244,7 +244,8 @@ function mountAboutVideo(media){
 
  const updateSound=()=>{
   const bn=document.documentElement.lang==='bn';
-  sound.textContent=media.muted?(bn?'সাউন্ড চালু করুন':'Sound On'):(bn?'সাউন্ড বন্ধ করুন':'Sound Off');
+  const label=media.muted?(bn?'সাউন্ড চালু করুন':'Sound On'):(bn?'সাউন্ড বন্ধ করুন':'Sound Off');
+  if(sound.textContent!==label)sound.textContent=label;
  };
  updateSound();
  media.addEventListener('volumechange',updateSound);
@@ -278,11 +279,10 @@ function mountAboutVideo(media){
  },{threshold:.35});
  observer.observe(player);
  document.addEventListener('visibilitychange',syncPlayback);
- const language=new MutationObserver(updateSound);
- language.observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+ window.addEventListener('shopyhat:languagechange',updateSound);
  aboutPlaybackCleanup=()=>{
   observer.disconnect();
-  language.disconnect();
+  window.removeEventListener('shopyhat:languagechange',updateSound);
   document.removeEventListener('visibilitychange',syncPlayback);
   media.pause();
  };
