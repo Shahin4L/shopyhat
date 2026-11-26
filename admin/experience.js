@@ -199,7 +199,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
  let aboutPhotos=[],aboutStories=[];
  const sampleStory={title:'Rooted in Tradition. Styled for Today.',description:'Fashion is a personal expression of who we are. At SHOPYHAT, we celebrate the beauty of Bengali traditions alongside contemporary style. From elegant sarees to versatile three-piece sets and hijabs, our vision is to make discovering your own style a simple, enjoyable experience.',images:['/assets/hero/shopyhat-cinematic-saree.png','/assets/hero/shopyhat-cinematic-hijab.png','/assets/hero/shopyhat-cinematic-campaign.png']};
  function renderAboutContent(){
- const host=$('shAboutContent');if(!host)return;host.replaceChildren();
+ const host=$('shAboutContent');if(!host)return;host.replaceChildren();const storyHost=$('shAboutStoriesHost');storyHost?.replaceChildren();
  for(const [label,items,story] of [['About Photo Gallery',aboutPhotos,false],['Inside SHOPYHAT — Stories',aboutStories,true]]){
  const section=document.createElement('section');const h=document.createElement('h3');h.textContent=label;section.append(h);
  const button=(name,fn)=>{const b=document.createElement('button');b.type='button';b.className='btn small';b.textContent=name;b.onclick=()=>{if(settingsLoaded&&!publishing&&!activeUploads)fn()};return b};
@@ -218,7 +218,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
  if(story)row.append(button('Add image URL',()=>{item.images.push({url:'',title:'',description:''});renderAboutContent();markDraft(undefined,'about')}));
  if(story){const move=n=>{const k=i+n;if(k<0||k>=items.length)return;[items[i],items[k]]=[items[k],items[i]];renderAboutContent();markDraft(undefined,'about')};const up=button('Move story up',()=>move(-1)),down=button('Move story down',()=>move(1));up.disabled=i===0;down.disabled=i===items.length-1;row.append(up,down);}
  row.append(button('Remove '+(story?'story':'photo'),()=>{if(confirm('Remove from draft? Original files will be retained.')){items.splice(i,1);renderAboutContent();markDraft(undefined,'about')}}));section.append(row);
- });section.append(button(story?'Add story':'Add photo',()=>{items.push(story?{title:'',description:'',images:[]}:{title:'',description:'',url:''});renderAboutContent();markDraft(undefined,'about')}));host.append(section);
+ });section.append(button(story?'Add story':'Add photo',()=>{items.push(story?{title:'',description:'',images:[]}:{title:'',description:'',url:''});renderAboutContent();markDraft(undefined,'about')}));(story&&storyHost?storyHost:host).append(section);
  }
  }
 
@@ -324,6 +324,29 @@ export function setupExperienceStudio({db,roleCan,notify}){
   publishBar.append(actions,panel.querySelector('#shExperienceMsg'));
   panel.querySelector('.topline').after(publishBar);
   nav.after(panel);
+  const aboutTab=document.createElement('button');aboutTab.type='button';aboutTab.className='btn';aboutTab.id='aboutStudioTab';aboutTab.dataset.page='about-studio';aboutTab.textContent='About Us Studio';b.after(aboutTab);
+  const studio=document.createElement('div');studio.id='page-about-studio';studio.className='panel hidden';panel.after(studio);
+  studio.innerHTML='<h2>About Us Studio</h2><p class="muted">Manage brand content independently of homepage design.</p><div id="shAboutTabs" style="display:flex;gap:8px;flex-wrap:wrap"></div><div id="shAboutWorkspace"></div><div class="editor-actions"><button type="button" class="btn primary" id="shAboutPublish">Save &amp; Publish</button><button type="button" class="btn" id="shAboutPreview">Preview draft</button></div><p id="shAboutStudioMsg" role="status"></p><div id="shAboutPreviewHost"></div>';
+  const workspace=studio.querySelector('#shAboutWorkspace'),tabs=studio.querySelector('#shAboutTabs');
+  const profile=document.createElement('section');profile.innerHTML='<h3>Brand Profile</h3><p class="muted">Leave fields blank to retain the original website copy.</p>'+[['intro_title','Introduction title'],['intro_body','Introduction / purpose'],['history_title','History title'],['history_body','History / journey'],['vision','Vision'],['mission','Mission'],['goals','Goals']].map(([key,label])=>'<label>'+label+'<textarea rows="3" data-profile="'+key+'"></textarea></label>').join('');
+  const photo=document.createElement('section'),discover=document.createElement('section'),storiesPane=document.createElement('section');
+  const legacyFields=aboutFields.querySelector('.sh-experience-fields');legacyFields.querySelectorAll('input,select').forEach(x=>x.setAttribute('form',form.id));photo.append(legacyFields,contentHost);discover.append(aboutSection,aboutFields);
+  storiesPane.id='shAboutStoriesHost';const panes={profile,photo,discover,stories:storiesPane};Object.values(panes).forEach(x=>workspace.append(x));
+  let selected='profile';const selectAbout=key=>{selected=key;for(const [k,p] of Object.entries(panes))p.hidden=k!==key;tabs.querySelectorAll('button').forEach(x=>x.classList.toggle('active',x.dataset.section===key));};
+  for(const [key,label] of [['profile','Brand Profile'],['photo','Photo Gallery'],['discover','Discover SHOPYHAT'],['stories','Inside SHOPYHAT']]){const tab=document.createElement('button');tab.type='button';tab.className='btn';tab.dataset.section=key;tab.textContent=label;tab.onclick=()=>selectAbout(key);tabs.append(tab)}
+  selectAbout('profile');aboutTab.onclick=()=>window.SHOPYHAT_SHOW_PAGE?.('about-studio');
+  const profileValues=()=>Object.fromEntries([...profile.querySelectorAll('[data-profile]')].map(x=>[x.dataset.profile,x.value.trim()]));
+  const loadProfile=()=>profile.querySelectorAll('[data-profile]').forEach(x=>x.value=currentConfig.about_profile?.[x.dataset.profile]||'');
+  studio.addEventListener('sh-profile-load',loadProfile);
+  studio.querySelector('#shAboutPublish').onclick=async()=>{
+   if(!roleCan('owner','manager')||!settingsLoaded||publishing||activeUploads)return;
+   const patch=selected==='profile'?{about_profile:profileValues()}:selected==='photo'?{about_photos:aboutPhotos.filter(x=>x.url),about_media_type:form.elements.about_media_type.value,about_media_url:form.elements.about_media_type.value==='image'?form.elements.about_media_url.value.trim():''}:selected==='discover'?{about_videos:aboutVideos.map(x=>({...x,url:x.url.trim()}))}:{about_stories:aboutStories.map(x=>({...x,images:x.images.filter(v=>typeof v==='string'?v:v?.url)}))};
+   if(patch.about_videos?.some(x=>!isAboutURL(x.url)))return notify('shAboutStudioMsg','Enter valid HTTPS video URLs.',true);
+   if(selected==='discover'&&currentConfig.about_media_type==='video'){patch.about_media_type='none';patch.about_media_url=''}
+   publishing=true;syncPublish();try{await publishPatch(patch);notify('shAboutStudioMsg','Selected section published successfully.')}catch(e){notify('shAboutStudioMsg',e.message,true)}finally{publishing=false;syncPublish()}
+  };
+  studio.querySelector('#shAboutPreview').onclick=()=>{const host=studio.querySelector('#shAboutPreviewHost');let frame=host.querySelector('iframe');if(!frame){frame=document.createElement('iframe');frame.src='/';frame.title='About Us draft preview';frame.style.cssText='width:100%;height:650px;border:1px solid #ccc';host.append(frame)}const send=()=>frame.contentWindow?.postMessage({type:'shopyhat:studio-preview',config:{...previewConfig(),about_profile:profileValues()},view:'about'},location.origin);frame.onload=send;send()};
+
   const style=document.createElement('style');style.textContent=`
  #dashboard{position:relative;padding-left:0;display:flow-root}#dashboard>.nav{position:relative;float:left;left:auto;top:auto;bottom:auto;width:192px;height:auto;max-height:none;z-index:1;overflow:visible;margin:14px 0 18px;padding:12px 8px;background:linear-gradient(180deg,#21150f,#17110e);border:1px solid #433025;border-radius:13px;display:flex;flex-direction:column;flex-wrap:nowrap;gap:3px;box-shadow:0 12px 32px #00000012}
  #dashboard>.panel{margin-left:209px}
@@ -488,7 +511,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   const reloadButton=$('shExperienceReload');reloadButton.disabled=true;reloadButton.textContent='Loading…';
   try{
    const {data,error}=await db.from('sh_storefront_experience').select('config').eq('id',1).maybeSingle();
-   if(error)throw error;currentConfig={...(data?.config||{})};const v={...defaults,...currentConfig},form=$('shExperienceForm');
+   if(error)throw error;currentConfig={...(data?.config||{})};$('page-about-studio')?.dispatchEvent(new Event('sh-profile-load'));const v={...defaults,...currentConfig},form=$('shExperienceForm');
    for(const [key] of fields)form.elements[key].value=v[key]||'';
    for(const [key] of switches)form.elements[key].checked=v[key]!==false;
    form.elements.hero_media_mode.value=mediaModes.includes(v.hero_media_mode)?v.hero_media_mode:'auto';
@@ -512,18 +535,16 @@ export function setupExperienceStudio({db,roleCan,notify}){
    settingsLoaded=true;notify('shExperienceMsg','Experience settings loaded.');refreshPreview();
   }catch(e){notify('shExperienceMsg','Could not load settings: '+e.message,true)}finally{reloadButton.disabled=false;reloadButton.textContent='Reload';syncPublish()}
  }
+ async function publishPatch(patch){
+ const {data,error}=await db.from('sh_storefront_experience').select('config,updated_at').eq('id',1).single();if(error)throw error;
+ const config={...data.config,...patch};let q=db.from('sh_storefront_experience').update({config,updated_at:new Date().toISOString()}).eq('id',1);q=data.updated_at==null?q.is('updated_at',null):q.eq('updated_at',data.updated_at);const result=await q.select('config').maybeSingle();if(result.error)throw result.error;if(!result.data)throw Error('Settings changed elsewhere. Retry publishing.');currentConfig={...result.data.config};
+ }
  async function save(e){
   e.preventDefault();if(!roleCan('owner','manager')||!settingsLoaded||publishing||activeUploads)return;
   const f=e.currentTarget,config={...currentConfig};
   for(const [key] of fields){config[key]=f.elements[key].value.trim();if(key.endsWith('_url')&&config[key]&&!/^https:\/\//i.test(config[key]))return notify('shExperienceMsg',key+' must be an HTTPS URL.',true)}
   for(const [key] of switches)config[key]=f.elements[key].checked;
   config.hero_media_mode=mediaModes.includes(f.elements.hero_media_mode.value)?f.elements.hero_media_mode.value:'auto';
-  config.about_media_type=f.elements.about_media_type.value==='image'?'image':'none';
-  config.about_photos=aboutPhotos.filter(x=>x.url);config.about_stories=aboutStories.map(x=>({...x,images:x.images.filter(v=>typeof v==='string'?v: v?.url)}));
-  config.about_videos=aboutVideos.map(video=>({url:video.url.trim(),title:video.title.trim().slice(0,80),description:String(video.description||'').trim().slice(0,1200)}));
-  if(config.about_videos.some(video=>!isAboutURL(video.url)))return notify('shExperienceMsg','Enter a valid HTTPS URL for each About video, or remove the empty row.',true);
-  config.about_media_url=config.about_media_type==='image'?f.elements.about_media_url.value.trim():'';
-  if(config.about_media_type!=='none'&&!/^https:\/\//i.test(config.about_media_url))return notify('shExperienceMsg','Upload About media or provide a valid HTTPS URL.',true);
   if(config.hero_media_mode==='video'&&!config.video_url)return notify('shExperienceMsg','Upload a video or enter a video URL before selecting video mode.',true);
   for(const [key,,options] of designSelects)config[key]=options.includes(f.elements[key].value)?f.elements[key].value:options[0];
   for(const [key,,min,max,initial] of designNumbers){const n=Number(f.elements[key].value);config[key]=Number.isFinite(n)?Math.max(min,Math.min(max,n)):initial;}
@@ -541,9 +562,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   const button=publishButton();publishing=true;syncPublish();button.textContent='Publishing…';button.setAttribute('aria-busy','true');
   notify('shExperienceMsg','Publishing your storefront changes…');
   try{
-   const {error}=await db.from('sh_storefront_experience').upsert({id:1,config,updated_at:new Date().toISOString()},{onConflict:'id'});
-   if(error)throw error;
-   currentConfig={...config};heroSlides=slides.map(slide=>({...slide}));renderSlides();
+   const patch=Object.fromEntries(Object.entries(config).filter(([k])=>!k.startsWith('about_')));await publishPatch(patch);heroSlides=slides.map(slide=>({...slide}));renderSlides();
    notify('shExperienceMsg','Published successfully. Open Preview Storefront to see your live changes.');
    if(config.video_url)notify('shHeroVideoMsg','Video settings published. Check the selected Hero background mode on the live site.');
   }catch(e){notify('shExperienceMsg','Publishing failed: '+e.message,true)}
