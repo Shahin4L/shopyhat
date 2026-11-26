@@ -201,7 +201,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
  function renderAboutVideos(){
   const list=$('shAboutVideos');
   list.innerHTML=aboutVideos.map((video,i)=>'<div class="sh-about-video-row" data-video-index="'+i+'">'+
-   '<div class="sh-experience-fields"><label>Video '+(i+1)+' title (optional)<input type="text" maxlength="80" data-video-field="title" value="'+esc(video.title)+'"></label>'+
+   '<div style="margin:12px 0"><video controls playsinline preload="none" style="display:block;width:100%;max-width:480px;aspect-ratio:16/9;object-fit:contain;background:#21150e;border-radius:12px" '+(isAboutURL(String(video.url||'').trim())?'src="'+esc(video.url.trim())+'"':'')+'></video><p class="muted">Current video preview · '+esc(String(video.url||'').split('?')[0].split('/').pop()||'No video selected')+'</p></div>'+ '<div class="sh-experience-fields"><label>Video '+(i+1)+' title (optional)<input type="text" maxlength="80" data-video-field="title" value="'+esc(video.title)+'"></label>'+
    '<label>Video HTTPS URL<input type="url" data-video-field="url" value="'+esc(video.url)+'" placeholder="https://..."></label><label>Video context<textarea maxlength="1200" rows="4" data-video-field="description">'+esc(video.description||'')+'</textarea></label></div>'+
    '<div class="editor-actions"><button class="btn small" type="button" data-video-action="up" '+(i===0?'disabled':'')+' aria-label="Move video '+(i+1)+' up">↑</button>'+
    '<button class="btn small" type="button" data-video-action="down" '+(i===aboutVideos.length-1?'disabled':'')+' aria-label="Move video '+(i+1)+' down">↓</button>'+
@@ -221,6 +221,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
    const row=e.target.closest('[data-video-index]');
    const field=e.target.dataset.videoField;
    if(row&&(field==='url'||field==='title'||field==='description'))aboutVideos[Number(row.dataset.videoIndex)][field]=e.target.value;
+   if(row&&field==='url'){const player=row.querySelector('video');const url=e.target.value.trim();if(player){player.pause();if(isAboutURL(url))player.src=url;else player.removeAttribute('src');player.load()}}
   });
   list.addEventListener('click',e=>{
    const button=e.target.closest('[data-video-action]');
