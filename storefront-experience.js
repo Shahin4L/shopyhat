@@ -133,6 +133,7 @@ function applyDesign(){
 }
 
 /* Real image slideshow: accessible arrows/dots, interval control, reduced-motion support. */
+const heroManualMedia=()=>matchMedia('(max-width: 820px), (prefers-reduced-motion: reduce)').matches||navigator.connection?.saveData===true;
 let slideIndex=0,lastSlideSignature='',slideTimer=null,slidePointerPaused=false,slideFocusPaused=false;
 let videoStartTimer=null;
 let slideLoadSeq=0,stageActive=0,lastRenderedSlideURL='';
@@ -165,7 +166,7 @@ function setSlide(index,manual=false){
   const movie=stage.querySelector('video');
   if(slide.kind==='video'){
    const seq=++slideLoadSeq;
-   if(movie&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+   if(movie&&(manual||!heroManualMedia())&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
     const advance=()=>{if(seq===slideLoadSeq)scheduleAdvance(0)};
     const useFallback=()=>{
      if(seq!==slideLoadSeq)return;
@@ -218,15 +219,15 @@ function setSlide(index,manual=false){
  }
 }
 function photoInterval(){
- return Math.max(3,Math.min(60,Number(cfg.hero_interval)||6))*1000;
+ return Math.max(3,Math.min(60,Number(cfg.hero_interval)||8))*1000;
 }
 function scheduleAdvance(delay){
  clearTimeout(slideTimer);
  slideTimer=null;
- if(configuredSlides().length<2||cfg.hero_autoplay===false||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ if(configuredSlides().length<2||cfg.hero_autoplay===false||heroManualMedia())return;
  const currentSlide=slideIndex;
  slideTimer=setTimeout(()=>{
-  if(currentSlide!==slideIndex)return;
+  if(currentSlide!==slideIndex||heroManualMedia())return;
   const home=document.getElementById('p-home');
   if(document.hidden||home?.classList.contains('hidden')||slidePointerPaused||slideFocusPaused){
    scheduleAdvance(250);
@@ -253,8 +254,8 @@ function syncSlider(){
  slidePointerPaused=slideFocusPaused=false;
  if(!slides.length)return;
  const stage=el('div','sh-slider-stage');
- for(let i=0;i<2;i++){const pic=el('img','sh-slider-backdrop');pic.alt='';pic.setAttribute('aria-hidden','true');pic.decoding='async';pic.style.opacity='0';stage.append(pic)}
- const movie=el('video','sh-slider-backdrop');movie.muted=true;movie.loop=false;movie.playsInline=true;movie.preload='metadata';movie.setAttribute('aria-hidden','true');movie.style.opacity='0';stage.append(movie);
+ for(let i=0;i<2;i++){const pic=el('img','sh-slider-backdrop');pic.alt='';pic.setAttribute('aria-hidden','true');pic.decoding='async';pic.fetchPriority=i===1?'high':'auto';pic.style.opacity='0';stage.append(pic)}
+ const movie=el('video','sh-slider-backdrop');movie.muted=true;movie.loop=false;movie.playsInline=true;movie.preload='none';movie.setAttribute('aria-hidden','true');movie.style.opacity='0';stage.append(movie);
  hero.prepend(stage);
  slideIndex=0;
  if(slides.length>1){
@@ -266,10 +267,14 @@ function syncSlider(){
   const live=el('span','sh-slider-live');live.setAttribute('aria-live','polite');live.setAttribute('aria-atomic','true');
   controls.append(prev,dots,next,live);hero.append(controls);
   if(!hero.dataset.sliderListeners){hero.dataset.sliderListeners='1';
-   hero.addEventListener('pointerover',e=>{if(e.pointerType==='mouse'&&e.target.closest('.sh-slider-controls'))slidePointerPaused=true});
-   hero.addEventListener('pointerout',e=>{if(e.pointerType==='mouse'&&!e.relatedTarget?.closest?.('.sh-slider-controls'))slidePointerPaused=false});
-   hero.addEventListener('focusin',e=>{if(e.target.closest('.sh-slider-controls'))slideFocusPaused=e.target.matches(':focus-visible')});
-   hero.addEventListener('focusout',e=>{if(!e.relatedTarget?.closest('.sh-slider-controls'))slideFocusPaused=false});
+   let touchStart=null;
+   hero.addEventListener('touchstart',e=>{if(e.touches.length===1&&!e.target.closest('a,button'))touchStart=[e.touches[0].clientX,e.touches[0].clientY];else touchStart=null},{passive:true});
+   hero.addEventListener('touchcancel',()=>{touchStart=null},{passive:true});
+   hero.addEventListener('touchend',e=>{if(!touchStart)return;const t=e.changedTouches[0],dx=t.clientX-touchStart[0],dy=t.clientY-touchStart[1];touchStart=null;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.5)setSlide(slideIndex+(dx<0?1:-1),true)},{passive:true});
+   hero.addEventListener('pointerover',e=>{if(e.pointerType==='mouse'&&hero.contains(e.target))slidePointerPaused=true});
+   hero.addEventListener('pointerout',e=>{if(e.pointerType==='mouse'&&!hero.contains(e.relatedTarget))slidePointerPaused=false});
+   hero.addEventListener('focusin',e=>{slideFocusPaused=true});
+   hero.addEventListener('focusout',e=>{if(!hero.contains(e.relatedTarget))slideFocusPaused=false});
   }
  }
  setSlide(0);
@@ -421,7 +426,7 @@ function decorate(){
  const imageURL=safeMedia(cfg.hero_image_url||'./assets/shopyhat-cinematic-art.svg');hero.classList.toggle('sh-has-image',!!imageURL);if(imageURL)hero.style.setProperty('--sh-hero-image','url("'+imageURL.replaceAll('"','%22')+'")');else hero.style.removeProperty('--sh-hero-image');
  hero.classList.toggle('sh-no-ribbon',!cfg.show_ribbon);hero.classList.toggle('sh-no-cards',!cfg.show_floating_cards);
  let video=hero.querySelector('.sh-hero-video');const videoURL=cfg.hero_media_mode==='slides'||configuredSlides().length?'':safeMedia(cfg.video_url);
- if(videoURL&&cfg.cinematic!==false&&!(window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {if(!video){video=el('video','sh-hero-video');video.muted=true;video.autoplay=true;video.loop=true;video.playsInline=true;hero.prepend(video)}if(video.src!==videoURL){video.style.opacity='0';video.onplaying=()=>{video.style.opacity='1'};video.onerror=()=>{video.style.opacity='0'};video.src=videoURL}}else video?.remove();
+ if(videoURL&&cfg.cinematic!==false&&!heroManualMedia()) {if(!video){video=el('video','sh-hero-video');video.muted=true;video.autoplay=true;video.loop=true;video.playsInline=true;hero.prepend(video)}if(video.src!==videoURL){video.style.opacity='0';video.onplaying=()=>{video.style.opacity='1'};video.onerror=()=>{video.style.opacity='0'};video.src=videoURL}}else video?.remove();
  const h=hero.querySelector('h1');if(h&&cfg.headline){const words=String(cfg.headline).split(',');h.innerHTML='';h.setAttribute('aria-label',cfg.headline);words.forEach((w,i)=>{const sp=el('span'),em=el('i','',w.trim()+(i<words.length-1?',':''));sp.append(em);h.append(sp)})}
  const desc=hero.querySelector('.wrap p');if(desc&&cfg.subtitle)desc.textContent=cfg.subtitle;
  const buttons=hero.querySelectorAll('.btns a');if(buttons[0]&&cfg.primary_cta)buttons[0].textContent=cfg.primary_cta;
