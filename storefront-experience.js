@@ -276,34 +276,74 @@ function syncSlider(){
 }
 
 let aboutPlaybackCleanup;
-function mountAboutVideo(media){
+function getAboutVideos(config){
+ const legacy=config.about_media_type==='video'?[{url:config.about_media_url,title:''}]:[];
+ const list=Array.isArray(config.about_videos)?config.about_videos:legacy;
+ return list.filter(v=>v&&safeMedia(v.url)).slice(0,6).map(v=>({
+  url:safeMedia(v.url),
+  title:typeof v.title==='string'?v.title.trim().slice(0,80):'',
+ }));
+}
+function mountAboutVideo(media,videos,poster){
  const player=el('div','sh-about-player');
  media.controls=true;
  media.playsInline=true;
  media.muted=true;
  media.defaultMuted=true;
+ media.loop=videos.length===1;
  media.preload='metadata';
+ if(poster)media.poster=poster;
  player.append(media);
 
+ let active=0;
  let shouldPlay=true;
  let inView=false;
+ let select;
  const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+ const play=()=>{
+  shouldPlay=false;
+  media.play().catch(()=>{});
+ };
+ const showVideo=(index,manual=false)=>{
+  active=(index+videos.length)%videos.length;
+  media.src=videos[active].url;
+  if(select)select.value=String(active);
+  shouldPlay=true;
+  if(manual||inView&&!document.hidden&&!reducedMotion.matches)play();
+ };
+ if(videos.length>1){
+  const nav=el('div','sh-about-video-nav');
+  const previous=el('button','btn line','Previous');
+  const next=el('button','btn line','Next');
+  select=el('select','sh-about-video-select');
+  select.setAttribute('aria-label','Choose About Us video');
+  previous.type=next.type='button';
+  videos.forEach(({title},i)=>{
+   const option=el('option','',title||'Video '+(i+1));
+   option.value=String(i);
+   select.append(option);
+  });
+  previous.addEventListener('click',()=>showVideo(active-1,true));
+  next.addEventListener('click',()=>showVideo(active+1,true));
+  select.addEventListener('change',()=>showVideo(Number(select.value),true));
+  media.addEventListener('ended',()=>showVideo(active+1,inView&&!document.hidden));
+  nav.append(previous,select,next);
+  player.append(nav);
+ }
+ showVideo(0);
  const syncPlayback=()=>{
   if(!player.isConnected)return;
   if(!inView||document.hidden){
    if(!media.paused){shouldPlay=true;media.pause()}
    return;
   }
-  if(shouldPlay&&!reducedMotion.matches){
-   shouldPlay=false;
-   media.play().catch(()=>{});
-  }
+  if(shouldPlay&&!reducedMotion.matches)play();
  };
  const observer=new IntersectionObserver(([entry])=>{
   inView=entry.isIntersecting&&entry.intersectionRatio>=.35;
   syncPlayback();
  },{threshold:.35});
- observer.observe(player);
+ observer.observe(media);
  document.addEventListener('visibilitychange',syncPlayback);
  aboutPlaybackCleanup=()=>{
   observer.disconnect();
@@ -315,22 +355,26 @@ function mountAboutVideo(media){
 function decorate(){
  applyDesign();
  const aboutIntro=document.querySelector('#p-about .about-v2-intro');
- const aboutURL=safeMedia(cfg.about_media_url),aboutType=cfg.about_media_type;
+ const videos=getAboutVideos(cfg);
+ const aboutPhoto=cfg.about_media_type==='image'?safeMedia(cfg.about_media_url):'';
  let aboutMedia=document.getElementById('shAboutMedia');
- if(aboutIntro&&aboutURL&&['image','video'].includes(aboutType)){
+ if(aboutIntro&&(videos.length||aboutPhoto)){
   if(!aboutMedia){aboutMedia=el('section');aboutMedia.id='shAboutMedia';aboutMedia.style.cssText='margin:28px auto 48px;max-width:1040px';aboutIntro.after(aboutMedia)}
-  const sig=aboutType+'|'+aboutURL;
+  const sig=JSON.stringify([videos,aboutPhoto]);
   if(aboutMedia.dataset.signature!==sig){
    aboutPlaybackCleanup?.();
    aboutPlaybackCleanup=undefined;
    aboutMedia.replaceChildren();
    aboutMedia.dataset.signature=sig;
    const heading=el('h2','','Discover SHOPYHAT');heading.style.cssText='margin:0 0 18px;font-size:clamp(24px,4vw,38px)';
-   const media=el(aboutType==='video'?'video':'img');
+   const media=el(videos.length?'video':'img');
    media.style.cssText='display:block;width:100%;max-height:620px;aspect-ratio:16/9;object-fit:contain;background:#21150e;border-radius:16px';
-   if(aboutType==='image'){media.alt='SHOPYHAT fashion and brand story';media.loading='lazy'}
-   const player=aboutType==='video'?mountAboutVideo(media):media;
-   media.src=aboutURL;
+   if(!videos.length){
+    media.alt='SHOPYHAT fashion and brand story';
+    media.loading='lazy';
+    media.src=aboutPhoto;
+   }
+   const player=videos.length?mountAboutVideo(media,videos,aboutPhoto):media;
    aboutMedia.append(heading,player);
   }
  }else if(aboutMedia){
@@ -391,7 +435,7 @@ if(new URLSearchParams(location.search).get('studio_preview')==='1'){
   if(event.origin!==location.origin||event.source!==window.parent)return;
   if(event.data?.type!=='shopyhat:studio-preview'||!event.data.config||typeof event.data.config!=='object')return;
   const preview=event.data.config;
-  const allowed=['announcement','headline','subtitle','hero_image_url','video_url','hero_media_mode','about_media_type','about_media_url','campaign_text','hero_eyebrow','primary_cta','secondary_cta','search_placeholder','categories_title','arrivals_title','offers_title','story_title','cinematic','show_ribbon','show_floating_cards','show_new_arrivals','show_categories','show_campaigns','ui_font','heading_font','hero_alignment','hero_vertical','hero_image_position','product_card_side','body_font_size','heading_scale','content_width','section_spacing','hero_height','category_columns','accent_color','section_order','hero_slides','hero_autoplay','hero_interval'];
+  const allowed=['announcement','headline','subtitle','hero_image_url','video_url','hero_media_mode','about_media_type','about_media_url','about_videos','campaign_text','hero_eyebrow','primary_cta','secondary_cta','search_placeholder','categories_title','arrivals_title','offers_title','story_title','cinematic','show_ribbon','show_floating_cards','show_new_arrivals','show_categories','show_campaigns','ui_font','heading_font','hero_alignment','hero_vertical','hero_image_position','product_card_side','body_font_size','heading_scale','content_width','section_spacing','hero_height','category_columns','accent_color','section_order','hero_slides','hero_autoplay','hero_interval'];
   for(const key of allowed){if(Object.prototype.hasOwnProperty.call(preview,key))cfg[key]=preview[key]}
   decorate();
   if(event.data.view==='about')location.hash='#about';

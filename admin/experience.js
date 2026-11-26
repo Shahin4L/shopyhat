@@ -195,6 +195,48 @@ export function setupExperienceStudio({db,roleCan,notify}){
  function previewHTML(){
   return '<section class="sh-design-editor sh-live-editor"><div class="topline"><div><h3>Live Storefront Preview</h3><p class="muted">View unsaved changes before publishing. Editing here does not affect the real website until Save & Publish.</p></div><div class="tools"><button type="button" class="btn small" id="shPreviewDesktop">Desktop</button><button type="button" class="btn small" id="shPreviewMobile">Mobile</button><button type="button" class="btn primary small" id="shPreviewUpdate">Preview Changes</button></div></div><div class="sh-preview-shell"><iframe title="SHOPYHAT storefront live design preview" id="shExperiencePreviewFrame" loading="lazy" referrerpolicy="same-origin" src="/?studio_preview=1#home"></iframe></div><p class="muted">For best results, preview Hero, menu and New Arrivals on desktop and mobile. The preview cannot place real orders.</p></section>';
  }
+ let aboutVideos=[];
+ const aboutVideoLimit=6;
+ const isAboutURL=value=>{try{return new URL(value).protocol==='https:'}catch{return false}};
+ function renderAboutVideos(){
+  const list=$('shAboutVideos');
+  list.innerHTML=aboutVideos.map((video,i)=>'<div class="sh-about-video-row" data-video-index="'+i+'">'+
+   '<div class="sh-experience-fields"><label>Video '+(i+1)+' title (optional)<input type="text" maxlength="80" data-video-field="title" value="'+esc(video.title)+'"></label>'+
+   '<label>Video HTTPS URL<input type="url" data-video-field="url" value="'+esc(video.url)+'" placeholder="https://..."></label></div>'+
+   '<div class="editor-actions"><button class="btn small" type="button" data-video-action="up" '+(i===0?'disabled':'')+' aria-label="Move video '+(i+1)+' up">↑</button>'+
+   '<button class="btn small" type="button" data-video-action="down" '+(i===aboutVideos.length-1?'disabled':'')+' aria-label="Move video '+(i+1)+' down">↓</button>'+
+   '<button class="btn small" type="button" data-video-action="remove" aria-label="Remove video '+(i+1)+'">Remove</button></div></div>').join('');
+  $('shAboutVideoAdd').disabled=aboutVideos.length>=aboutVideoLimit;
+ }
+ function bindAboutVideos(){
+  const list=$('shAboutVideos');
+  $('shAboutVideoAdd').onclick=()=>{
+   if(activeUploads||publishing||!settingsLoaded||aboutVideos.length>=aboutVideoLimit)return;
+   aboutVideos.push({url:'',title:''});
+   renderAboutVideos();
+   list.lastElementChild.querySelector('[data-video-field="url"]').focus();
+   markDraft('Enter the video URL, then publish to save the playlist.','about');
+  };
+  list.addEventListener('input',e=>{
+   const row=e.target.closest('[data-video-index]');
+   const field=e.target.dataset.videoField;
+   if(row&&(field==='url'||field==='title'))aboutVideos[Number(row.dataset.videoIndex)][field]=e.target.value;
+  });
+  list.addEventListener('click',e=>{
+   const button=e.target.closest('[data-video-action]');
+   if(!button||activeUploads||publishing||!settingsLoaded)return;
+   const index=Number(button.closest('[data-video-index]').dataset.videoIndex);
+   const action=button.dataset.videoAction;
+   if(action==='remove')aboutVideos.splice(index,1);
+   else{
+    const target=index+(action==='up'?-1:1);
+    if(!aboutVideos[target])return;
+    [aboutVideos[index],aboutVideos[target]]=[aboutVideos[target],aboutVideos[index]];
+   }
+   renderAboutVideos();
+   markDraft('About video playlist updated. Publish to apply.','about');
+  });
+ }
  function previewConfig(){
   const f=$('shExperienceForm');if(!f)return {};
   const c={...defaults,...currentConfig};
@@ -202,6 +244,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   for(const [key] of switches)c[key]=f.elements[key]?.checked!==false;
   c.hero_media_mode=mediaModes.includes(f.elements.hero_media_mode?.value)?f.elements.hero_media_mode.value:'auto';
   c.about_media_type=f.elements.about_media_type?.value||'none';c.about_media_url=f.elements.about_media_url?.value?.trim()||'';
+  c.about_videos=aboutVideos.filter(video=>isAboutURL(video.url.trim())).map(video=>({url:video.url.trim(),title:video.title.trim()}));
   for(const [key] of designSelects)c[key]=f.elements[key]?.value;
   for(const [key,,min,max,fallback] of designNumbers){
    const n=Number(f.elements[key]?.value);c[key]=Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;
@@ -235,9 +278,9 @@ export function setupExperienceStudio({db,roleCan,notify}){
   modeLabel.innerHTML='Hero background mode<select name="hero_media_mode"><option value="auto">Automatic (existing behavior)</option><option value="video">Video (photo fallback)</option><option value="slides">Photo slideshow</option><option value="mixed">Photos + video rotation</option></select><small>Choose photos + video to rotate through your images and uploaded video. Preview, then publish.</small>';
   panel.querySelector('.sh-experience-fields').prepend(modeLabel);
   const aboutSection=document.createElement('section');aboutSection.className='media-section';aboutSection.style.cssText='margin:18px 0;padding:18px';
-  aboutSection.innerHTML='<h3>About Us — Photo or Video</h3><p class="muted">Add a story photo or MP4 / WebM video to the About Us page. Recommended image: 1920 × 1080 px. Images up to 12 MB are optimized; videos up to 25 MB.</p><label for="shAboutFile">Choose photo or video</label><input type="file" id="shAboutFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"><div class="editor-actions"><button type="button" class="btn primary" id="shAboutUpload">Upload About Media</button><button type="button" class="btn" id="shAboutRemove">Remove About Media</button></div><p id="shAboutMsg" class="msg" role="status" aria-live="polite"></p>';
+  aboutSection.innerHTML='<h3>About Us — Photo &amp; Video Playlist</h3><p class="muted">Upload up to six MP4 or WebM videos (25 MB each). Videos play in order and repeat. An optional story photo serves as the cover; recommended size is 1920 × 1080 px.</p><label for="shAboutFile">Choose photo or video</label><input type="file" id="shAboutFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"><div class="editor-actions"><button type="button" class="btn primary" id="shAboutUpload">Upload About Media</button><button type="button" class="btn" id="shAboutRemove">Remove About Photo</button></div><p id="shAboutMsg" class="msg" role="status" aria-live="polite"></p>';
   panel.querySelector('#shExperienceForm').before(aboutSection);
-  const aboutFields=document.createElement('div');aboutFields.className='sh-experience-fields';aboutFields.innerHTML='<label>About media type<select name="about_media_type"><option value="none">None</option><option value="image">Photo</option><option value="video">Video</option></select></label><label>About media HTTPS URL<input type="url" name="about_media_url" placeholder="https://..."></label>';
+  const aboutFields=document.createElement('section');aboutFields.className='sh-design-editor';aboutFields.innerHTML='<h3>About video playlist</h3><div id="shAboutVideos"></div><div class="editor-actions"><button class="btn" type="button" id="shAboutVideoAdd">Add Video URL</button></div><div class="sh-experience-fields"><label>About photo<select name="about_media_type"><option value="none">None</option><option value="image">Photo</option></select></label><label>About photo HTTPS URL<input type="url" name="about_media_url" placeholder="https://..."></label></div>';
   panel.querySelector('#shExperienceForm').prepend(aboutFields);
   const form=panel.querySelector('#shExperienceForm');
   form.addEventListener('invalid',()=>notify('shExperienceMsg','Check the highlighted field before publishing.',true),true);
@@ -264,6 +307,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
  .sh-order-list{display:grid;gap:5px;margin:12px 0}
  .sh-order-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#fff;border:1px solid #e9e1d8;border-radius:8px}
  .sh-order-row .tools{gap:5px}
+ .sh-about-video-row{padding:10px 12px;margin:8px 0;border:1px solid #eadccc;border-radius:10px}.sh-about-video-row .editor-actions{margin-top:8px}
  .sh-publish-bar{position:sticky;top:0;z-index:5;margin-top:12px;padding:10px 14px;background:#fffaf5;border:1px solid #eadccc;border-radius:12px}.sh-publish-bar .editor-actions{margin:0}.sh-publish-bar .msg{margin:6px 0 0}.media-section .msg{overflow-wrap:anywhere}.media-section button[aria-busy=true],.sh-publish-bar button[aria-busy=true]{cursor:progress}
  .sh-experience-form{max-width:850px}.sh-experience-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px}
  .sh-experience-fields label{font-size:13px}.sh-experience-fields textarea{min-height:85px}.sh-experience-fields label:has(textarea){grid-column:1/-1}
@@ -295,8 +339,9 @@ export function setupExperienceStudio({db,roleCan,notify}){
  renderOrder();
  $('shHeroUploadButton').onclick=uploadHero;
  $('shHeroVideoUpload').onclick=uploadHeroVideo;
+ bindAboutVideos();
  $('shAboutUpload').onclick=uploadAboutMedia;
- $('shAboutRemove').onclick=()=>{const f=$('shExperienceForm');f.elements.about_media_url.value='';f.elements.about_media_type.value='none';notify('shAboutMsg','Removed from settings. Click Save & Publish Experience to apply.');markDraft(undefined,'about')};
+ $('shAboutRemove').onclick=()=>{if(activeUploads||publishing||!settingsLoaded)return;const f=$('shExperienceForm');f.elements.about_media_url.value='';f.elements.about_media_type.value='none';notify('shAboutMsg','Photo removed. Click Save & Publish Experience to apply.');markDraft(undefined,'about')};
  $('shHeroVideoRemove').onclick=()=>{const f=$('shExperienceForm');f.elements.video_url.value='';f.elements.hero_media_mode.value='auto';setVideoPreview('');notify('shHeroVideoMsg','Video removed from the settings. Click Save & Publish Experience to apply.');markDraft(undefined,'home')};
  $('shHeroVideoFile').onchange=()=>{const file=$('shHeroVideoFile').files?.[0];if(!file)return;const error=checkVideo(file);if(error)return notify('shHeroVideoMsg',error,true);setVideoPreview(URL.createObjectURL(file),true);notify('shHeroVideoMsg',file.name+' selected. Click Upload Hero Video to continue.')};
  $('shAboutFile').onchange=()=>{const file=$('shAboutFile').files?.[0];if(file)notify('shAboutMsg',file.name+' selected. Click Upload About Media to continue.')};
@@ -342,6 +387,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   const type=videoType(selected),video=!!type,photo=['image/png','image/jpeg','image/webp'].includes(selected.type);
   if(!video&&!photo)return notify('shAboutMsg','Use JPG, PNG, WebP, MP4 or WebM.',true);
   if(!selected.size||selected.size>(video?25:12)*1024*1024)return notify('shAboutMsg',video?'Video must be at most 25 MB.':'Photo must be at most 12 MB.',true);
+  if(video&&aboutVideos.length>=aboutVideoLimit)return notify('shAboutMsg','The playlist is full. Remove a video before uploading a new one.',true);
   await runUpload($('shAboutUpload'),'shAboutMsg',async()=>{
    const file=photo?await optimizeHero(selected):selected;
    const contentType=type||file.type;
@@ -355,7 +401,15 @@ export function setupExperienceStudio({db,roleCan,notify}){
     if(error)throw error;
     url=storage.getPublicUrl(path).data.publicUrl;
    }
-   const f=$('shExperienceForm');f.elements.about_media_url.value=url;f.elements.about_media_type.value=video?'video':'image';
+   const f=$('shExperienceForm');
+   if(video){
+    aboutVideos.push({url,title:''});
+    renderAboutVideos();
+   }else{
+    f.elements.about_media_url.value=url;
+    f.elements.about_media_type.value='image';
+   }
+   $('shAboutFile').value='';
    notify('shAboutMsg','Uploaded successfully. Click Save & Publish Experience to show it on About Us.');markDraft(undefined,'about');
   });
  }
@@ -406,7 +460,12 @@ export function setupExperienceStudio({db,roleCan,notify}){
    for(const [key] of fields)form.elements[key].value=v[key]||'';
    for(const [key] of switches)form.elements[key].checked=v[key]!==false;
    form.elements.hero_media_mode.value=mediaModes.includes(v.hero_media_mode)?v.hero_media_mode:'auto';
-   form.elements.about_media_type.value=['image','video'].includes(v.about_media_type)?v.about_media_type:'none';form.elements.about_media_url.value=v.about_media_url||'';
+   form.elements.about_media_type.value=v.about_media_type==='image'?'image':'none';
+   form.elements.about_media_url.value=v.about_media_type==='image'?v.about_media_url||'':'';
+   const legacy=v.about_media_type==='video'&&v.about_media_url?[{url:v.about_media_url,title:''}]:[];
+   const saved=Array.isArray(v.about_videos)?v.about_videos:legacy;
+   aboutVideos=saved.slice(0,aboutVideoLimit).filter(video=>video&&typeof video.url==='string').map(video=>({url:video.url,title:String(video.title||'')}));
+   renderAboutVideos();
    setVideoPreview(/^https:\/\//i.test(v.video_url||'')?v.video_url:'');
    for(const [key,,opts,fallback] of designSelects)form.elements[key].value=opts.includes(v[key])?v[key]:fallback;
    for(const [key,,min,max,initial] of designNumbers){const n=Number(v[key]);form.elements[key].value=Number.isFinite(n)&&n>=min&&n<=max?n:initial;}
@@ -426,7 +485,9 @@ export function setupExperienceStudio({db,roleCan,notify}){
   for(const [key] of fields){config[key]=f.elements[key].value.trim();if(key.endsWith('_url')&&config[key]&&!/^https:\/\//i.test(config[key]))return notify('shExperienceMsg',key+' must be an HTTPS URL.',true)}
   for(const [key] of switches)config[key]=f.elements[key].checked;
   config.hero_media_mode=mediaModes.includes(f.elements.hero_media_mode.value)?f.elements.hero_media_mode.value:'auto';
-  config.about_media_type=['image','video'].includes(f.elements.about_media_type.value)?f.elements.about_media_type.value:'none';
+  config.about_media_type=f.elements.about_media_type.value==='image'?'image':'none';
+  config.about_videos=aboutVideos.map(video=>({url:video.url.trim(),title:video.title.trim().slice(0,80)}));
+  if(config.about_videos.some(video=>!isAboutURL(video.url)))return notify('shExperienceMsg','Enter a valid HTTPS URL for each About video, or remove the empty row.',true);
   config.about_media_url=f.elements.about_media_url.value.trim();
   if(config.about_media_type!=='none'&&!/^https:\/\//i.test(config.about_media_url))return notify('shExperienceMsg','Upload About media or provide a valid HTTPS URL.',true);
   if(config.hero_media_mode==='video'&&!config.video_url)return notify('shExperienceMsg','Upload a video or enter a video URL before selecting video mode.',true);
