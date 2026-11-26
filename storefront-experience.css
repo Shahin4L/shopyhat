@@ -330,3 +330,26 @@ html,body{max-width:100%;overflow-x:clip}
   top: 56.25vw;
  }
 }
+
+/* Preserve complete hero campaign images, including the opening slide. */
+#p-home .sh-has-rotation .sh-slider-stage { background: #130a07; }
+#p-home .sh-has-rotation img.sh-slider-backdrop,
+#p-home .sh-has-rotation img.sh-slider-backdrop[src*="/assets/hero/shopyhat-cinematic-"] {
+ object-fit: contain;
+ object-position: center;
+}
+#p-home .sh-cinematic.sh-has-image:before {
+ background-size: cover, contain;
+ background-position: center;
+ background-repeat: no-repeat;
+}
+@media (max-width: 650px) {
+ #p-home .sh-cinematic.sh-has-image:before {
+  background-size: contain;
+  background-position: center top;
+ }
+ #p-home .sh-has-rotation img.sh-slider-backdrop,
+ #p-home .sh-has-rotation img.sh-slider-backdrop[src*="/assets/hero/shopyhat-cinematic-"] {
+  object-position: center top;
+ }
+}
