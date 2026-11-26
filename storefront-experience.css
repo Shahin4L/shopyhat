@@ -198,6 +198,12 @@ html,body{max-width:100%;overflow-x:clip}
 #p-home .sh-has-rotation .sh-slider-controls{position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:12;display:flex;align-items:center;gap:12px;padding:7px 12px;background:#120907e6;border:1px solid #eaa15d80;border-radius:34px}
 #p-home .sh-cinematic .sh-hero-video{z-index:-1;object-position:var(--sh-hero-position,center)}
 #p-home .sh-cinematic:has(.sh-hero-video):after{background:linear-gradient(90deg,#100704e0,#160907a0 45%,#16090733)}
+/* Anchor right-framed campaign photos before cover sizing crops their edges. */
+@media (min-width: 651px) {
+ #p-home .sh-has-rotation img.sh-slider-backdrop[src*="/assets/hero/shopyhat-cinematic-"] {
+  object-position: right top;
+ }
+}
 @media (max-width: 650px) {
  #p-home .sh-cinematic,
  #p-home .sh-has-rotation { min-height: 0; background: #130a07 !important; }
