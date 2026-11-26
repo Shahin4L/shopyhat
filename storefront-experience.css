@@ -70,7 +70,7 @@
 .sh-cinematic .sh-eyebrow{font-size:12px;margin-bottom:18px;color:#ffad67;letter-spacing:.23em}
 .sh-cinematic .btn{padding:15px 26px;border-radius:35px;box-shadow:0 6px 18px #0003}
 .sh-cinematic #heroArt{opacity:.18;filter:blur(1px);pointer-events:none}
-.sh-cinematic.sh-has-image #heroArt{opacity:0;visibility:hidden}
+.sh-cinematic.sh-has-image #heroArt,#p-home .sh-has-rotation #heroArt{display:none}
 .sh-featured{position:absolute;right:max(3%,calc((100vw - 1500px)/2));top:44%;z-index:3;width:190px;max-width:22vw;padding:10px;border:1px solid #ffad71aa;border-radius:19px;background:linear-gradient(135deg,#301409e5,#160c09e8);box-shadow:0 16px 44px #000a,0 0 15px #e97a2940;color:#fff;transform:translateY(-10%);text-align:left;transition:transform .25s,box-shadow .25s;cursor:pointer}
 .sh-featured:hover{transform:translateY(-15%);box-shadow:0 24px 60px #000c,0 0 20px #e97a2980}
 .sh-featured>img{width:100%;aspect-ratio:4/4.4;object-fit:cover;border-radius:11px}
