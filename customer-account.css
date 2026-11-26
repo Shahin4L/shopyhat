@@ -149,3 +149,18 @@
 }
 
 #shAccountUnread[hidden]{display:none}
+
+.sh-profile-heading,.sh-order-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+#shAccountPanel .sh-account-secondary{display:inline-flex;align-items:center;justify-content:center;min-height:40px;text-decoration:none}
+#shAccountPanel .sh-account-secondary:hover{background:#fff2e6;color:#843805}
+.sh-profile-details,.sh-profile-summary,.sh-order-card{background:#fff;border:1px solid #eddfd2;border-radius:12px;padding:14px;margin:14px 0}
+.sh-profile-details div,.sh-profile-activity li{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:4px 14px;padding:9px 0}
+.sh-profile-details div+div,.sh-profile-activity li+li{border-top:1px solid #f0e4d9}
+.sh-profile-details dt{color:#694d3c}
+.sh-profile-details dd{font-weight:700;margin:0;text-align:right;overflow-wrap:anywhere}
+.sh-profile-summary p{white-space:pre-line;margin:5px 0 0}
+.sh-profile-activity{list-style:none;margin:12px 0 0;padding:0;font-size:14px}
+.sh-profile-activity time,.sh-order-heading small{color:#6c5547;display:block}
+.sh-order-facts,.sh-order-actions,.sh-order-pages{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px}
+.sh-order-facts span{padding:4px 8px;border-radius:7px;background:#f8eee4;color:#523523;font-size:13px}
+@media(max-width:480px){.sh-profile-details div{display:block}.sh-profile-details dd{text-align:left}.sh-order-actions>*{flex:1}}

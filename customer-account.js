@@ -7,7 +7,7 @@ const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,
 const money=n=>'৳'+Number(n||0).toLocaleString('en-BD');
 const normalPhone=s=>{let n=String(s||'').trim().replace(/[\s-]/g,'');if(n.startsWith('+88'))n=n.slice(3);else if(n.startsWith('88'))n=n.slice(2);return /^01[3-9]\d{8}$/.test(n)?n:null};
 let accountReady=false, currentTab='', requestedTab='orders';
-let profile=null,pendingName='',pendingPhone='',signedUser=null,inboxTimer=null;
+let profile=null,profileExists=false,pendingName='',pendingPhone='',signedUser=null,inboxTimer=null;
 window.SHOPYHAT_CUSTOMER={getProfile:()=>profile,getUser:()=>signedUser,show:open,route:routeAccount,addressFields,readAddress,formatAddress,db};
 const message=(s,bad=false)=>{const n=$('shAccountMessage');if(n){n.textContent=s;n.classList.toggle('error',bad)}};
 const view=(html)=>{$('shAccountBody').innerHTML=html};
@@ -139,16 +139,20 @@ function recoveryCodeView(email){
  $('shRecoveryCode').onsubmit=async e=>{e.preventDefault();const b=e.currentTarget.querySelector('[type=submit]');b.disabled=true;try{const token=String(new FormData(e.currentTarget).get('code')||'').trim();const {data,error}=await db.auth.verifyOtp({email,token,type:'recovery'});if(error)throw error;if(!data.session)throw Error('Verification could not be completed. Please request a new code.');location.assign('/reset-password.html')}catch(err){message('Code invalid or expired. Please request a new recovery email.',true)}finally{b.disabled=false}};
 }
 async function loadAccount(){
- const {data:{user}}=await db.auth.getUser();signedUser=user||null;profile=null;
+ const {data:{user}}=await db.auth.getUser();signedUser=user||null;profile=null;profileExists=false;
  if(!signedUser){clearInterval(inboxTimer);inboxTimer=null;window.dispatchEvent(new Event('sh:account'));return}
  const result=await db.from('sh_customer_profiles').select('*').eq('user_id',user.id).maybeSingle();
+ const metadata=user.user_metadata||{};
+ const priorPhone=[metadata.mobile,metadata.phone,metadata.phone_number,metadata.mobile_number,user.phone].map(normalPhone).find(Boolean);
+ const priorName=String(metadata.name||metadata.full_name||'').slice(0,120);
  if(!result.error&&result.data)profile=result.data;
- else if(!result.error&&user.email&&normalPhone(user.user_metadata?.mobile||pendingPhone||'')){
-  const fullName=pendingName||String(user.user_metadata?.name||'Customer').slice(0,100);
-  const {data}=await db.from('sh_customer_profiles').insert({user_id:user.id,full_name:fullName,phone:'+88'+normalPhone(user.user_metadata?.mobile||pendingPhone||''),email:user.email.toLowerCase()}).select().maybeSingle();
+ else if(!result.error&&user.email&&(priorPhone||normalPhone(pendingPhone))){
+  const fullName=pendingName||priorName||'Customer';
+  const {data}=await db.from('sh_customer_profiles').insert({user_id:user.id,full_name:fullName,phone:'+88'+(priorPhone||normalPhone(pendingPhone)),email:user.email.toLowerCase()}).select().maybeSingle();
   if(data)profile=data;
  }
- if(!profile){profile={user_id:user.id,full_name:pendingName||user.user_metadata?.name||'Customer',phone:normalPhone(user.user_metadata?.mobile||'')?'+88'+normalPhone(user.user_metadata?.mobile||''):null,email:user.email,preferred_address:''}}
+ profileExists=Boolean(profile);
+ if(!profile)profile={user_id:user.id,full_name:pendingName||priorName,phone:priorPhone?'+88'+priorPhone:null,email:user.email,preferred_address:''};
  pendingName='';
  window.dispatchEvent(new Event('sh:account'));
  if(signedUser)scheduleWatchSync();
@@ -164,6 +168,7 @@ function restoreShopping(){
   }
  }
 }
+const accountContact=()=>[signedUser?.email,normalPhone(profile?.phone)].filter(Boolean).join(' · ');
 function render(){
  if(!isAccountPage())return;
  restoreShopping();
@@ -172,15 +177,14 @@ function render(){
  page.classList.toggle('sh-account-signed-in',Boolean(signedUser));
  page.classList.toggle('sh-account-signed-out',!signedUser);
  if(!signedUser){currentTab='';loginView();return}
- const phone=normalPhone(profile?.phone)||'';
- view('<div class="sh-account-greeting"><h2 id="shAccountGreeting">Hello, '+esc(profile?.full_name||'Customer')+'</h2><p>'+esc([signedUser.email,phone].filter(Boolean).join(' · '))+'</p></div><div class="sh-account-layout"><aside class="sh-account-menu"><nav aria-label="Account sections">'+Object.entries(tabs).map(([key,label])=>'<a href="#account/'+key+'" data-account-tab="'+key+'">'+label+'</a>').join('')+'</nav><button class="sh-text-button" id="shSignOut" type="button">Sign out</button></aside><div id="shAccountPanel"></div></div>');
+ view('<div class="sh-account-greeting"><h2 id="shAccountGreeting">Hello, '+esc(profile?.full_name||'Customer')+'</h2><p id="shAccountContact">'+esc(accountContact())+'</p></div><div class="sh-account-layout"><aside class="sh-account-menu"><nav aria-label="Account sections">'+Object.entries(tabs).map(([key,label])=>'<a href="#account/'+key+'" data-account-tab="'+key+'">'+label+'</a>').join('')+'</nav><button class="sh-text-button" id="shSignOut" type="button">Sign out</button></aside><div id="shAccountPanel"></div></div>');
  $('shSignOut').onclick=async e=>{
   const button=e.currentTarget, label=button.textContent;
   button.disabled=true;button.textContent='Signing out…';
   try{
    const {error}=await db.auth.signOut();
    if(error)throw error;
-   signedUser=null;profile=null;clearInterval(inboxTimer);inboxTimer=null;
+   signedUser=null;profile=null;profileExists=false;clearInterval(inboxTimer);inboxTimer=null;
    $('shAccountUnread').hidden=true;
    $('shAccountTrigger').setAttribute('aria-label','My Account');
    window.dispatchEvent(new Event('sh:account'));
@@ -222,25 +226,36 @@ function loadTab(tab){
  profileView();
 }
 const isCurrentTab=(tab,version)=>isAccountPage()&&signedUser&&currentTab===tab&&tabVersion===version;
-async function ordersView(version){
- const {data,error}=await db.rpc('sh_customer_orders');
+function orderDate(value){
+ return new Date(value).toLocaleString('en-BD',{timeZone:'Asia/Dhaka',day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'});
+}
+async function ordersView(version,page=0){
+ const {data,error}=await db.rpc('sh_customer_order_history',{p_page:page});
  if(!isCurrentTab('orders',version))return;
  if(error)throw error;
  const orders=Array.isArray(data)?data:[];
- panel('<h3>Order History</h3><p class="sh-account-note">Your signed-in orders are saved securely. Previous guest orders still use order number and mobile tracking.</p>'+
- (orders.length?orders.map(o=>'<div class="sh-account-line"><div><b>'+esc(o.order_number)+'</b><small>'+esc(o.status||'Pending')+' · '+new Date(o.created_at).toLocaleDateString('en-BD')+'</small></div><div><span>'+money(o.total)+'</span><button type="button" class="sh-account-secondary" data-track-order="'+esc(o.order_number)+'">Track</button></div></div>').join(''):'<p>No orders yet.</p><a class="btn" href="/#shop">Start shopping</a>'));
+ panel('<h3>Order history</h3><p class="sh-account-note">See your account orders, track delivery or get help with an order. To find a guest order, <a href="/#track">track it by order number and mobile</a>.</p>'+
+ (orders.length?orders.slice(0,20).map(o=>'<article class="sh-order-card"><div class="sh-order-heading"><div><strong>'+esc(o.order_number)+'</strong><small>'+esc(orderDate(o.created_at))+'</small></div><strong>'+money(o.total)+'</strong></div><div class="sh-order-facts"><span>Status: '+esc(o.status||'Pending')+'</span>'+(o.payment_status?'<span>Payment: '+esc(o.payment_status)+'</span>':'')+'</div><div class="sh-order-actions"><button type="button" class="sh-account-secondary" data-track-order="'+esc(o.order_number)+'">Track order</button><a class="sh-account-secondary" href="/#care/report/'+encodeURIComponent(o.order_number)+'">Report an issue</a></div></article>').join(''):(page===0?'<p>No orders yet.</p><a class="btn" href="/#shop">Start shopping</a>':'<p>There are no more orders.</p>'))+
+ (page>0||orders.length>20?'<div class="sh-order-pages">'+(page>0?'<button id="shOrdersPrev" class="sh-account-secondary" type="button">Previous</button>':'')+'<span>Page '+(page+1)+'</span>'+(orders.length>20?'<button id="shOrdersNext" class="sh-account-secondary" type="button">Next</button>':'')+'</div>':''));
+ const go=async (event,nextPage)=>{
+  const button=event.currentTarget;button.disabled=true;
+  try{await ordersView(version,nextPage);if(isCurrentTab('orders',version))$('shAccountPanel').scrollIntoView({block:'start'})}
+  catch{if(isCurrentTab('orders',version))message('Could not load that page. Please try again.',true)}
+  finally{button.disabled=false}
+ };
+ if($('shOrdersPrev'))$('shOrdersPrev').onclick=e=>go(e,page-1);
+ if($('shOrdersNext'))$('shOrdersNext').onclick=e=>go(e,page+1);
  document.querySelectorAll('[data-track-order]').forEach(button=>button.onclick=()=>{
-  const number=String(button.dataset.trackOrder||'');
-  const mobile=normalPhone(profile?.phone)||'';
+  const number=button.dataset.trackOrder;
+  const order=orders.find(o=>o.order_number===number);
+  const mobile=normalPhone(order?.customer_phone)||'';
   history.pushState(null,'','/#track');
   window.dispatchEvent(new Event('hashchange'));
-  setTimeout(()=>{
-   const input=document.getElementById('tId'),phoneInput=document.getElementById('tPhone');
-   if(input)input.value=number;
-   if(phoneInput)phoneInput.value=mobile;
-   if(mobile)document.getElementById('trackForm')?.requestSubmit();
-   else phoneInput?.focus();
-  },50);
+  const input=$('tId'),phoneInput=$('tPhone');
+  if(input)input.value=number;
+  if(phoneInput)phoneInput.value=mobile;
+  if(mobile)$('trackForm')?.requestSubmit();
+  else phoneInput?.focus();
  });
 }
 async function checkInbox(silent=false){
@@ -351,41 +366,81 @@ function saveFeedback(form,text,error=false){
  status.classList.toggle('error',error);
 }
 async function submitAccountChange(form,working,success,task){
- const button=form.querySelector('[type=submit]'),label=button.textContent;
+ const button=form.querySelector('[type=submit]'),cancel=form.querySelector('#shCancelProfile,#shCancelAddress'),label=button.textContent;
  button.disabled=true;button.textContent=working;
+ if(cancel)cancel.disabled=true;
  saveFeedback(form,working);
  try{await task();saveFeedback(form,success)}
  catch(error){saveFeedback(form,error.message||'Could not save. Please try again.',true)}
- finally{button.disabled=false;button.textContent=label}
+ finally{button.disabled=false;button.textContent=label;if(cancel)cancel.disabled=false}
 }
 async function saveCustomerProfile(values){
- const user=signedUser;
- const {data,error}=await db.from('sh_customer_profiles').update({...values,updated_at:new Date().toISOString()}).eq('user_id',user.id).select().maybeSingle();
- if(error)throw error;
- if(!data)throw Error('Your changes could not be saved. Please contact SHOPYHAT support.');
- if(signedUser?.id!==user.id)return;
+ const owner=signedUser.id;
+ const {data,error}=await db.rpc('sh_save_customer_profile',{p_changes:values}).single();
+ if(error)throw error.code==='22023'||error.code==='42501'?Error(error.message):Error('Could not save your changes. Try again in a moment.');
+ if(!data)throw Error('Could not confirm the save. Reload My Account and try again.');
+ if(signedUser?.id!==owner)return;
  profile=data;
+ profileExists=true;
+ const greeting=$('shAccountGreeting'),contact=$('shAccountContact');
+ if(greeting)greeting.textContent='Hello, '+(profile.full_name||'Customer');
+ if(contact)contact.textContent=accountContact();
  window.dispatchEvent(new Event('sh:account'));
 }
 const formStatus='<p class="sh-action-status" role="status" aria-live="polite"></p>';
+async function loadActivity(host){
+ const labels={full_name:'Name',phone:'Mobile number',delivery_address:'Delivery address'};
+ try{
+  const {data,error}=await db.from('sh_customer_profile_changes').select('id,fields,changed_at').order('changed_at',{ascending:false}).order('id',{ascending:false}).limit(20);
+  if(error)throw error;
+  host.innerHTML=data?.length?'<ul class="sh-profile-activity">'+data.map(item=>'<li><strong>'+esc(item.fields.map(key=>labels[key]).filter(Boolean).join(', '))+'</strong><time datetime="'+esc(item.changed_at)+'">'+esc(orderDate(item.changed_at))+'</time></li>').join('')+'</ul>':'<p>No profile changes recorded yet.</p>';
+ }catch{host.textContent='Could not load recent changes. Reopen Profile to try again.'}
+}
 function addressView(){
- panel('<h3>Delivery address</h3><p>Save your usual address for faster checkout. You can use a different address for an individual order.</p><form id="shAddressForm">'+addressFields('account',profile?.delivery_address,profile?.preferred_address)+formButton('Save delivery address')+formStatus+'</form>');
- $('shAddressForm').onsubmit=e=>{
+ if(!profileExists){
+  panel('<h3>Delivery address</h3><p>Add your name and mobile number in Profile first. You can then save a delivery address for future orders.</p><a class="sh-account-secondary" href="#account/profile">Go to Profile</a>');
+  return;
+ }
+ const saved=profile?.preferred_address||'';
+ panel('<div class="sh-profile-heading"><h3>Delivery address</h3><button id="shEditAddress" class="sh-account-secondary" type="button">'+(saved?'Edit address':'Add address')+'</button></div><p>Use this address at checkout or choose a different one for an individual order.</p><div class="sh-profile-summary"><strong>Saved address</strong><p>'+esc(saved||'No delivery address saved yet.')+'</p></div>');
+ $('shEditAddress').onclick=editAddressView;
+}
+function editAddressView(){
+ panel('<h3>Edit delivery address</h3><p>Select a division and enter your district, thana and local address. Add a landmark if it helps the courier find you.</p><form id="shAddressForm">'+addressFields('account',profile?.delivery_address,profile?.preferred_address)+formButton('Save delivery address')+' <button id="shCancelAddress" type="button" class="sh-account-secondary">Cancel</button>'+formStatus+'</form>');
+ $('shCancelAddress').onclick=()=>{addressView();$('shEditAddress')?.focus()};
+ $('accountDivision')?.focus();
+ $('shAddressForm').onsubmit=async e=>{
   e.preventDefault();
   const form=e.currentTarget,address=readAddress(form,'account'),formatted=formatAddress(address);
   if(formatted&&(!address.line||formatted.length<10))return saveFeedback(form,'Enter your house, road or other details needed to find the address.',true);
   if(formatted.length>400)return saveFeedback(form,'The full address is too long. Shorten it to 400 characters or fewer.',true);
-  submitAccountChange(form,'Saving…',formatted?'Delivery address saved.':'Saved delivery address cleared.',()=>saveCustomerProfile({delivery_address:formatted?address:{},preferred_address:formatted}));
+  await submitAccountChange(form,'Saving…',formatted?'Delivery address saved.':'Saved delivery address cleared.',async()=>{
+   await saveCustomerProfile({delivery_address:formatted?address:{}});
+   if(form.isConnected){addressView();message(formatted?'Delivery address saved.':'Saved delivery address cleared.');$('shEditAddress')?.focus()}
+  });
  };
 }
 function profileView(){
- panel('<h3>Profile</h3><p>Your contact details help us identify your account and send order updates.</p><form id="shProfileForm">'+field('full_name','Full name','text','autocomplete="name" maxlength="120" value="'+esc(profile?.full_name||'')+'"')+'<label>Email address<input type="email" value="'+esc(signedUser.email||'')+'" readonly></label><label>Mobile number<input type="tel" value="'+esc(normalPhone(profile?.phone)||'')+'" readonly></label>'+formButton('Save profile')+formStatus+'</form>');
- $('shProfileForm').onsubmit=e=>{
-  e.preventDefault();const form=e.currentTarget,name=String(new FormData(form).get('full_name')||'').trim();
+ panel('<div class="sh-profile-heading"><h3>Profile</h3><button id="shEditProfile" class="sh-account-secondary" type="button">Edit profile</button></div><p>Manage your contact details for delivery and support.</p><dl class="sh-profile-details"><div><dt>Full name</dt><dd>'+esc(profile?.full_name||'Not added')+'</dd></div><div><dt>Mobile number</dt><dd>'+esc(normalPhone(profile?.phone)||'Not added')+'</dd></div><div><dt>Sign-in email</dt><dd>'+esc(signedUser.email||'Not added')+'</dd></div></dl><h4>Recent changes</h4><div id="shProfileActivity" role="status">Loading recent changes…</div>');
+ $('shEditProfile').onclick=editProfileView;
+ loadActivity($('shProfileActivity'));
+}
+function editProfileView(){
+ panel('<h3>Edit profile</h3><p>Enter the mobile number you want us to use for deliveries and support. Your sign-in email stays the same.</p><form id="shProfileForm">'+field('full_name','Full name','text','autocomplete="name" minlength="2" maxlength="120" value="'+esc(profile?.full_name||'')+'"')+field('phone','Mobile number','tel','autocomplete="tel" maxlength="20" placeholder="01XXXXXXXXX" value="'+esc(normalPhone(profile?.phone)||'')+'"')+'<p>Use a Bangladesh mobile number, for example 01XXXXXXXXX.</p>'+formButton('Save changes')+' <button id="shCancelProfile" type="button" class="sh-account-secondary">Cancel</button>'+formStatus+'</form>');
+ $('shCancelProfile').onclick=()=>{profileView();$('shEditProfile')?.focus()};
+ $('shProfileForm').elements.namedItem('full_name')?.focus();
+ $('shProfileForm').onsubmit=async e=>{
+  e.preventDefault();
+  const form=e.currentTarget,fields=new FormData(form),name=String(fields.get('full_name')||'').trim(),phone=normalPhone(fields.get('phone'));
   if(name.length<2)return saveFeedback(form,'Enter a name with at least 2 characters.',true);
-  submitAccountChange(form,'Saving…','Profile updated.',async()=>{
-   await saveCustomerProfile({full_name:name});
-   if($('shAccountGreeting')&&signedUser)$('shAccountGreeting').textContent='Hello, '+(profile?.full_name||'Customer');
+  if(!phone){form.elements.namedItem('phone')?.focus();return saveFeedback(form,'Enter a valid Bangladesh mobile number.',true)}
+  const changes={};
+  if(!profileExists||name!==profile?.full_name)changes.full_name=name;
+  if(!profileExists||phone!==normalPhone(profile?.phone))changes.phone='+88'+phone;
+  if(!Object.keys(changes).length)return saveFeedback(form,'You have no changes to save.');
+  await submitAccountChange(form,'Saving…','Profile updated.',async()=>{
+   await saveCustomerProfile(changes);
+   if(form.isConnected){profileView();message('Profile updated.');$('shEditProfile')?.focus()}
   });
  };
 }
