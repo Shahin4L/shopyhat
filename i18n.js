@@ -266,7 +266,17 @@ el.innerHTML='<button type="button" data-sh-lang="en" aria-label="English" title
 return el};
 function ensureSwitches(){
  const header=document.querySelector('.hd .icons');
- if(header&&!header.querySelector('.sh-header-lang'))header.prepend(makeSwitch('sh-header-lang'));
+ if(header&&!document.querySelector('.sh-header-lang')){
+  const control=makeSwitch('sh-header-lang');
+  const narrow=matchMedia('(max-width: 800px)');
+  const placeControl=()=>{
+   const announcement=document.querySelector('.ann');
+   if(narrow.matches&&announcement)announcement.append(control);
+   else header.prepend(control);
+  };
+  placeControl();
+  narrow.addEventListener('change',placeControl);
+ }
  for(const id of ['prodModal','coModal','okModal']){
   const box=document.querySelector('#'+id+' > .box');
   if(box&&!box.querySelector('.sh-modal-lang'))box.prepend(makeSwitch('sh-modal-lang'));
