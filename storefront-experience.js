@@ -535,7 +535,9 @@ function decorate(){
  ann.textContent=cfg.announcement||'';ann.hidden=!cfg.announcement;
  syncSlider();
 }
-async function load(){if(new URLSearchParams(location.search).get('studio_preview')==='1'){decorate();return}try{const r=await fetch(SH_DB_URL+'/rest/v1/sh_storefront_experience?id=eq.1&select=config',{headers:{apikey:SH_DB_KEY}});if(!r.ok)throw Error('settings unavailable');const rows=await r.json();if(rows[0]?.config)cfg={...cfg,...rows[0].config}}catch(e){console.info('Using default SHOPYHAT experience:',e.message)}decorate()}
+let loadingConfig=false,lastConfigSignature='';
+async function load(){if(new URLSearchParams(location.search).get('studio_preview')==='1'){decorate();return}if(loadingConfig)return;loadingConfig=true;try{const r=await fetch(SH_DB_URL+'/rest/v1/sh_storefront_experience?id=eq.1&select=config',{cache:'no-store',headers:{apikey:SH_DB_KEY}});if(!r.ok)throw Error('settings unavailable');const rows=await r.json();if(rows[0]?.config){const signature=JSON.stringify(rows[0].config);if(signature!==lastConfigSignature){lastConfigSignature=signature;cfg={...configDefault,...rows[0].config};decorate()}}}catch(e){console.info('SHOPYHAT settings sync:',e.message)}finally{loadingConfig=false}}
+async function connectSettings(){if(new URLSearchParams(location.search).get('studio_preview')==='1')return;try{const {createClient}=await import('https://esm.sh/@supabase/supabase-js@2.49.10');const client=createClient(SH_DB_URL,SH_DB_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});client.channel('sh-storefront-settings').on('postgres_changes',{event:'UPDATE',schema:'public',table:'sh_storefront_experience',filter:'id=eq.1'},()=>load()).subscribe(status=>{if(status==='SUBSCRIBED')load()});}catch(e){console.info('Realtime unavailable; using refresh fallback')}setInterval(()=>{if(!document.hidden)load()},30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});window.addEventListener('focus',load)}
 // Preview messages run only when this storefront is framed by its same-origin Admin Studio.
 // Never persist preview settings, alter backend records, or accept cross-origin messages.
 if(new URLSearchParams(location.search).get('studio_preview')==='1'){
@@ -543,7 +545,7 @@ if(new URLSearchParams(location.search).get('studio_preview')==='1'){
   if(event.origin!==location.origin||event.source!==window.parent)return;
   if(event.data?.type!=='shopyhat:studio-preview'||!event.data.config||typeof event.data.config!=='object')return;
   const preview=event.data.config;
-  const allowed=['announcement','headline','subtitle','hero_image_url','video_url','hero_media_mode','about_media_type','about_media_url','about_videos','about_photos','about_stories','campaign_text','hero_eyebrow','primary_cta','secondary_cta','search_placeholder','categories_title','arrivals_title','offers_title','story_title','cinematic','show_ribbon','show_floating_cards','show_new_arrivals','show_categories','show_campaigns','ui_font','heading_font','hero_alignment','hero_vertical','hero_image_position','product_card_side','body_font_size','heading_scale','content_width','section_spacing','hero_height','category_columns','accent_color','section_order','hero_slides','hero_autoplay','hero_interval'];
+  const allowed=['announcement','headline','subtitle','hero_image_url','video_url','hero_media_mode','about_media_type','about_media_url','about_videos','about_photos','about_stories','about_profile','campaign_text','hero_eyebrow','primary_cta','secondary_cta','search_placeholder','categories_title','arrivals_title','offers_title','story_title','cinematic','show_ribbon','show_floating_cards','show_new_arrivals','show_categories','show_campaigns','ui_font','heading_font','hero_alignment','hero_vertical','hero_image_position','product_card_side','body_font_size','heading_scale','content_width','section_spacing','hero_height','category_columns','accent_color','section_order','hero_slides','hero_autoplay','hero_interval'];
   for(const key of allowed){if(Object.prototype.hasOwnProperty.call(preview,key))cfg[key]=preview[key]}
   decorate();
   if(event.data.view==='about')location.hash='#about';
@@ -554,7 +556,7 @@ if(new URLSearchParams(location.search).get('studio_preview')==='1'){
  });
 }
 
-nav();decorate();load();
+nav();decorate();load();connectSettings();
 const watched=document.getElementById('homeGrid');
 if(watched){let pending=false;const observer=new MutationObserver(()=>{if(!pending){pending=true;requestAnimationFrame(()=>{pending=false;populateMega();decorate()})}});observer.observe(watched,{childList:true})}
 window.addEventListener('hashchange',()=>setTimeout(()=>{if(location.hash.startsWith('#home'))decorate()},30));
