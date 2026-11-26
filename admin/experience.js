@@ -202,7 +202,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   const list=$('shAboutVideos');
   list.innerHTML=aboutVideos.map((video,i)=>'<div class="sh-about-video-row" data-video-index="'+i+'">'+
    '<div class="sh-experience-fields"><label>Video '+(i+1)+' title (optional)<input type="text" maxlength="80" data-video-field="title" value="'+esc(video.title)+'"></label>'+
-   '<label>Video HTTPS URL<input type="url" data-video-field="url" value="'+esc(video.url)+'" placeholder="https://..."></label></div>'+
+   '<label>Video HTTPS URL<input type="url" data-video-field="url" value="'+esc(video.url)+'" placeholder="https://..."></label><label>Video context<textarea maxlength="1200" rows="4" data-video-field="description">'+esc(video.description||'')+'</textarea></label></div>'+
    '<div class="editor-actions"><button class="btn small" type="button" data-video-action="up" '+(i===0?'disabled':'')+' aria-label="Move video '+(i+1)+' up">↑</button>'+
    '<button class="btn small" type="button" data-video-action="down" '+(i===aboutVideos.length-1?'disabled':'')+' aria-label="Move video '+(i+1)+' down">↓</button>'+
    '<button class="btn small" type="button" data-video-action="remove" aria-label="Remove video '+(i+1)+'">Remove</button></div></div>').join('');
@@ -220,7 +220,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   list.addEventListener('input',e=>{
    const row=e.target.closest('[data-video-index]');
    const field=e.target.dataset.videoField;
-   if(row&&(field==='url'||field==='title'))aboutVideos[Number(row.dataset.videoIndex)][field]=e.target.value;
+   if(row&&(field==='url'||field==='title'||field==='description'))aboutVideos[Number(row.dataset.videoIndex)][field]=e.target.value;
   });
   list.addEventListener('click',e=>{
    const button=e.target.closest('[data-video-action]');
@@ -244,7 +244,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   for(const [key] of switches)c[key]=f.elements[key]?.checked!==false;
   c.hero_media_mode=mediaModes.includes(f.elements.hero_media_mode?.value)?f.elements.hero_media_mode.value:'auto';
   c.about_media_type=f.elements.about_media_type?.value||'none';c.about_media_url=f.elements.about_media_url?.value?.trim()||'';
-  c.about_videos=aboutVideos.filter(video=>isAboutURL(video.url.trim())).map(video=>({url:video.url.trim(),title:video.title.trim()}));
+  c.about_videos=aboutVideos.filter(video=>isAboutURL(video.url.trim())).map(video=>({url:video.url.trim(),title:video.title.trim(),description:String(video.description||'').trim().slice(0,1200)}));
   for(const [key] of designSelects)c[key]=f.elements[key]?.value;
   for(const [key,,min,max,fallback] of designNumbers){
    const n=Number(f.elements[key]?.value);c[key]=Number.isFinite(n)?Math.min(max,Math.max(min,n)):fallback;
@@ -464,7 +464,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
    form.elements.about_media_url.value=v.about_media_type==='image'?v.about_media_url||'':'';
    const legacy=v.about_media_type==='video'&&v.about_media_url?[{url:v.about_media_url,title:''}]:[];
    const saved=Array.isArray(v.about_videos)?v.about_videos:legacy;
-   aboutVideos=saved.slice(0,aboutVideoLimit).filter(video=>video&&typeof video.url==='string').map(video=>({url:video.url,title:String(video.title||'')}));
+   aboutVideos=saved.slice(0,aboutVideoLimit).filter(video=>video&&typeof video.url==='string').map(video=>({url:video.url,title:String(video.title||''),description:String(video.description||'')}));
    renderAboutVideos();
    setVideoPreview(/^https:\/\//i.test(v.video_url||'')?v.video_url:'');
    for(const [key,,opts,fallback] of designSelects)form.elements[key].value=opts.includes(v[key])?v[key]:fallback;
@@ -486,7 +486,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   for(const [key] of switches)config[key]=f.elements[key].checked;
   config.hero_media_mode=mediaModes.includes(f.elements.hero_media_mode.value)?f.elements.hero_media_mode.value:'auto';
   config.about_media_type=f.elements.about_media_type.value==='image'?'image':'none';
-  config.about_videos=aboutVideos.map(video=>({url:video.url.trim(),title:video.title.trim().slice(0,80)}));
+  config.about_videos=aboutVideos.map(video=>({url:video.url.trim(),title:video.title.trim().slice(0,80),description:String(video.description||'').trim().slice(0,1200)}));
   if(config.about_videos.some(video=>!isAboutURL(video.url)))return notify('shExperienceMsg','Enter a valid HTTPS URL for each About video, or remove the empty row.',true);
   config.about_media_url=f.elements.about_media_url.value.trim();
   if(config.about_media_type!=='none'&&!/^https:\/\//i.test(config.about_media_url))return notify('shExperienceMsg','Upload About media or provide a valid HTTPS URL.',true);
