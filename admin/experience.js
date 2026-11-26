@@ -196,6 +196,30 @@ export function setupExperienceStudio({db,roleCan,notify}){
   return '<section class="sh-design-editor sh-live-editor"><div class="topline"><div><h3>Live Storefront Preview</h3><p class="muted">View unsaved changes before publishing. Editing here does not affect the real website until Save & Publish.</p></div><div class="tools"><button type="button" class="btn small" id="shPreviewDesktop">Desktop</button><button type="button" class="btn small" id="shPreviewMobile">Mobile</button><button type="button" class="btn primary small" id="shPreviewUpdate">Preview Changes</button></div></div><div class="sh-preview-shell"><iframe title="SHOPYHAT storefront live design preview" id="shExperiencePreviewFrame" loading="lazy" referrerpolicy="same-origin" src="/?studio_preview=1#home"></iframe></div><p class="muted">For best results, preview Hero, menu and New Arrivals on desktop and mobile. The preview cannot place real orders.</p></section>';
  }
  let aboutVideos=[];
+ let aboutPhotos=[],aboutStories=[];
+ const sampleStory={title:'Rooted in Tradition. Styled for Today.',description:'Fashion is a personal expression of who we are. At SHOPYHAT, we celebrate the beauty of Bengali traditions alongside contemporary style. From elegant sarees to versatile three-piece sets and hijabs, our vision is to make discovering your own style a simple, enjoyable experience.',images:['/assets/hero/shopyhat-cinematic-saree.png','/assets/hero/shopyhat-cinematic-hijab.png','/assets/hero/shopyhat-cinematic-campaign.png']};
+ function renderAboutContent(){
+ const host=$('shAboutContent');if(!host)return;host.replaceChildren();
+ for(const [label,items,story] of [['About Photo Gallery',aboutPhotos,false],['Inside SHOPYHAT — Stories',aboutStories,true]]){
+ const section=document.createElement('section');const h=document.createElement('h3');h.textContent=label;section.append(h);
+ const button=(name,fn)=>{const b=document.createElement('button');b.type='button';b.className='btn small';b.textContent=name;b.onclick=()=>{if(settingsLoaded&&!publishing&&!activeUploads)fn()};return b};
+ items.forEach((item,i)=>{
+ const row=document.createElement('div');row.style.cssText='border:1px solid #ccc;border-radius:12px;padding:12px;margin:12px 0';
+ const field=(name,key,multi=false)=>{const l=document.createElement('label');l.textContent=name;const input=document.createElement(multi?'textarea':'input');input.value=item[key]||'';input.oninput=()=>{item[key]=input.value;markDraft(undefined,'about')};l.append(input);row.append(l)};
+ field('Title','title');field('Description / body','description',true);
+ const urls=story?item.images:[item.url];urls.forEach((url,j)=>{
+ const img=document.createElement('img');img.style.cssText='width:100%;max-width:260px;object-fit:contain;display:block';if(url)img.src=url;row.append(img);
+ const input=document.createElement('input');input.type='text';input.placeholder='Image URL';input.value=url||'';input.onchange=()=>{if(story)item.images[j]=input.value.trim();else item.url=input.value.trim();renderAboutContent();markDraft(undefined,'about')};row.append(input);
+ if(story)row.append(button('Remove image',()=>{item.images.splice(j,1);renderAboutContent();markDraft(undefined,'about')}));
+ });
+ const upload=document.createElement('input');upload.type='file';upload.accept='image/jpeg,image/png,image/webp';upload.multiple=story;row.append(upload);
+ const up=button('Upload / replace photo',async()=>{if(!upload.files.length)return;await runUpload(up,'shAboutMsg',async()=>{for(const selected of upload.files){if(!['image/jpeg','image/png','image/webp'].includes(selected.type)||selected.size>12*1024*1024)throw Error('Use JPG, PNG or WebP under 12 MB');const file=await optimizeHero(selected);const storage=db.storage.from('shopyhat-branding');const path='hero/about-'+crypto.randomUUID()+'.'+(file.type==='image/webp'?'webp':file.type==='image/png'?'png':'jpg');const {error}=await storage.upload(path,file,{contentType:file.type,upsert:false});if(error)throw error;const url=storage.getPublicUrl(path).data.publicUrl;if(story)item.images.push(url);else item.url=url;}renderAboutContent();markDraft(undefined,'about')})});row.append(up);
+ if(story)row.append(button('Add image URL',()=>{item.images.push('');renderAboutContent()}));
+ row.append(button('Remove '+(story?'story':'photo'),()=>{if(confirm('Remove from draft? Original files will be retained.')){items.splice(i,1);renderAboutContent();markDraft(undefined,'about')}}));section.append(row);
+ });section.append(button(story?'Add story':'Add photo',()=>{items.push(story?{title:'',description:'',images:[]}:{title:'',description:'',url:''});renderAboutContent();markDraft(undefined,'about')}));host.append(section);
+ }
+ }
+
  const aboutVideoLimit=6;
  const isAboutURL=value=>{try{return new URL(value).protocol==='https:'}catch{return false}};
  function renderAboutVideos(){
@@ -250,6 +274,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   for(const [key] of switches)c[key]=f.elements[key]?.checked!==false;
   c.hero_media_mode=mediaModes.includes(f.elements.hero_media_mode?.value)?f.elements.hero_media_mode.value:'auto';
   c.about_media_type=f.elements.about_media_type?.value||'none';c.about_media_url=f.elements.about_media_url?.value?.trim()||'';
+  c.about_photos=aboutPhotos;c.about_stories=aboutStories;
   c.about_videos=aboutVideos.filter(video=>isAboutURL(video.url.trim())).map(video=>({url:video.url.trim(),title:video.title.trim(),description:String(video.description||'').trim().slice(0,1200)}));
   for(const [key] of designSelects)c[key]=f.elements[key]?.value;
   for(const [key,,min,max,fallback] of designNumbers){
@@ -287,7 +312,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   aboutSection.innerHTML='<h3>About Us — Photo &amp; Video Playlist</h3><p class="muted">Upload up to six MP4 or WebM videos (25 MB each). Videos play in order and repeat. An optional story photo serves as the cover; recommended size is 1920 × 1080 px.</p><label for="shAboutFile">Choose photo or video</label><input type="file" id="shAboutFile" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"><div class="editor-actions"><button type="button" class="btn primary" id="shAboutUpload">Upload About Media</button><button type="button" class="btn" id="shAboutRemove">Remove About Photo</button></div><p id="shAboutMsg" class="msg" role="status" aria-live="polite"></p>';
   panel.querySelector('#shExperienceForm').before(aboutSection);
   const aboutFields=document.createElement('section');aboutFields.className='sh-design-editor';aboutFields.innerHTML='<h3>About video playlist</h3><div id="shAboutVideos"></div><div class="editor-actions"><button class="btn" type="button" id="shAboutVideoAdd">Add Video URL</button></div><div class="sh-experience-fields"><label>About photo<select name="about_media_type"><option value="none">None</option><option value="image">Photo</option></select></label><label>About photo HTTPS URL<input type="url" name="about_media_url" placeholder="https://..."></label></div>';
-  panel.querySelector('#shExperienceForm').prepend(aboutFields);
+  panel.querySelector('#shExperienceForm').prepend(aboutFields);const contentHost=document.createElement('section');contentHost.id='shAboutContent';aboutFields.after(contentHost);
   const form=panel.querySelector('#shExperienceForm');
   form.addEventListener('invalid',()=>notify('shExperienceMsg','Check the highlighted field before publishing.',true),true);
   const actions=panel.querySelector('#shExperienceMsg').previousElementSibling;
@@ -412,8 +437,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
     aboutVideos.push({url,title:''});
     renderAboutVideos();
    }else{
-    f.elements.about_media_url.value=url;
-    f.elements.about_media_type.value='image';
+    aboutPhotos.push({url,title:'',description:''});renderAboutContent();
    }
    $('shAboutFile').value='';
    notify('shAboutMsg','Uploaded successfully. Click Save & Publish Experience to show it on About Us.');markDraft(undefined,'about');
@@ -471,6 +495,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
    const legacy=v.about_media_type==='video'&&v.about_media_url?[{url:v.about_media_url,title:''}]:[];
    const saved=Array.isArray(v.about_videos)&&v.about_videos.length?v.about_videos:legacy;
    aboutVideos=saved.slice(0,aboutVideoLimit).filter(video=>video&&typeof video.url==='string').map((video,i)=>({url:video.url,title:String(video.title||(i===0?"Discover Fashion. Discover SHOPYHAT.":'')),description:String(video.description||(i===0?"Fashion is more than what you wear — it is an expression of who you are. Since 2020, SHOPYHAT has been inspired by the beauty of tradition, contemporary fashion and individual style. Discover a world where elegance meets everyday living. Your Choice, Our Gift.":''))}));
+   aboutPhotos=Array.isArray(v.about_photos)?v.about_photos.map(x=>({...x})):v.about_media_type==='image'&&v.about_media_url?[{url:v.about_media_url,title:'',description:''}]:[];aboutStories=Array.isArray(v.about_stories)?v.about_stories.map(x=>({...x,images:[...(x.images||[])]})): [structuredClone(sampleStory)];renderAboutContent();
    renderAboutVideos();
    setVideoPreview(/^https:\/\//i.test(v.video_url||'')?v.video_url:'');
    for(const [key,,opts,fallback] of designSelects)form.elements[key].value=opts.includes(v[key])?v[key]:fallback;
@@ -492,6 +517,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   for(const [key] of switches)config[key]=f.elements[key].checked;
   config.hero_media_mode=mediaModes.includes(f.elements.hero_media_mode.value)?f.elements.hero_media_mode.value:'auto';
   config.about_media_type=f.elements.about_media_type.value==='image'?'image':'none';
+  config.about_photos=aboutPhotos.filter(x=>x.url);config.about_stories=aboutStories.map(x=>({...x,images:x.images.filter(Boolean)}));
   config.about_videos=aboutVideos.map(video=>({url:video.url.trim(),title:video.title.trim().slice(0,80),description:String(video.description||'').trim().slice(0,1200)}));
   if(config.about_videos.some(video=>!isAboutURL(video.url)))return notify('shExperienceMsg','Enter a valid HTTPS URL for each About video, or remove the empty row.',true);
   config.about_media_url=config.about_media_type==='image'?f.elements.about_media_url.value.trim():'';
