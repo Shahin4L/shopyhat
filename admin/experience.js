@@ -116,9 +116,9 @@ export function setupExperienceStudio({db,roleCan,notify}){
 
  function carouselHTML(){
   return '<details class="sh-design-editor" open><summary>Hero Slideshow — Multiple Pictures</summary>'+
-   '<p class="muted">Up to eight hero images. Recommended: 1920 × 1080 px (16:9), JPG / PNG / WebP. Keep important details near the center for mobile. Use ↑/↓ to change image order. Select “Photos + video” to include the hero video.</p>'+
+   '<p class="muted">Up to eight hero images. Recommended: 1920 × 1080 px (16:9), JPG / PNG / WebP. Keep important details near the center for mobile. Use ↑/↓ to change image order. Select “Photos + video” to include the hero video. The next slide starts after the video ends.</p>'+
    '<div class="fieldrow"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="hero_autoplay" style="width:auto" checked> Autoplay slideshow</label>'+
-   '<label>Time per photo or video (seconds)<input type="number" name="hero_interval" min="3" max="60" step="1" value="6"></label></div>'+
+   '<label>Time per photo (seconds)<input type="number" name="hero_interval" min="3" max="60" step="1" value="6"></label></div>'+
    '<div id="shSlideRows" class="sh-slide-rows"></div>'+
    '<div class="tools" style="margin-top:15px"><button type="button" id="shSlideAdd" class="btn primary">+ Add Hero Slide</button></div></details>';
  }

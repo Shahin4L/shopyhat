@@ -276,18 +276,3 @@ html,body{max-width:100%;overflow-x:clip}
 }
 
 .sh-about-player { position: relative; isolation: isolate; }
-.sh-about-sound {
- position: absolute;
- top: 12px;
- right: 12px;
- z-index: 1;
- min-height: 44px;
- padding: 9px 16px;
- border: 1px solid #ffffff80;
- border-radius: 999px;
- background: #17100eee;
- color: #fff;
- font-size: 13px;
- font-weight: 700;
-}
-.sh-about-sound:focus-visible { outline: 2px solid #ffae69; outline-offset: 2px; }
