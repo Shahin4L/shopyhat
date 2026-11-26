@@ -435,3 +435,45 @@ html,body{max-width:100%;overflow-x:clip}
 @media(prefers-reduced-motion:reduce) {
  #p-home .sh-cinematic h1 span i,#p-home .sh-cinematic .wrap p,#p-home .sh-cinematic .btns { animation:none!important; transform:none!important; opacity:1!important; }
 }
+
+/* Full-bleed cinematic hero V3 */
+#p-home .sh-cinematic { min-height:0; isolation:isolate; }
+#p-home .sh-cinematic .wrap,
+#p-home .sh-has-rotation .wrap,
+#p-home .sh-cinematic:has(.sh-hero-video) .wrap {
+ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+ min-height:clamp(440px,52vw,var(--sh-hero-min-height,660px));
+ max-height:none; align-items:center; align-content:center;
+ padding:48px clamp(20px,5vw,80px) 88px; direction:ltr; gap:0;
+}
+#p-home .sh-cinematic .wrap>div:first-child { text-align:left; margin:0; max-width:620px; }
+#p-home .sh-cinematic .wrap p { margin:0 0 20px; }
+#p-home .sh-cinematic .btns { display:flex; justify-content:flex-start; flex-wrap:wrap; gap:10px; }
+#p-home .sh-cinematic .btns .btn { flex:0 1 auto; min-height:44px; }
+#p-home .sh-has-rotation .sh-slider-stage { inset:0; }
+#p-home .sh-has-rotation .sh-slider-backdrop,
+#p-home .sh-has-rotation img.sh-slider-backdrop[src*="/assets/hero/shopyhat-cinematic-"],
+#p-home .sh-cinematic .sh-hero-video { inset:0; width:100%; height:100%; aspect-ratio:auto; object-fit:cover; object-position:right center; }
+#p-home .sh-cinematic.sh-has-image:before { background-size:cover; background-position:right center; }
+#p-home .sh-cinematic:after,#p-home .sh-cinematic:has(.sh-hero-video):after,
+#p-home .sh-has-rotation .sh-slider-stage:after { inset:0; background:linear-gradient(90deg,#130a07ed 0%,#130a0799 38%,#130a071a 76%),linear-gradient(0deg,#130a0799,transparent 24%); }
+#p-home .sh-has-rotation .sh-slider-controls { bottom:18px; gap:8px; padding:4px 8px; border:1px solid #ffffff40; background:#17100c99; backdrop-filter:blur(14px); border-radius:999px; }
+#p-home .sh-slider-arrow { width:44px;height:44px;border:0;background:#ffffff12;font-size:26px; }
+#p-home .sh-slider-dots { gap:0; }
+#p-home .sh-slider-dot { width:20px;height:28px; }
+#p-home .sh-slider-dot::after { inset:auto;top:12px;left:7px;width:6px;height:4px;border-radius:8px; }
+#p-home .sh-slider-dot.active { width:30px; }
+#p-home .sh-slider-dot.active::after { width:18px;left:6px;background:#ff8b27; }
+@media(max-width:820px){
+ #p-home .sh-cinematic .wrap,#p-home .sh-has-rotation .wrap,#p-home .sh-cinematic:has(.sh-hero-video) .wrap {
+ grid-template-columns:minmax(0,1fr);min-height:clamp(410px,112vw,570px);padding:32px clamp(16px,5vw,32px) 82px;align-content:center;align-items:center;
+ }
+ #p-home .sh-cinematic .wrap>div:first-child { max-width: min(78%,440px); }
+ #p-home .sh-cinematic h1 { font-size:clamp(30px,7.8vw,54px);line-height:1.08; }
+ #p-home .sh-cinematic .wrap p { font-size:clamp(13px,3.3vw,16px);line-height:1.5; }
+ #p-home .sh-cinematic .btns { display:flex;flex-direction:column;align-items:flex-start; }
+ #p-home .sh-cinematic .btns .btn { padding:10px 15px; }
+ #p-home .sh-has-rotation .sh-slider-backdrop,#p-home .sh-has-rotation img.sh-slider-backdrop[src*="/assets/hero/shopyhat-cinematic-"],#p-home .sh-cinematic .sh-hero-video { object-position:78% center; }
+ #p-home .sh-cinematic.sh-has-image:before { background-position:78% center; }
+ #p-home .sh-cinematic:after,#p-home .sh-cinematic:has(.sh-hero-video):after,#p-home .sh-has-rotation .sh-slider-stage:after { background:linear-gradient(90deg,#130a07df,#130a0780 48%,#130a071a 100%),linear-gradient(0deg,#130a0799,transparent 28%); }
+}
