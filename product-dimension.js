@@ -10,15 +10,15 @@ const muted=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const lowPower=()=>typeof navigator.deviceMemory==='number'&&navigator.deviceMemory<3;
 function normalize(input){
  const x=input&&typeof input==='object'&&!Array.isArray(input)?input:{};
- const category_modes={};for(const [k,v] of Object.entries(x.category_modes||{})){if(k.length<80&&MODES.includes(v))category_modes[key(k)]=v;}
- const product_modes={};for(const [k,v] of Object.entries(x.product_modes||{})){if(/^[0-9]{1,12}$/.test(k)&&MODES.includes(v))product_modes[k]=v;}
+ const category_modes=Object.create(null);for(const [k,v] of Object.entries(x.category_modes||{})){if(k.length<80&&MODES.includes(v))category_modes[key(k)]=v;}
+ const product_modes=Object.create(null);for(const [k,v] of Object.entries(x.product_modes||{})){if(/^[0-9]{1,12}$/.test(k)&&MODES.includes(v))product_modes[k]=v;}
  return {enabled:x.enabled===true,mode:safeMode(x.mode),allow_customer_switch:x.allow_customer_switch!==false,ambient:x.ambient!==false,intensity:Math.max(0,Math.min(100,Number(x.intensity)||0)),category_modes,product_modes};
 }
 function modeFor(p){
  if(!cfg.enabled)return 'classic';
  const productMode=cfg.product_modes[String(p?.id)]||'';
  const categoryMode=cfg.category_modes[key(p?.cat)]||cfg.category_modes[key(p?.catName)]||'';
- const chosen=(cfg.allow_customer_switch?customerMode:'')||productMode||categoryMode||cfg.mode;
+ const chosen=(cfg.allow_customer_switch&&!new URLSearchParams(location.search).has('studio_preview')?customerMode:'')||productMode||categoryMode||cfg.mode;
  if(chosen==='ultra')return 'immersive'; // Never fabricate a genuine 3D model from a single photograph.
  if((muted()||lowPower())&&chosen==='immersive')return 'premium';
  return safeMode(chosen);
@@ -49,9 +49,9 @@ function updateGallery(){
  if(mode!=='classic'&&cfg.ambient){gal.classList.add('sh-dimension-ambient');gal.style.setProperty('--sh-dimension-color',color);gal.style.setProperty('--sh-dimension-strength',String(cfg.intensity/100));}
  if(cfg.allow_customer_switch){
    const bar=document.createElement('div');bar.className='sh-dimension-toolbar';bar.setAttribute('role','group');bar.setAttribute('aria-label','Product display mode');
-   for(const [m,label] of [['classic','Classic'],['immersive','Explore']]){
+   for(const [m,label] of [['classic','Classic'],['premium','Premium'],['immersive','Explore']]){
      const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.dimensionMode=m;
-     button.setAttribute('aria-pressed',String(mode===m||(mode==='premium'&&m==='immersive')));
+     button.setAttribute('aria-pressed',String(mode===m));
      button.addEventListener('click',()=>{customerMode=m;try{localStorage.setItem('sh_dimension_choice_v1',m)}catch{}updateGallery()});
      bar.append(button);
    }
@@ -95,8 +95,8 @@ async function load(){
  if(new URLSearchParams(location.search).get('studio_preview')==='1')return;
  try{
    const r=await fetch(SH_DB_URL+'/rest/v1/sh_storefront_experience?id=eq.1&select=config',{headers:{apikey:SH_DB_KEY},cache:'no-store'});
-   if(!r.ok)return;const rows=await r.json();cfg=normalize(rows?.[0]?.config?.product_dimension);schedule();
- }catch(e){console.info('Product visual settings unavailable; classic view preserved.')}
+   if(!r.ok)throw Error('Settings unavailable');const rows=await r.json();cfg=normalize(rows?.[0]?.config?.product_dimension);schedule();
+ }catch(e){cfg={...defaults};schedule();console.info('Product visual settings unavailable; classic view preserved.')}
 }
 try{const stored=localStorage.getItem('sh_dimension_choice_v1');if(stored==='classic'||stored==='premium'||stored==='immersive')customerMode=stored;}catch{}
 if(new URLSearchParams(location.search).get('studio_preview')==='1'){
