@@ -48,3 +48,18 @@
 @media(prefers-reduced-motion:reduce){
  #prodModal.sh-dimension-page-ambient,#prodBox.sh-dimension-page-ambient{transition:none}
 }
+
+/* Garment fidelity: the atmosphere belongs outside the product photograph.
+   Solid photo stage prevents adaptive background colors shining through transparent source PNGs. */
+#prodBox .pd .gal .main{background:#fff!important;isolation:isolate}
+#prodBox .pd .gal .main::before,
+#prodBox .pd .gal .main::after{display:none!important;content:none!important}
+#prodBox .pd .gal .main>img{
+ background:#fff!important;
+ filter:none!important;
+ opacity:1!important;
+ mix-blend-mode:normal!important;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+}
+#prodBox .pd .gal.sh-dimension-ambient .main{background:#fff!important}
