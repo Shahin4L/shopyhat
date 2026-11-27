@@ -66,6 +66,29 @@ function scanCards(){
    card.classList.toggle('sh-dimension-card',cfg.enabled&&mode!=='classic');
  }
 }
+
+/* Independent of visual mode: use existing thumbnail handler, preserving variant and cart state. */
+let gesture=null;
+document.addEventListener('pointerdown',e=>{
+ const gallery=e.target.closest?.('#pdMain');
+ if(!gallery||!e.isPrimary||e.button!==0){gesture=null;return;}
+ const buttons=gallery.closest('.gal')?.querySelectorAll('[data-gi]');
+ if(!buttons||buttons.length<2)return;
+ gesture={id:e.pointerId,x:e.clientX,y:e.clientY,gallery};
+},{passive:true});
+document.addEventListener('pointercancel',()=>{gesture=null},{passive:true});
+document.addEventListener('pointerup',e=>{
+ const g=gesture;gesture=null;if(!g||g.id!==e.pointerId||!g.gallery.isConnected)return;
+ const dx=e.clientX-g.x,dy=e.clientY-g.y;
+ if(Math.abs(dx)<40||Math.abs(dx)<Math.abs(dy)*1.5)return;
+ const buttons=[...g.gallery.closest('.gal').querySelectorAll('[data-gi]')];
+ const current=buttons.findIndex(b=>b.classList.contains('on'));
+ if(current<0||buttons.length<2)return;
+ const next=Math.max(0,Math.min(buttons.length-1,current+(dx<0?1:-1)));
+ if(next!==current)buttons[next].click();
+},{passive:true});
+document.addEventListener('dragstart',e=>{if(e.target.closest?.('#pdMain img'))e.preventDefault()});
+
 let pending=false;
 function schedule(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;updateGallery();scanCards()});}
 async function load(){
