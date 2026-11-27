@@ -269,7 +269,10 @@ export function setupExperienceStudio({db,roleCan,notify}){
    markDraft(action==='remove'?'Video removed from draft. Save & Publish to update the website.':'About video playlist updated. Publish to apply.','about');
   });
  }
- function previewConfig(){
+const dimensionModes=['classic','premium','immersive'];
+ function dimensionValues(){const f=$('shExperienceForm');const old=currentConfig.product_dimension||{};return {...old,enabled:f.elements.dimension_enabled.checked,mode:f.elements.dimension_mode.value,ambient:f.elements.dimension_ambient.checked,allow_customer_switch:f.elements.dimension_switch.checked,intensity:Number(f.elements.dimension_intensity.value)};}
+ function loadDimension(v){const f=$('shExperienceForm'),d=v.product_dimension||{};f.elements.dimension_enabled.checked=d.enabled===true;f.elements.dimension_mode.value=dimensionModes.includes(d.mode)?d.mode:'classic';f.elements.dimension_ambient.checked=d.ambient!==false;f.elements.dimension_switch.checked=d.allow_customer_switch!==false;f.elements.dimension_intensity.value=Math.max(0,Math.min(100,Number(d.intensity??42))); }
+  function previewConfig(){
   const f=$('shExperienceForm');if(!f)return {};
   const c={...defaults,...currentConfig};
   for(const [key] of fields)c[key]=f.elements[key]?.value?.trim()||'';
@@ -285,6 +288,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   c.accent_color=f.elements.accent_color?.value||'#f47721';
   c.section_order=[...sectionOrder];
   c.hero_slides=photoSlides(c.hero_image_url).filter(slide=>/^https:\/\//i.test(slide.image_url||'')).slice(0,8);
+  c.product_dimension=dimensionValues();
   c.hero_autoplay=false; // Keep the chosen slide in view while editing.
   c.hero_interval=Math.max(3,Math.min(60,Number(f.elements.hero_interval?.value)||6));
   return c;
@@ -316,6 +320,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   const aboutFields=document.createElement('section');aboutFields.className='sh-design-editor';aboutFields.innerHTML='<h3>About video playlist</h3><div id="shAboutVideos"></div><div class="editor-actions"><button class="btn" type="button" id="shAboutVideoAdd">Add Video URL</button></div><div class="sh-experience-fields"><label>About photo<select name="about_media_type"><option value="none">None</option><option value="image">Photo</option></select></label><label>About photo HTTPS URL<input type="url" name="about_media_url" placeholder="https://..."></label></div>';
   panel.querySelector('#shExperienceForm').prepend(aboutFields);const contentHost=document.createElement('section');contentHost.id='shAboutContent';aboutFields.after(contentHost);
   const form=panel.querySelector('#shExperienceForm');
+  const dimension=document.createElement('section');dimension.className='sh-design-editor';dimension.innerHTML='<h3>Product Dimension Studio</h3><p class="muted">Optional product presentation. Open a product in the preview to inspect the effect.</p><div class="sh-experience-fields"><label><input type="checkbox" name="dimension_enabled"> Enable product experience</label><label>Display mode<select name="dimension_mode"><option value="classic">Classic</option><option value="premium">Premium</option><option value="immersive">Immersive 2.5D</option></select></label><label><input type="checkbox" name="dimension_ambient" checked> Adaptive colour background</label><label><input type="checkbox" name="dimension_switch" checked> Allow customer display choice</label><label>Ambient intensity<input type="range" name="dimension_intensity" min="0" max="100" value="42"></label></div>';form.prepend(dimension);
   form.addEventListener('invalid',()=>notify('shExperienceMsg','Check the highlighted field before publishing.',true),true);
   const actions=panel.querySelector('#shExperienceMsg').previousElementSibling;
   const publish=actions.querySelector('[type=submit]');
@@ -516,6 +521,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
   try{
    const {data,error}=await db.from('sh_storefront_experience').select('config').eq('id',1).maybeSingle();
    if(error)throw error;currentConfig={...(data?.config||{})};$('page-about-studio')?.dispatchEvent(new Event('sh-profile-load'));const v={...defaults,...currentConfig},form=$('shExperienceForm');
+   loadDimension(v);
    for(const [key] of fields)form.elements[key].value=v[key]||'';
    for(const [key] of switches)form.elements[key].checked=v[key]!==false;
    form.elements.hero_media_mode.value=mediaModes.includes(v.hero_media_mode)?v.hero_media_mode:'auto';
@@ -561,6 +567,7 @@ export function setupExperienceStudio({db,roleCan,notify}){
    if(slide.cta_url&&!/^#(?:[a-z0-9/_-]+)?$|^https:\/\//i.test(slide.cta_url))return notify('shExperienceMsg','Slide CTA must be a #path or HTTPS link.',true);
   }
   config.hero_slides=slides;
+  config.product_dimension=dimensionValues();
   config.hero_autoplay=f.elements.hero_autoplay.checked;
   config.hero_interval=Math.max(3,Math.min(60,Number(f.elements.hero_interval.value)||6));
   const button=publishButton();publishing=true;syncPublish();button.textContent='Publishing…';button.setAttribute('aria-busy','true');
