@@ -1,4 +1,4 @@
-import {setupAfterSalesPolicyEditor} from './after-sales-policy.js';
+import {setupAfterSalesPolicyEditor} from './after-sales-policy.js?v=legal-v2';
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.49.10';
 import {SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,CHECKOUT_URL} from './config.js';
 import {setupBrandManager} from './brand.js';
