@@ -15,3 +15,24 @@
 @media(prefers-reduced-motion:reduce){#prodBox .pd .gal.sh-dimension-premium *,#prodBox .pd .gal.sh-dimension-immersive *,.pro-card.sh-dimension-card *{transition:none!important;animation:none!important}}
 
 #pdMain{touch-action:pan-y pinch-zoom} #pdMain img{-webkit-user-drag:none;user-select:none}
+
+/* Product-wide adaptive palette: intentionally subtle to preserve readable controls. */
+#prodModal.sh-dimension-page-ambient{
+ background:color-mix(in srgb,var(--sh-dimension-color) var(--sh-dimension-mix),#f7f3ed);
+ transition:background-color .3s ease;
+}
+#prodBox.sh-dimension-page-ambient{
+ background:color-mix(in srgb,var(--sh-dimension-color) var(--sh-dimension-mix),#fff);
+ transition:background-color .3s ease;
+}
+#prodBox.sh-dimension-page-ambient .pd .body,
+#prodBox.sh-dimension-page-ambient .sh-product-below{
+ background:transparent;
+}
+#prodBox.sh-dimension-page-ambient .product-reassurance,
+#prodBox.sh-dimension-page-ambient .sh-product-review{
+ background:color-mix(in srgb,var(--sh-dimension-color) calc(var(--sh-dimension-mix) / 2),#fffaf5);
+}
+@media(prefers-reduced-motion:reduce){
+ #prodModal.sh-dimension-page-ambient,#prodBox.sh-dimension-page-ambient{transition:none}
+}
