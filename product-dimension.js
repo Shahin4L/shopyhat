@@ -34,13 +34,17 @@ function cleanState(gal){
  gal.style.removeProperty('--sh-dimension-color');
  gal.style.removeProperty('--sh-dimension-strength');
  gal.querySelector('.sh-dimension-toolbar')?.remove();
+ delete gal.dataset.shDimensionSignature;
 }
 function updateGallery(){
  const gal=document.querySelector('#prodBox .pd .gal');if(!gal)return;
  const current=photoInfo();
  if(!current||!cfg.enabled){cleanState(gal);return;}
  const {mode,color}=current;
+ const sig=[mode,color,cfg.ambient,cfg.intensity,cfg.allow_customer_switch,customerMode].join('|');
+ if(gal.dataset.shDimensionSignature===sig && (!cfg.allow_customer_switch||gal.querySelector('.sh-dimension-toolbar')))return;
  cleanState(gal);
+ gal.dataset.shDimensionSignature=sig;
  if(mode!=='classic')gal.classList.add('sh-dimension-'+mode);
  if(mode!=='classic'&&cfg.ambient){gal.classList.add('sh-dimension-ambient');gal.style.setProperty('--sh-dimension-color',color);gal.style.setProperty('--sh-dimension-strength',String(cfg.intensity/100));}
  if(cfg.allow_customer_switch){
