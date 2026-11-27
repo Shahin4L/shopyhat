@@ -69,3 +69,45 @@
 @media(prefers-reduced-motion:no-preference){#p-about.about-animations-ready .about-reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}#p-about.about-animations-ready .about-reveal.is-visible{opacity:1;transform:translateY(0)}}
 @media(max-width:920px){#p-about .about-v2-grid,#p-about .about-v2-history,#p-about .about-v2-social{grid-template-columns:1fr}#p-about .about-v2-brand{min-height:340px}#p-about .about-v2-values,#p-about .about-v2-purpose-grid{grid-template-columns:1fr 1fr}#p-about .about-v2-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){#p-about .about-v2-hero{padding:46px 0}#p-about .about-v2-facts{grid-template-columns:1fr 1fr}#p-about .about-v2-values,#p-about .about-v2-purpose-grid,#p-about .about-v2-gallery{grid-template-columns:1fr}#p-about .about-v2-gallery-card,#p-about .about-v2-gallery-card:first-child{min-height:290px}#p-about .about-v2-promise{flex-direction:column;align-items:stretch}#p-about .about-v2-promise-actions{flex:initial}#p-about .about-v2-history{padding:23px}#p-about .about-v2-social{padding:20px}}
+
+/* About Us — SHOPYHAT signature logo card, isolated premium refinement. */
+#p-about .about-v2-brand{
+  isolation:isolate;
+  background:radial-gradient(ellipse at 50% 20%,#ab704044 0%,transparent 57%),linear-gradient(150deg,#483124,#211713 85%);
+  border:1px solid #e7bd8b56;
+  box-shadow:0 22px 55px #120a083d,inset 0 1px #ffffff1c;
+}
+#p-about .about-v2-brand::before{
+  content:"";position:absolute;inset:10px;pointer-events:none;
+  border:1px solid #fff2d01e;border-radius:22px;z-index:1;
+}
+#p-about .about-v2-brand-glow{
+  inset:0;background:radial-gradient(ellipse 65% 40% at 50% 35%,#ffae542e,transparent 80%);
+  opacity:.72;transition:opacity .5s ease;z-index:0;
+}
+#p-about .about-v2-brand-logo{
+  width:clamp(132px,38%,205px);
+  border-radius:25px;
+  border:1px solid #f8c98b52;
+  box-shadow:0 15px 30px #09040366,0 0 0 7px #fff5e908;
+  z-index:2;transition:transform .45s ease,box-shadow .45s ease;
+}
+#p-about .about-v2-brand-logo img{filter:none;opacity:1;mix-blend-mode:normal;transform:none}
+#p-about .about-v2-brand strong{font-size:clamp(24px,2.8vw,36px);letter-spacing:.1em;line-height:1.12;z-index:2}
+#p-about .about-v2-brand>span{letter-spacing:.11em;line-height:1.5;z-index:2}
+#p-about .about-v2-brand>small{line-height:1.55;letter-spacing:.09em;z-index:2}
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+ #p-about .about-v2-brand:hover .about-v2-brand-logo{transform:translateY(-4px);box-shadow:0 19px 40px #09040377,0 0 0 8px #fff5e90d}
+ #p-about .about-v2-brand:hover .about-v2-brand-glow{opacity:1}
+}
+@media(max-width:600px){
+ #p-about .about-v2-brand{min-height:0;padding:30px 22px 34px;gap:11px;border-radius:24px}
+ #p-about .about-v2-brand::before{inset:8px;border-radius:17px}
+ #p-about .about-v2-brand-logo{width:clamp(126px,42vw,176px);border-radius:21px}
+ #p-about .about-v2-brand strong{font-size:clamp(25px,7.5vw,34px);letter-spacing:.09em}
+ #p-about .about-v2-brand>span{font-size:11px}
+ #p-about .about-v2-brand>small{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+ #p-about .about-v2-brand-logo,#p-about .about-v2-brand-glow{transition:none}
+}
