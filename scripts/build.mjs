@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 const out = 'dist';
 await mkdir(out, { recursive: true });
-for (const f of ['_redirects','robots.txt','sitemap.xml','index.html','account-confirmed.html','reset-password.html','admin.html','i18n.js','customer-care.js','visitor-analytics.js','brand-about.js','about-enhanced.css','storefront-experience.css','storefront-experience.js','customer-account.css','customer-account.js','password-strength.js']) {
+for (const f of ['_redirects','robots.txt','sitemap.xml','index.html','account-confirmed.html','reset-password.html','admin.html','i18n.js','customer-care.js','visitor-analytics.js','brand-about.js','about-enhanced.css','storefront-experience.css','storefront-experience.js','customer-account.css','customer-account.js','password-strength.js','policy-live.js']) {
   await copyFile(f, join(out,f));
 }
 await cp('admin',join(out,'admin'),{recursive:true});
