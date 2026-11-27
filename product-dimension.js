@@ -73,7 +73,7 @@ document.addEventListener('pointerdown',e=>{
  const gallery=e.target.closest?.('#pdMain');
  if(!gallery||!e.isPrimary||e.button!==0){gesture=null;return;}
  const buttons=gallery.closest('.gal')?.querySelectorAll('[data-gi]');
- if(!buttons||buttons.length<2)return;
+ if(!buttons||buttons.length<2){gesture=null;return;}
  gesture={id:e.pointerId,x:e.clientX,y:e.clientY,gallery};
 },{passive:true});
 document.addEventListener('pointercancel',()=>{gesture=null},{passive:true});
