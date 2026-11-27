@@ -13,3 +13,5 @@
 @media(hover:hover){.pro-card.sh-dimension-card:hover .im .art{transform:translateY(-3px)}}
 @media(max-width:680px){#prodBox .sh-dimension-toolbar{justify-content:center}#prodBox .pd .gal.sh-dimension-immersive .main:hover img{transform:none}}
 @media(prefers-reduced-motion:reduce){#prodBox .pd .gal.sh-dimension-premium *,#prodBox .pd .gal.sh-dimension-immersive *,.pro-card.sh-dimension-card *{transition:none!important;animation:none!important}}
+
+#pdMain{touch-action:pan-y pinch-zoom} #pdMain img{-webkit-user-drag:none;user-select:none}
