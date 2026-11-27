@@ -1305,7 +1305,7 @@ Orders are subject to stock and confirmation. Payment, cancellation, delivery, r
     <div><h4>Connect</h4><ul>
       <li><a href="https://www.facebook.com/shopyhat/" target="_blank" rel="noopener noreferrer">Facebook</a></li><li><a href="https://youtube.com/@shopyhat1" target="_blank" rel="noopener noreferrer">YouTube</a></li><li><a href="#about">Our Story</a></li><li><a href="#policies">Privacy policy</a></li></ul></div>
   </div>
-  <div class="copy">&copy; <span id="year"></span> SHOPYHAT. All rights reserved.</div>
+  <div class="wrap" style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:12px 20px" aria-label="Legal policies"><a href="#policies/terms">Terms &amp; Conditions</a><a href="#policies/privacy">Privacy Policy</a><a href="#policies/returns">Return Policy</a><a href="#policies/exchange">Exchange Policy</a><a href="#policies/refund">Refund Policy</a><a href="#policies/shipping">Delivery &amp; Shipping</a><a href="#policies/cancellation">Cancellation Policy</a><a href="#policies/payment">Payment Policy</a></div><div class="copy">&copy; <span id="year"></span> SHOPYHAT. All rights reserved.</div>
 </footer>
 
 <nav class="bnav" aria-label="Quick navigation">
@@ -1956,7 +1956,7 @@ function openCheckout(){
        <label class="pay-ack"><input type="checkbox" id="kPaidAck"> <span>I have completed Send Money to the displayed receiving number. I understand SHOPYHAT must verify it before confirming payment.</span></label>
        <div class="pay-warning">Never share your bKash/Nagad PIN, OTP, login or security code. A Transaction ID is a claim, <strong>not automatic payment confirmation</strong>.</div>
      </div>
-    <label class="agree"><input type="checkbox" id="kAgree" required><span>I agree to the <a href="#policies" target="_blank" rel="noopener">Terms &amp; Conditions and published policies</a> and confirm my order details.</span></label>
+    <label class="agree"><input type="checkbox" id="kAgree" required><span>I agree to the <a href="#policies/terms" target="_blank" rel="noopener">Terms &amp; Conditions and published policies</a> and confirm my order details.</span></label>
     ${CONFIG.turnstileSiteKey?'<div class="cf-turnstile" data-sitekey="'+esc(CONFIG.turnstileSiteKey)+'"></div>':''}
     <div class="err" id="kErr"></div>
     <button class="btn block" type="submit" id="placeBtn">Place order <span aria-hidden="true">→</span></button>
@@ -2213,7 +2213,8 @@ function route(keep){
   if(!keep)window.scrollTo({top:0,behavior:"instant"});
   if(pg==="p"&&byId(arg)&&!keep)openProduct(arg);
 }
-window.addEventListener("hashchange",()=>{closeAll();route()});
+function focusPolicyLink(){const [page,id]=location.hash.slice(1).split("/");if(page==="policies"&&id)requestAnimationFrame(()=>document.getElementById(id)?.scrollIntoView({block:"start"}));}
+window.addEventListener("hashchange",()=>{closeAll();route();focusPolicyLink()});window.addEventListener("load",focusPolicyLink);
 window.addEventListener('shopyhat:languagechange',()=>{renderHome();if(!$("#p-shop").classList.contains("hidden"))renderShop()});
 
 /* =====================================================================
