@@ -964,6 +964,20 @@ main{overflow:clip}
 /* Keep the catalogue page and its controls centered at all viewport widths. */
 #p-shop > .wrap, #p-shop .pagehead > .wrap{width:min(100%,var(--sh-content-width,1240px));max-width:100%;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box}
 #p-shop #shopGrid{margin-inline:auto;width:100%;min-width:0}
+
+/* Product detail: full-width information section avoids tall empty gallery column.
+   The gallery and purchase controls remain adjacent; reviews and accordions sit below both. */
+#prodBox .pd{align-items:start}
+#prodBox .pd>.gal{grid-column:1;grid-row:1}
+#prodBox .pd>.body{grid-column:2;grid-row:1;min-width:0}
+#prodBox .pd>.sh-product-below{grid-column:1/-1;grid-row:2;min-width:0;padding:clamp(20px,3vw,34px);border-top:1px solid #eee7df;background:#fff}
+#prodBox .sh-product-below>.sh-product-review{margin:0 0 20px;max-width:none}
+#prodBox .sh-product-below>.acc{max-width:none}
+#prodBox .sh-product-below .acc details{max-width:100%}
+@media(max-width:860px){
+ #prodBox .pd>.gal,#prodBox .pd>.body,#prodBox .pd>.sh-product-below{grid-column:1;grid-row:auto}
+ #prodBox .pd>.sh-product-below{padding:20px 17px}
+}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1794,7 +1808,7 @@ function drawProduct(){
     <div class="err" id="pdErr"></div>
     ${variantSoldOut?`<div class="note">This color is sold out right now. Message us to ask when it will be back.</div>`:`<div class="acts buy-acts"><button class="btn" id="pdAdd">Add to bag</button><button class="btn ink" id="pdBuy">Buy now →</button></div>`}
     <div class="acts" style="margin-top:-4px"><button class="btn line wish-in" data-wish="${p.id}">${on?"Saved to wishlist":"Save to wishlist"}</button><button class="btn line" id="pdShare">Share</button></div>
-    <div class="sh-product-review" data-review-detail="${p.id}"><h3>Customer Reviews</h3><p>Loading customer feedback…</p></div>
+  </div><section class="sh-product-below" aria-label="Product information and reviews"><div class="sh-product-review" data-review-detail="${p.id}"><h3>Customer Reviews</h3><p>Loading customer feedback…</p></div>
     <div class="acc">
       ${p.details&&p.details.length?`<details open><summary>Details</summary><ul>${p.details.map(d=>`<li>${esc(d)}</li>`).join("")}</ul></details>`:""}
       <details><summary>Delivery and returns</summary><p>Delivery: ${money(CONFIG.delivery.dhaka)} inside Dhaka, ${money(CONFIG.delivery.outside)} outside Dhaka. Pay on delivery. If the item is damaged, defective or wrong, contact us within 3 calendar days. <a href="#policies" data-close class="link">Read the policy</a></p></details>
