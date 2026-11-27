@@ -18,7 +18,7 @@ function modeFor(p){
  if(!cfg.enabled)return 'classic';
  const productMode=cfg.product_modes[String(p?.id)]||'';
  const categoryMode=cfg.category_modes[key(p?.cat)]||cfg.category_modes[key(p?.catName)]||'';
- const chosen=customerMode||productMode||categoryMode||cfg.mode;
+ const chosen=(cfg.allow_customer_switch?customerMode:'')||productMode||categoryMode||cfg.mode;
  if(chosen==='ultra')return 'immersive'; // Never fabricate a genuine 3D model from a single photograph.
  if((muted()||lowPower())&&chosen==='immersive')return 'premium';
  return safeMode(chosen);
@@ -49,9 +49,9 @@ function updateGallery(){
  if(mode!=='classic'&&cfg.ambient){gal.classList.add('sh-dimension-ambient');gal.style.setProperty('--sh-dimension-color',color);gal.style.setProperty('--sh-dimension-strength',String(cfg.intensity/100));}
  if(cfg.allow_customer_switch){
    const bar=document.createElement('div');bar.className='sh-dimension-toolbar';bar.setAttribute('role','group');bar.setAttribute('aria-label','Product display mode');
-   for(const [m,label] of [['classic','Classic'],['premium','Explore']]){
+   for(const [m,label] of [['classic','Classic'],['immersive','Explore']]){
      const button=document.createElement('button');button.type='button';button.textContent=label;button.dataset.dimensionMode=m;
-     button.setAttribute('aria-pressed',String(mode===m||(mode==='immersive'&&m==='premium')));
+     button.setAttribute('aria-pressed',String(mode===m||(mode==='premium'&&m==='immersive')));
      button.addEventListener('click',()=>{customerMode=m;try{localStorage.setItem('sh_dimension_choice_v1',m)}catch{}updateGallery()});
      bar.append(button);
    }
@@ -75,7 +75,7 @@ async function load(){
    if(!r.ok)return;const rows=await r.json();cfg=normalize(rows?.[0]?.config?.product_dimension);schedule();
  }catch(e){console.info('Product visual settings unavailable; classic view preserved.')}
 }
-try{const stored=localStorage.getItem('sh_dimension_choice_v1');if(stored==='classic'||stored==='premium')customerMode=stored;}catch{}
+try{const stored=localStorage.getItem('sh_dimension_choice_v1');if(stored==='classic'||stored==='premium'||stored==='immersive')customerMode=stored;}catch{}
 if(new URLSearchParams(location.search).get('studio_preview')==='1'){
  window.addEventListener('message',event=>{
    if(event.origin!==location.origin||event.source!==window.parent||event.data?.type!=='shopyhat:studio-preview')return;
