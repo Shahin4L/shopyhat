@@ -65,7 +65,7 @@ function updateGallery(){
  cleanState(gal);
  gal.dataset.shDimensionSignature=sig;
  if(mode!=='classic')gal.classList.add('sh-dimension-'+mode);
- if(mode!=='classic'&&cfg.ambient){gal.classList.add('sh-dimension-ambient');gal.style.setProperty('--sh-dimension-color',color);gal.style.setProperty('--sh-dimension-strength',String(cfg.intensity/100));setPageAmbient(color,cfg.intensity);}
+ if(cfg.ambient){const intensity=mode==='classic'?Math.round(cfg.intensity*0.65):cfg.intensity;gal.classList.add('sh-dimension-ambient');gal.style.setProperty('--sh-dimension-color',color);gal.style.setProperty('--sh-dimension-strength',String(intensity/100));gal.style.setProperty('--sh-dimension-mix',Math.round(intensity*.35)+'%');setPageAmbient(color,intensity);}
  if(cfg.allow_customer_switch){
    const bar=document.createElement('div');bar.className='sh-dimension-toolbar';bar.setAttribute('role','group');bar.setAttribute('aria-label','Product display mode');
    for(const [m,label] of [['classic','Classic'],['premium','Premium'],['immersive','Explore']]){
