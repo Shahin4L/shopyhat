@@ -3,7 +3,7 @@
 "use strict";
 const URL="https://xwfqgmgiunlxzvzoermn.supabase.co/rest/v1/sh_after_sales_policy?select=version,created_at,return_hours,refund_min_days,refund_max_days,review_hours,content&order=version.desc&limit=1";
 const KEY="sb_publishable_Tk-PzYsM3YxnDsjicnMdzQ_mQsREdkP";
-const IDs=["returns","exchange","process","delivery","refund"];
+const IDs=["terms","privacy","returns","exchange","process","delivery","refund","shipping","cancellation","payment"];
 const bnNumber=n=>String(n).replace(/[0-9]/g,d=>"০১২৩৪৫৬৭৮৯"[Number(d)]);
 function updateLanguage(node,en,bn){
   const first=node.querySelector("[data-policy-en]"),second=node.querySelector("[data-policy-bn]");
@@ -14,13 +14,15 @@ async function sync(){
   const response=await fetch(URL,{headers:{apikey:KEY},cache:"no-store"});
   if(!response.ok)throw Error("Policy API "+response.status);
   const records=await response.json(),policy=records[0],sections=policy?.content?.sections;
-  if(!policy||!sections)return;
+  if(!policy)return;
+  if(!sections){root.dataset.policyVersion=String(policy.version);return;}
   // Validate the entire publication before touching the page: never present mixed versions.
-  if(!IDs.every(id=>typeof sections[id]?.en==="string"&&typeof sections[id]?.bn==="string"&&sections[id].en.trim()&&sections[id].bn.trim()))return;
+  
   for(const id of IDs){
+    if(typeof sections[id]?.en!=="string"||typeof sections[id]?.bn!=="string"||!sections[id].en.trim()||!sections[id].bn.trim())continue;
     const section=root.querySelector("#"+id);
     if(!section)continue;
-    const existing=[...section.children].filter(e=>e.tagName==="P");
+    const existing=[...section.children].filter(e=>["P","UL","H3"].includes(e.tagName));
     for(const old of existing)old.remove();
     const paragraphs={en:sections[id].en.split(/\n\s*\n/),bn:sections[id].bn.split(/\n\s*\n/)};
     const count=Math.max(paragraphs.en.length,paragraphs.bn.length);
